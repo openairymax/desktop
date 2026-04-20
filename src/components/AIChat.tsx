@@ -75,14 +75,14 @@ const AIChat: React.FC<{
       }));
 
       const response = await sdk.chat({
-        provider_id: "openai",
+        providerId: "openai",
         messages: [
           { role: "system", content: `你是 AgentOS 智能助手，一个工业级 AI 操作系统的前端界面。你的职责是帮助用户管理 AgentOS 的各项功能，包括：服务管理、智能体注册、任务提交、LLM 配置、记忆系统等。请用中文回复，保持简洁专业。` },
           ...allMessages,
         ],
         model,
         temperature: 0.7,
-        max_tokens: 2048,
+        maxTokens: 2048,
       });
 
       const assistantMessage: ChatMessage = {
@@ -90,14 +90,14 @@ const AIChat: React.FC<{
         role: "assistant",
         content: response.content,
         timestamp: new Date(),
-        tokenCount: response.usage.completion_tokens,
+        tokenCount: response.usage.completionTokens,
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // Store conversation in memory
       try {
-        await sdk.memoryStore({ type: "conversation", content: `用户: ${content} → 助手: ${response.content.slice(0, 100)}...`, source: "ai-chat" });
+        await sdk.memoryStore("conversation", `用户: ${content} → 助手: ${response.content.slice(0, 100)}...`, "ai-chat");
       } catch { /* memory store is best-effort */ }
     } catch (error) {
       console.error("Chat error:", error);

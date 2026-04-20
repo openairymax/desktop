@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { useI18n } from '../i18n';
-import { useAlert } from '../components/useAlert';
+import { useTranslation } from 'react-i18next';
+import {
+  listProtocols, testProtocolConnection, sendProtocolMessage, getProtocolCapabilities,
+  type ProtocolInfo, type ProtocolCapabilities
+} from '../services/agentos-sdk';
 import {
   CheckCircle2,
   XCircle,
@@ -17,12 +19,8 @@ import {
   Loader2,
 } from 'lucide-react';
 
-interface ProtocolInfo {
-  id: string;
-  name: string;
-  description: string;
+interface ExtendedProtocolInfo extends ProtocolInfo {
   version: string;
-  status: string;
   endpoint: string;
   capabilities: string[];
   color: string;
@@ -53,9 +51,8 @@ interface ProtocolMessageResponse {
 }
 
 const ProtocolPlayground: React.FC = () => {
-  const { t } = useI18n();
-  const { error: alertError, success } = useAlert();
-  const [protocols, setProtocols] = useState<ProtocolInfo[]>([]);
+  const { t } = useTranslation();
+  const [protocols, setProtocols] = useState<ExtendedProtocolInfo[]>([]);
   const [selectedProtocol, setSelectedProtocol] = useState<string>('');
   const [capabilities, setCapabilities] = useState<ProtocolCapability[]>([]);
   const [testEndpoint, setTestEndpoint] = useState<string>('http://localhost:18789');
@@ -79,10 +76,18 @@ const ProtocolPlayground: React.FC = () => {
 
   const loadProtocols = async () => {
     try {
-      const result = await invoke<ProtocolInfo[]>('list_protocols');
-      setProtocols(result);
-      if (result.length > 0 && !selectedProtocol) {
-        setSelectedProtocol(result[0].id);
+      const result = await listProtocols();
+      const extended: ExtendedProtocolInfo[] = (result as any[]).map((p, i) => ({
+        ...p,
+        version: '1.0.0',
+        endpoint: (p as any).host ? `http://${(p as any).host}:${(p as any).port}` : 'http://localhost:8080',
+        capabilities: [],
+        color: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'][i % 4],
+        icon: 'settings',
+      }));
+      setProtocols(extended);
+      if (extended.length > 0 && !selectedProtocol) {
+        setSelectedProtocol(extended[0].id);
       }
     } catch (e) {
       setError(`Failed to load protocols: ${e}`);
@@ -91,8 +96,13 @@ const ProtocolPlayground: React.FC = () => {
 
   const loadCapabilities = async (protocolId: string) => {
     try {
-      const result = await invoke<ProtocolCapability[]>('get_protocol_capabilities', { protocolId });
-      setCapabilities(result);
+      const caps = await getProtocolCapabilities();
+      const protoCaps = (caps as unknown as ProtocolCapabilities).protocols?.map((name: string) => ({
+        name: `${name}.call`,
+        description: `调用 ${name} 协议方法`,
+        params: ['method', 'params'],
+      })) || [];
+      setCapabilities(protoCaps);
     } catch {
       setCapabilities([]);
     }
@@ -105,11 +115,17 @@ const ProtocolPlayground: React.FC = () => {
     setError('');
 
     try {
-      const result = await invoke<ConnectionTestResult>('test_protocol_connection', {
-        protocolId: selectedProtocol,
+      const proto = protocols.find(p => p.id === selectedProtocol);
+      const host = (proto as any)?.host || 'localhost';
+      const port = (proto as any)?.port || 8080;
+      const result = await testProtocolConnection(selectedProtocol, host, port);
+      setTestResult({
+        protocol_id: selectedProtocol,
         endpoint: testEndpoint,
+        success: (result as any).success !== false,
+        latency_ms: (result as any).latency || 0,
+        message: (result as any).success ? '连接成功' : '连接失败',
       });
-      setTestResult(result);
     } catch (e) {
       setError(`Connection test failed: ${e}`);
     } finally {
@@ -133,14 +149,13 @@ const ProtocolPlayground: React.FC = () => {
     }
 
     try {
-      const result = await invoke<ProtocolMessageResponse>('send_protocol_message', {
-        message: {
-          protocol: selectedProtocol,
-          method: messageMethod,
-          params,
-        },
+      const result = await sendProtocolMessage(selectedProtocol, { method: messageMethod, params });
+      setMessageResponse({
+        protocol: selectedProtocol,
+        success: (result as any).success !== false,
+        data: (result as any).response || result,
+        latency_ms: 0,
       });
-      setMessageResponse(result);
     } catch (e) {
       setError(`Message send failed: ${e}`);
     } finally {
@@ -233,7 +248,7 @@ const ProtocolPlayground: React.FC = () => {
                   <span style={{ fontWeight: 600, fontSize: "15px", color: "var(--text-primary)" }}>
                     {proto.name}
                   </span>
-                  {proto.status === 'active' ? (
+                  {proto.status === 'available' ? (
                     <CheckCircle2 size={14} color="#22c55e" />
                   ) : (
                     <XCircle size={14} color="var(--text-muted)" />
@@ -250,7 +265,7 @@ const ProtocolPlayground: React.FC = () => {
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <div style={{
                 width: "6px", height: "6px", borderRadius: "50%",
-                background: proto.status === 'active' ? "#22c55e" : "var(--text-muted)",
+                background: proto.status === 'available' ? "#22c55e" : "var(--text-muted)",
               }} />
               <span style={{ fontSize: "11.5px", color: "var(--text-muted)" }}>
                 {proto.status} · {proto.endpoint}

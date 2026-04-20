@@ -18,11 +18,11 @@ impl Default for AppState {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SystemInfo {
     pub os: String,
-    pub os_version: String,
+    pub osVersion: String,
     pub architecture: String,
-    pub cpu_cores: usize,
-    pub total_memory_gb: f64,
-    pub free_memory_gb: f64,
+    pub cpuCores: usize,
+    pub totalMemoryGb: f64,
+    pub freeMemoryGb: f64,
     pub hostname: String,
 }
 
@@ -31,27 +31,52 @@ pub struct ServiceStatus {
     pub name: String,
     pub status: String,
     pub healthy: bool,
-    pub uptime_seconds: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uptimeSeconds: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AgentInfo {
     pub id: String,
     pub name: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub type: Option<String>,
     pub status: String,
-    pub task_count: u32,
-    pub last_active: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub taskCount: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lastActive: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capabilities: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub createdAt: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct TaskInfo {
     pub id: String,
-    pub agent_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agentId: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "type")]
+    pub type_: Option<String>,
     pub status: String,
     pub progress: f32,
-    pub created_at: String,
-    pub updated_at: Option<String>,
+    pub createdAt: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updatedAt: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub result: Option<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
 }
 
 #[tauri::command]
@@ -70,11 +95,11 @@ pub async fn get_system_info(state: State<'_, AppState>) -> Result<SystemInfo, S
 
     Ok(SystemInfo {
         os,
-        os_version,
+        osVersion: os_version,
         architecture,
-        cpu_cores,
-        total_memory_gb,
-        free_memory_gb,
+        cpuCores,
+        totalMemoryGb,
+        freeMemoryGb,
         hostname,
     })
 }
@@ -145,7 +170,7 @@ pub async fn get_service_status(state: State<'_, AppState>) -> Result<Vec<Servic
             name,
             status,
             healthy,
-            uptime_seconds: None,
+            uptimeSeconds: None,
             port,
         });
     }
@@ -287,23 +312,38 @@ pub async fn list_agents(_state: State<'_, AppState>) -> Result<Vec<AgentInfo>, 
         AgentInfo {
             id: "agent-001".to_string(),
             name: "Research Assistant".to_string(),
+            type: Some("research".to_string()),
             status: "idle".to_string(),
-            task_count: 0,
-            last_active: Some(chrono::Utc::now().to_rfc3339()),
+            taskCount: Some(0),
+            lastActive: Some(chrono::Utc::now().to_rfc3339()),
+            description: Some("Web search, document analysis, information aggregation"),
+            capabilities: Some(vec!["search".to_string(), "analyze".to_string(), "summarize".to_string()]),
+            config: None,
+            createdAt: Some(chrono::Utc::now().to_rfc3339()),
         },
         AgentInfo {
             id: "agent-002".to_string(),
             name: "Code Reviewer".to_string(),
+            type: Some("coding".to_string()),
             status: "running".to_string(),
-            task_count: 3,
-            last_active: Some(chrono::Utc::now().to_rfc3339()),
+            taskCount: Some(3),
+            lastActive: Some(chrono::Utc::now().to_rfc3339()),
+            description: Some("Code generation, debugging, refactoring, review"),
+            capabilities: Some(vec!["generate".to_string(), "debug".to_string(), "review".to_string()]),
+            config: None,
+            createdAt: Some(chrono::Utc::now().to_rfc3339()),
         },
         AgentInfo {
             id: "agent-003".to_string(),
             name: "Data Analyst".to_string(),
+            type: Some("analysis".to_string()),
             status: "idle".to_string(),
-            task_count: 1,
-            last_active: None,
+            taskCount: Some(1),
+            lastActive: None,
+            description: Some("Data analysis, visualization, reporting"),
+            capabilities: Some(vec!["analyze".to_string(), "visualize".to_string()]),
+            config: None,
+            createdAt: Some(chrono::Utc::now().to_rfc3339()),
         },
     ])
 }

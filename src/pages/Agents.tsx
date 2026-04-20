@@ -356,7 +356,7 @@ const Agents: React.FC = () => {
                 if (agents.length > 0) {
                   exportToCSV(agents.map(a => ({
                     名称: a.name, 类型: a.type, 状态: a.status,
-                    描述: a.description || '', 创建时间: a.created_at || '',
+                    描述: (a as any).description || '', 创建时间: (a as any).createdAt || '',
                   })), 'agentos_agents');
                 }
               }}
