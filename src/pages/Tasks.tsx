@@ -135,8 +135,8 @@ const Tasks: React.FC = () => {
     try {
       let params: Record<string, unknown> = {};
       try { params = taskParams ? JSON.parse(taskParams) : {}; } catch { params = { raw: taskParams }; }
-      const agentId = tasks.length > 0 && tasks[0].agent_id ? tasks[0].agent_id : "default";
-      const newTask = await sdk.submitTask(agentId, taskName, params, "normal");
+      const agentId = tasks.length > 0 && (tasks[0] as any).agentId ? (tasks[0] as any).agentId : "default";
+      const newTask = await sdk.submitTask(agentId, taskName, "normal");
       setTasks(prev => [newTask, ...prev]);
       setTaskName("");
       setTaskParams("");
@@ -701,7 +701,7 @@ const Tasks: React.FC = () => {
                             gap: '4px',
                           }}>
                             <Clock size={12} />
-                            {new Date(task.created_at).toLocaleString('zh-CN')}
+                            {new Date((task as any).createdAt).toLocaleString('zh-CN')}
                           </span>
                           <span>ID: {task.id.slice(0, 8)}</span>
                         </div>

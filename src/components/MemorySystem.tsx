@@ -88,9 +88,9 @@ const MemorySystem: React.FC = () => {
     try {
       const stats = await sdk.getContextWindowStats();
       setContextWindow({
-        totalTokens: stats.total_tokens,
-        maxTokens: stats.max_tokens,
-        usedPercent: stats.used_percent,
+        totalTokens: stats.totalTokens,
+        maxTokens: stats.maxTokens,
+        usedPercent: stats.usedPercent,
         breakdown: stats.breakdown,
       });
     } catch (error) {
@@ -118,7 +118,7 @@ const MemorySystem: React.FC = () => {
   const handleSearch = async () => {
     if (!searchQuery.trim()) { loadMemories(); return; }
     try {
-      const results = await sdk.memorySearch({ query: searchQuery, limit: 100 });
+      const results = await sdk.memorySearch(searchQuery, 100);
       setMemories(results || []);
     } catch (error) {
       console.error("Memory search failed:", error);
@@ -359,12 +359,12 @@ const MemorySystem: React.FC = () => {
                     <div style={{ display: "flex", gap: "12px", marginTop: "6px", fontSize: "11px", color: "var(--text-muted)" }}>
                       <span><Hash size={10} style={{ display: "inline", marginRight: "3px" }} />{mem.id.slice(0, 8)}</span>
                       <span>{mem.source || "-"}</span>
-                      <span>{new Date(mem.created_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: "2-digit" })}</span>
+                      <span>{new Date(mem.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: "2-digit" })}</span>
                       <span style={{ marginLeft: "auto" }}>{mem.tokens} tokens</span>
                     </div>
                   </div>
                   <div style={{ width: "44px", height: "6px", borderRadius: "3px", background: "var(--bg-primary)", overflow: "hidden", flexShrink: 0 }}>
-                    <div style={{ width: `${(mem.relevance || 0.8) * 100}%`, height: "100%", background: mt?.color, borderRadius: "3px" }} />
+                    <div style={{ width: `${((mem as any).relevance || 0.8) * 100}%`, height: "100%", background: mt?.color, borderRadius: "3px" }} />
                   </div>
                   <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(mem.id)} title="删除">
                     <Trash2 size={13} />

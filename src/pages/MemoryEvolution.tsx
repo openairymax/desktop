@@ -1,342 +1,417 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Database,
-  TrendingUp,
-  Layers,
-  ArrowUpRight,
-  ArrowDownRight,
-  RefreshCw,
-  Download,
-  Upload,
-  Trash2,
-  Search,
-  Filter,
-  GitBranch,
-  Clock,
-  Zap,
-  Brain,
-  BarChart3,
-  Sparkles,
-  ChevronDown,
-  ChevronRight,
-  AlertTriangle,
-  CheckCircle2,
-} from "lucide-react";
-import sdk from "../services/agentos-sdk";
-import { useI18n } from "../i18n";
-import type { MemoryEntry } from "../services/agentos-sdk";
-import { useAlert } from "../components/useAlert";
+  Brain, Database, Search, Plus, Trash2, X, Clock,
+  MessageSquare, FileText, Settings, AlertCircle, Eye, BarChart3
+} from 'lucide-react';
+import { memoryList, memoryStore, memorySearch, memoryDelete, memoryClear, contextWindowStats, type MemoryEntry, type ContextWindowStats } from '../services/agentos-sdk';
 
-const layerConfig = [
-  { key: "L1", name: "原始卷", desc: "原始数据存储", icon: Database, color: "#6366f1", gradient: "linear-gradient(135deg, #6366f1, #818cf8)" },
-  { key: "L2", name: "特征层", desc: "FAISS 向量嵌入索引", icon: Brain, color: "#06b6d4", gradient: "linear-gradient(135deg, #06b6d4, #22d3ee)" },
-  { key: "L3", name: "结构层", desc: "知识图谱关系编码", icon: GitBranch, color: "#f59e0b", gradient: "linear-gradient(135deg, #f59e0b, #fbbf24)" },
-  { key: "L4", name: "模式层", desc: "持久同调稳定规则挖掘", icon: Sparkles, color: "#10b981", gradient: "linear-gradient(135deg, #10b981, #34d399)" },
-];
-
-const typeConfig: Record<string, { label: string; color: string; icon: typeof Database }> = {
-  conversation: { label: "对话记忆", color: "var(--primary-color)", icon: Database },
-  fact: { label: "事实知识", color: "var(--success-color)", icon: CheckCircle2 },
-  skill: { label: "技能经验", color: "var(--warning-color)", icon: Zap },
-  preference: { label: "偏好设置", color: "var(--error-color)", icon: Brain },
-  error: { label: "错误记录", color: "var(--error-color)", icon: AlertTriangle },
-  observation: { label: "观察记录", color: "var(--info-color)", icon: BarChart3 },
+const MEMORY_TYPE_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  episodic: { icon: <Clock className="w-4 h-4" />, color: 'text-blue-500 bg-blue-50', label: 'episodic' },
+  semantic: { icon: <Database className="w-4 h-4" />, color: 'text-purple-500 bg-purple-50', label: 'semantic' },
+  procedural: { icon: <Settings className="w-4 h-4" />, color: 'text-green-500 bg-green-50', label: 'procedural' },
+  preference: { icon: <FileText className="w-4 h-4" />, color: 'text-amber-500 bg-amber-50', label: 'preference' },
+  error: { icon: <AlertCircle className="w-4 h-4" />, color: 'text-red-500 bg-red-50', label: 'error' },
+  observation: { icon: <Eye className="w-4 h-4" />, color: 'text-cyan-500 bg-cyan-50', label: 'observation' },
 };
 
 const MemoryEvolution: React.FC = () => {
-  const { t } = useI18n();
-  const { error, success, info, confirm: confirmModal } = useAlert();
-  const [entries, setEntries] = useState<MemoryEntry[]>([]);
+  const { t, i18n } = useTranslation();
+  const [memories, setMemories] = useState<MemoryEntry[]>([]);
+  const [stats, setStats] = useState<ContextWindowStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterType, setFilterType] = useState<string>("all");
-  const [selectedEntry, setSelectedEntry] = useState<MemoryEntry | null>(null);
-  const [evolving, setEvolving] = useState(false);
-  const [activeLayer, setActiveLayer] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [showStoreModal, setShowStoreModal] = useState(false);
+  const [newMemory, setNewMemory] = useState({ type: 'episodic', content: '', source: '' });
+  const [activeTab, setActiveTab] = useState<'list' | 'store' | 'stats'>('list');
 
-  useEffect(() => { loadEntries(); }, []);
-
-  const loadEntries = async () => {
-    setLoading(true);
+  const loadMemories = useCallback(async () => {
     try {
-      const data = await sdk.memoryList(filterType === "all" ? undefined : filterType as MemoryEntry["type"], 100);
-      setEntries(data || []);
-    } catch (err) {
-      error("加载失败", `无法加载记忆条目: ${err}`);
+      setLoading(true);
+      const filter = typeFilter === 'all' ? undefined : typeFilter;
+      let data: MemoryEntry[];
+      if (searchQuery.trim()) {
+        data = await memorySearch(searchQuery, 50, filter);
+      } else {
+        data = await memoryList(filter, 50);
+      }
+      setMemories(data);
+    } catch (e) {
+      console.error('Failed to load memories:', e);
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, typeFilter]);
 
-  useEffect(() => { if (filterType) loadEntries(); }, [filterType]);
-
-  const handleEvolve = async () => {
-    setEvolving(true);
+  const loadStats = useCallback(async () => {
     try {
-      const result = await sdk.memoryEvolve();
-      if (result && result.evolved > 0) {
-        const evolutionDetails = result.layers.map((l: { layer: string; before: number; after: number }) => `${l.layer}: ${l.before} → ${l.after}`).join("\n");
-        success("进化完成", `记忆进化完成！共进化 ${result.evolved} 条记忆\n\n${evolutionDetails}`);
-        loadEntries();
-      } else {
-        info("进化中", "正在进行记忆进化，请稍候...");
-        await new Promise(r => setTimeout(r, 1500));
-        loadEntries();
-      }
-    } catch (err) {
-      error("进化失败", `记忆进化过程出错: ${err}`);
-      await new Promise(r => setTimeout(r, 1500));
-    } finally {
-      setEvolving(false);
+      const data = await contextWindowStats();
+      setStats(data);
+    } catch (e) {
+      console.error('Failed to load context window stats:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMemories();
+    loadStats();
+  }, [loadMemories, loadStats]);
+
+  const handleStoreMemory = async () => {
+    if (!newMemory.content.trim()) return;
+    try {
+      await memoryStore(newMemory.type, newMemory.content, newMemory.source || undefined);
+      setNewMemory({ type: 'episodic', content: '', source: '' });
+      setShowStoreModal(false);
+      loadMemories();
+      loadStats();
+    } catch (e) {
+      console.error('Failed to store memory:', e);
     }
   };
 
-  const handleForget = async (id: string) => {
-    const confirmed = await confirmModal({
-      type: 'danger',
-      title: '遗忘记忆',
-      message: '确定要遗忘此条记忆吗？此操作无法撤销。',
-    });
-    if (!confirmed) return;
+  const handleDelete = async (id: string) => {
+    if (!window.confirm(t('memoryEvolution.deleteConfirm'))) return;
     try {
-      await sdk.memoryDelete(id);
-      setEntries(prev => prev.filter(e => e.id !== id));
-      if (selectedEntry?.id === id) setSelectedEntry(null);
-      success("已遗忘", "记忆条目已被成功移除");
-    } catch (err) {
-      error("删除失败", `无法删除记忆条目: ${err}`);
+      await memoryDelete(id);
+      loadMemories();
+      loadStats();
+    } catch (e) {
+      console.error('Failed to delete memory:', e);
     }
   };
 
-  const filteredEntries = entries.filter(e =>
-    e.content.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleClearAll = async () => {
+    if (!window.confirm(t('memoryEvolution.clearConfirm'))) return;
+    try {
+      await memoryClear();
+      setMemories([]);
+      loadStats();
+    } catch (e) {
+      console.error('Failed to clear memories:', e);
+    }
+  };
 
-  const typeStats = Object.entries(typeConfig).map(([key, cfg]) => ({
-    key, ...cfg, count: entries.filter(e => e.type === key).length,
-  }));
+  const formatTime = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleString(i18n.language === 'zh' ? 'zh-CN' : 'en-US');
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{
-            width: "44px", height: "44px", borderRadius: "var(--radius-md)",
-            background: "var(--primary-gradient)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(0,113,227,0.35), 0 0 0 1px rgba(255,255,255,0.08) inset",
-          }}>
-            <Database size={20} color="white" />
-          </div>
-          <div>
-            <h1>四层记忆卷载</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "14px", margin: "2px 0 0 0" }}>
-              MemoryEvolution · L1→L4 自动进化管理系统
-            </p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Brain className="w-8 h-8 text-purple-600" />
+            {t('memoryEvolution.title')}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('memoryEvolution.subtitle')}</p>
         </div>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <button className="btn btn-secondary" onClick={loadEntries} disabled={loading}>
-            <RefreshCw size={16} className={loading ? "spin" : ""} /> 刷新
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowStoreModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {t('memoryEvolution.storeMemory')}
           </button>
-          <button className="btn btn-primary" onClick={handleEvolve} disabled={evolving}>
-            {evolving ? <><RefreshCw size={16} className="spin" /> 进化中...</> : <><TrendingUp size={16} /> 触发进化</>}
+          <button
+            onClick={handleClearAll}
+            className="inline-flex items-center px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            {t('memoryEvolution.clearAll')}
           </button>
         </div>
       </div>
 
-      {/* Four-Layer Visualization */}
-      <div className="card card-elevated" style={{ marginBottom: "20px" }}>
-        <h3 className="card-title"><Layers size={18} /> 记忆层级架构</h3>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "14px" }}>
-          {layerConfig.map((layer) => {
-            const IconComp = layer.icon;
-            const isActive = activeLayer === layer.key;
-            const entryCount = entries.length;
-            const layerPct = layer.key === "L1" ? Math.min(100, (entryCount / 1500) * 100)
-              : layer.key === "L2" ? Math.min(100, (entryCount / 1200) * 100)
-              : layer.key === "L3" ? Math.min(100, (entryCount / 600) * 100)
-              : Math.min(100, (entryCount / 200) * 100);
-            return (
-              <div
-                key={layer.key}
-                onClick={() => setActiveLayer(isActive ? null : layer.key)}
-                style={{
-                  padding: "18px", borderRadius: "var(--radius-lg)",
-                  border: `2px solid ${isActive ? layer.color : "var(--border-subtle)"}`,
-                  background: isActive ? `${layer.color}08` : "var(--bg-secondary)",
-                  cursor: "pointer", transition: "all var(--transition-fast)",
-                  position: "relative", overflow: "hidden",
-                }}
-              >
-                {isActive && <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "3px", background: layer.gradient }} />}
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                  <div style={{ width: "36px", height: "36px", borderRadius: "var(--radius-sm)", background: isActive ? layer.gradient : "var(--bg-tertiary)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <IconComp size={17} color={isActive ? "white" : "var(--text-muted)"} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: "14px", fontWeight: 700, color: isActive ? layer.color : "var(--text-primary)" }}>{layer.name}</div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)" }}>{layer.desc}</div>
-                  </div>
-                </div>
-                <div style={{ height: "6px", background: "var(--bg-tertiary)", borderRadius: "3px", overflow: "hidden", marginBottom: "8px" }}>
-                  <div style={{ width: `${layerPct}%`, height: "100%", background: `linear-gradient(90deg, ${layer.color}, ${layer.color}88)`, borderRadius: "3px", transition: "width 0.6s ease" }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px" }}>
-                  <span style={{ color: "var(--text-muted)" }}>容量</span>
-                  <span style={{ fontWeight: 600, color: layer.color }}>{Math.round(layerPct)}%</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: "1px solid var(--border-subtle)", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {["FAISS 向量检索", "艾宾浩斯遗忘曲线", "持久同调 Ripser", "自动进化触发"].map((tag, i) => (
-            <span key={i} style={{ fontSize: "11px", padding: "4px 10px", background: "var(--primary-light)", color: "var(--primary-color)", borderRadius: "var(--radius-full)", fontWeight: 600 }}>{tag}</span>
-          ))}
-        </div>
+      <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-fit">
+        {(['list', 'store', 'stats'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+              activeTab === tab
+                ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+            }`}
+          >
+            {tab === 'list' && <Search className="w-4 h-4 inline mr-2" />}
+            {tab === 'store' && <Plus className="w-4 h-4 inline mr-2" />}
+            {tab === 'stats' && <BarChart3 className="w-4 h-4 inline mr-2" />}
+            {tab === 'list' ? t('memoryEvolution.memoryList') : tab === 'store' ? t('memoryEvolution.storeMemory') : t('memoryEvolution.contextWindow.title')}
+          </button>
+        ))}
       </div>
 
-      {/* Type Stats + Controls */}
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "20px", marginBottom: "20px" }}>
-        {/* Type Distribution */}
-        <div className="card card-elevated">
-          <h3 className="card-title"><BarChart3 size={18} /> 类型分布</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {typeStats.map((stat) => {
-              const StatIcon = stat.icon;
-              const maxCount = Math.max(...typeStats.map(s => s.count), 1);
-              const pct = (stat.count / maxCount) * 100;
-              return (
-                <div key={stat.key}
-                  onClick={() => setFilterType(filterType === stat.key ? "all" : stat.key)}
-                  style={{
-                    padding: "10px 12px", borderRadius: "var(--radius-md)",
-                    border: `1px solid ${filterType === stat.key ? stat.color : "var(--border-subtle)"}`,
-                    background: filterType === stat.key ? `${stat.color}08` : "transparent",
-                    cursor: "pointer", transition: "all var(--transition-fast)",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                    <StatIcon size={13} color={stat.color} />
-                    <span style={{ fontSize: "12.5px", fontWeight: 600, flex: 1 }}>{stat.label}</span>
-                    <span style={{ fontSize: "14px", fontWeight: 700, color: stat.color }}>{stat.count}</span>
-                  </div>
-                  <div style={{ height: "4px", background: "var(--bg-tertiary)", borderRadius: "2px", overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: stat.color, borderRadius: "2px", transition: "width 0.4s ease" }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Entry List */}
-        <div className="card card-elevated">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 className="card-title" style={{ marginBottom: 0 }}><Database size={18} /> 记忆条目</h3>
-            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <div style={{ position: "relative" }}>
-                <Search size={14} style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-                <input
-                  type="text" className="form-input"
-                  placeholder="搜索记忆内容..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  style={{ paddingLeft: "32px", width: "220px", fontSize: "13px" }}
-                />
-              </div>
+      {activeTab === 'list' && (
+        <>
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('memoryEvolution.searchPlaceholder')}
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
             </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            >
+              <option value="all">{t('memoryEvolution.memoryTypes.all')}</option>
+              {Object.entries(MEMORY_TYPE_CONFIG).map(([key, config]) => (
+                <option key={key} value={key}>{t(`memoryEvolution.memoryTypes.${config.label}`)}</option>
+              ))}
+            </select>
           </div>
 
           {loading ? (
-            <div style={{ textAlign: "center", padding: "40px" }}><div className="loading-spinner" /></div>
-          ) : filteredEntries.length === 0 ? (
-            <div className="empty-state">
-              <Database size={48} style={{ opacity: 0.2 }} />
-              <div className="empty-state-text">暂无记忆条目</div>
-              <div className="empty-state-hint">智能体的交互记忆将在此处显示</div>
+            <div className="flex items-center justify-center py-12 text-gray-500">{t('common.loading')}</div>
+          ) : memories.length === 0 ? (
+            <div className="text-center py-12">
+              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">{t('memoryEvolution.noMemories') || 'No memories stored yet'}</p>
             </div>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "420px", overflowY: "auto" }}>
-              {filteredEntries.map((entry, idx) => {
-                const tc = typeConfig[entry.type] || { label: entry.type, color: "var(--text-muted)", icon: Database };
-                const TcIcon = tc.icon;
-                const isSelected = selectedEntry?.id === entry.id;
-                return (
-                  <div
-                    key={entry.id}
-                    onClick={() => setSelectedEntry(isSelected ? null : entry)}
-                    style={{
-                      padding: "12px 14px", borderRadius: "var(--radius-md)",
-                      border: `1px solid ${isSelected ? tc.color : "var(--border-subtle)"}`,
-                      background: isSelected ? `${tc.color}06` : "var(--bg-tertiary)",
-                      cursor: "pointer", transition: "all var(--transition-fast)",
-                      display: "flex", gap: "12px", alignItems: "flex-start",
-                      animation: `staggerFadeIn 0.3s ease-out ${idx * 40}ms both`,
-                    }}
+            <div className="space-y-3">
+              <AnimatePresence>
+                {memories.map((memory) => (
+                  <motion.div
+                    key={memory.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 shadow-sm"
                   >
-                    <TcIcon size={15} color={tc.color} style={{ flexShrink: 0, marginTop: "2px" }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                        <span className="tag" style={{ fontSize: "10px", background: `${tc.color}15`, color: tc.color }}>{tc.label}</span>
-                        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-                          <Clock size={10} style={{ display: "inline", marginRight: "3px" }} />
-                          {new Date(entry.created_at).toLocaleString('zh-CN')}
-                        </span>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className={`p-2 rounded-lg ${MEMORY_TYPE_CONFIG[memory.type]?.color || 'text-gray-500 bg-gray-50'}`}>
+                          {MEMORY_TYPE_CONFIG[memory.type]?.icon || <Database className="w-4 h-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {t(`memoryEvolution.memoryTypes.${MEMORY_TYPE_CONFIG[memory.type]?.label || 'all'}`)}
+                            </span>
+                            <span className="text-xs text-gray-500 px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-full">
+                              {memory.tokens} tokens
+                            </span>
+                            {memory.source && (
+                              <span className="text-xs text-gray-500 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full">
+                                {memory.source}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 break-words">{memory.content}</p>
+                          <p className="text-xs text-gray-400 mt-2">{formatTime(memory.createdAt)}</p>
+                        </div>
                       </div>
-                      <p style={{ fontSize: "13px", color: "var(--text-primary)", lineHeight: 1.5, margin: 0, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                        {entry.content}
-                      </p>
-                      {entry.tokens > 0 && (
-                        <span style={{ fontSize: "10.5px", color: "var(--text-muted)", marginTop: "4px", display: "inline-block" }}>
-                          {entry.tokens} tokens
-                        </span>
-                      )}
+                      <button
+                        onClick={() => handleDelete(memory.id)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+          )}
+        </>
+      )}
+
+      {activeTab === 'store' && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('memoryEvolution.storeMemory')}</h3>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('memoryEvolution.type')}
+              </label>
+              <select
+                value={newMemory.type}
+                onChange={(e) => setNewMemory({ ...newMemory, type: e.target.value })}
+                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              >
+                {Object.entries(MEMORY_TYPE_CONFIG).map(([key, config]) => (
+                  <option key={key} value={key}>{t(`memoryEvolution.memoryTypes.${config.label}`)}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('memoryEvolution.content')}
+              </label>
+              <textarea
+                value={newMemory.content}
+                onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
+                rows={4}
+                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Enter memory content..."
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('memoryEvolution.source')} ({t('common.optional') || 'Optional'})
+              </label>
+              <input
+                type="text"
+                value={newMemory.source}
+                onChange={(e) => setNewMemory({ ...newMemory, source: e.target.value })}
+                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                placeholder="e.g., user_input, system_event, agent_output"
+              />
+            </div>
+            <button
+              onClick={handleStoreMemory}
+              disabled={!newMemory.content.trim()}
+              className="w-full px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Plus className="w-4 h-4 inline mr-2" />
+              {t('memoryEvolution.storeMemory')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'stats' && stats && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">{t('memoryEvolution.contextWindow.totalTokens')}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalTokens.toLocaleString()}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">{t('memoryEvolution.contextWindow.maxTokens')}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.maxTokens.toLocaleString()}</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">{t('memoryEvolution.contextWindow.usedPercent')}</p>
+              <p className="text-2xl font-bold text-green-600">{stats.usedPercent}%</p>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500">{t('memoryEvolution.stats.totalEntries')}</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white">{memories.length}</p>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              {t('memoryEvolution.contextWindow.title')}
+            </h3>
+            <div className="space-y-4">
+              {Object.entries(stats.breakdown).map(([key, value]) => {
+                const percent = ((value / stats.maxTokens) * 100).toFixed(2);
+                const colors: Record<string, string> = {
+                  system: 'bg-blue-500',
+                  history: 'bg-purple-500',
+                  tools: 'bg-amber-500',
+                  output: 'bg-green-500',
+                };
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-700 dark:text-gray-300">{t(`memoryEvolution.contextWindow.${key}`)}</span>
+                      <span className="text-gray-500">{value.toLocaleString()} tokens ({percent}%)</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+                      <div
+                        className={`${colors[key] || 'bg-gray-500'} h-2.5 rounded-full transition-all`}
+                        style={{ width: `${Math.min(parseFloat(percent) * 10, 100)}%` }}
+                      />
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* Detail Panel */}
-      {selectedEntry && (
-        <div className="card card-elevated" style={{ animation: "fadeIn 0.3s ease-out" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-            <h3 className="card-title" style={{ marginBottom: 0 }}>记忆详情</h3>
-            <div style={{ display: "flex", gap: "8px" }}>
-              <button className="btn btn-danger btn-sm" onClick={() => handleForget(selectedEntry.id)}>
-                <Trash2 size={14} /> 遗忘
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSelectedEntry(null)}>✕ 关闭</button>
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: "20px" }}>
-            <div style={{ padding: "16px", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", fontSize: "14px", lineHeight: 1.8, whiteSpace: "pre-wrap", fontFamily: "Inter, sans-serif" }}>
-              {selectedEntry.content}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {[
-                { label: "类型", value: typeConfig[selectedEntry.type]?.label || selectedEntry.type },
-                { label: "ID", value: selectedEntry.id.slice(0, 12) + "...", mono: true },
-                { label: "Tokens", value: String(selectedEntry.tokens) },
-                { label: "创建时间", value: new Date(selectedEntry.created_at).toLocaleString('zh-CN') },
-                { label: "来源", value: selectedEntry.source || "—" },
-                { label: "相关度", value: selectedEntry.relevance ? `${(selectedEntry.relevance * 100).toFixed(1)}%` : "—" },
-              ].map((row, i) => (
-                <div key={i}>
-                  <div style={{ fontSize: "11px", color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "3px" }}>{row.label}</div>
-                  <div style={{ fontSize: "13.5px", fontWeight: 500, fontFamily: row.mono ? "JetBrains Mono, monospace" : "inherit" }}>{row.value}</div>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       )}
+
+      <AnimatePresence>
+        {showStoreModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowStoreModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('memoryEvolution.storeMemory')}</h3>
+                <button onClick={() => setShowStoreModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
+                  <X className="w-5 h-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('memoryEvolution.type')}</label>
+                  <select
+                    value={newMemory.type}
+                    onChange={(e) => setNewMemory({ ...newMemory, type: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  >
+                    {Object.entries(MEMORY_TYPE_CONFIG).map(([key, config]) => (
+                      <option key={key} value={key}>{t(`memoryEvolution.memoryTypes.${config.label}`)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('memoryEvolution.content')}</label>
+                  <textarea
+                    value={newMemory.content}
+                    onChange={(e) => setNewMemory({ ...newMemory, content: e.target.value })}
+                    rows={4}
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    placeholder="Enter memory content..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('memoryEvolution.source')} ({t('common.optional') || 'Optional'})</label>
+                  <input
+                    type="text"
+                    value={newMemory.source}
+                    onChange={(e) => setNewMemory({ ...newMemory, source: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowStoreModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                  <button
+                    onClick={handleStoreMemory}
+                    disabled={!newMemory.content.trim()}
+                    className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('memoryEvolution.storeMemory')}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

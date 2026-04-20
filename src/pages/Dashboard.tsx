@@ -504,7 +504,7 @@ export default function Dashboard() {
         setConnectionStatus('disconnected');
       }
       if (monitorData) {
-        const newCpu = Math.round(monitorData.cpu.usage_percent);
+        const newCpu = Math.round(monitorData.cpu.usagePercent);
         const newMem = Math.round(monitorData.memory.percent);
         setSystemData({
           cpu: newCpu,
@@ -513,7 +513,7 @@ export default function Dashboard() {
           processes: monitorData.cpu.cores.length,
           servicesUp: serviceStatus ? serviceStatus.filter((s: any) => s.healthy).length : 5,
           servicesTotal: serviceStatus ? serviceStatus.length : 6,
-          uptime: Math.floor(monitorData.uptime_seconds / 3600) + "h",
+          uptime: Math.floor(monitorData.uptimeSeconds / 3600) + "h",
           version: "v2.1.0",
         });
         setCpuHistory(prev => [...prev.slice(-19), newCpu]);
