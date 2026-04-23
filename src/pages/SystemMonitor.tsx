@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Cpu, MemoryStick, HardDrive, Network, Activity, RefreshCw,
   Terminal, XCircle, ChevronDown, ChevronUp, Eye
@@ -68,244 +68,906 @@ const SystemMonitor: React.FC = () => {
   };
 
   const getUsageColor = (percent: number): string => {
-    if (percent < 50) return 'text-green-500';
-    if (percent < 80) return 'text-amber-500';
-    return 'text-red-500';
+    if (percent < 50) return 'var(--success-color)';
+    if (percent < 80) return 'var(--warning-color)';
+    return 'var(--error-color)';
   };
 
   const getBarColor = (percent: number): string => {
-    if (percent < 50) return 'bg-green-500';
-    if (percent < 80) return 'bg-amber-500';
-    return 'bg-red-500';
+    if (percent < 50) return 'var(--success-color)';
+    if (percent < 80) return 'var(--warning-color)';
+    return 'var(--error-color)';
   };
 
   if (loading && !monitor) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <RefreshCw className="w-8 h-8 text-gray-400 animate-spin" />
-        <span className="ml-3 text-gray-500">{t('common.loading')}</span>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '64px 24px',
+        minHeight: '400px'
+      }}>
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+          style={{
+            marginRight: '12px',
+            color: 'var(--text-muted)'
+          }}
+        >
+          <RefreshCw size={32} />
+        </motion.div>
+        <span style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-md)' }}>
+          {t('common.loading')}
+        </span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Activity className="w-8 h-8 text-blue-600" />
-            {t('systemMonitor.title')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('systemMonitor.subtitle')}</p>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }}>
+      {/* Header */}
+      <motion.div 
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          marginBottom: '32px',
+          flexWrap: 'wrap',
+          gap: '16px'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            boxShadow: 'var(--shadow-md)'
+          }}>
+            <Activity size={20} />
+          </div>
+          <div>
+            <h1 style={{
+              margin: 0,
+              fontSize: 'var(--font-size-2xl)',
+              fontWeight: 'var(--font-weight-bold)',
+              color: 'var(--text-primary)',
+              letterSpacing: '-0.02em',
+            }}>
+              {t('systemMonitor.title')}
+            </h1>
+            <p style={{
+              margin: '4px 0 0 0',
+              fontSize: 'var(--font-size-md)',
+              color: 'var(--text-muted)',
+            }}>
+              {t('systemMonitor.subtitle')}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <select
-            value={refreshRate}
-            onChange={(e) => setRefreshRate(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-          >
-            <option value={1000}>{t('systemMonitor.everySecond')}</option>
-            <option value={2000}>{t('systemMonitor.every2Seconds')}</option>
-            <option value={5000}>{t('systemMonitor.every5Seconds')}</option>
-          </select>
-          <button
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{
+            position: 'relative',
+            minWidth: '180px'
+          }}>
+            <select
+              value={refreshRate}
+              onChange={(e) => setRefreshRate(Number(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '10px 16px',
+                border: '1px solid var(--border-color)',
+                borderRadius: 'var(--radius-lg)',
+                background: 'var(--bg-primary)',
+                color: 'var(--text-primary)',
+                fontSize: 'var(--font-size-sm)',
+                cursor: 'pointer',
+                transition: 'all var(--transition-fast)'
+              }}
+            >
+              <option value={1000}>{t('systemMonitor.everySecond')}</option>
+              <option value={2000}>{t('systemMonitor.every2Seconds')}</option>
+              <option value={5000}>{t('systemMonitor.every5Seconds')}</option>
+            </select>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={loadData}
-            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            disabled={loading}
+            style={{
+              padding: '10px 16px',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-lg)',
+              background: 'var(--bg-primary)',
+              color: 'var(--text-primary)',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all var(--transition-fast)'
+            }}
           >
-            <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
-          </button>
+            {loading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              >
+                <RefreshCw size={16} />
+              </motion.div>
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            <span>{t('systemMonitor.refresh')}</span>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
 
       {monitor && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Metrics Grid */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '24px',
+            marginBottom: '32px'
+          }}>
+            {/* CPU Card */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+              transition={{ duration: 0.4 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
+                padding: '24px',
+                boxShadow: 'var(--shadow-sm)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Cpu className="w-5 h-5 text-blue-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('systemMonitor.cpu')}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white'
+                  }}>
+                    <Cpu size={18} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {t('systemMonitor.cpu')}
+                  </h3>
                 </div>
-                <span className={`text-2xl font-bold ${getUsageColor(monitor.cpu.usagePercent)}`}>
+                <span style={{
+                  fontSize: 'var(--font-size-xl)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: getUsageColor(monitor.cpu.usagePercent)
+                }}>
                   {monitor.cpu.usagePercent.toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
-                <div className={`${getBarColor(monitor.cpu.usagePercent)} h-3 rounded-full transition-all`} style={{ width: `${monitor.cpu.usagePercent}%` }} />
+              <div style={{
+                width: '100%',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-full)',
+                height: '8px',
+                marginBottom: '20px',
+                overflow: 'hidden'
+              }}>
+                <motion.div 
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${monitor.cpu.usagePercent}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  style={{
+                    height: '100%',
+                    borderRadius: 'var(--radius-full)',
+                    background: getBarColor(monitor.cpu.usagePercent),
+                    boxShadow: '0 0 12px rgba(0,0,0,0.1)'
+                  }}
+                />
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(60px, 1fr))',
+                gap: '12px'
+              }}>
                 {monitor.cpu.cores.slice(0, 8).map((core) => (
-                  <div key={core.coreId} className="text-center">
-                    <div className="text-xs text-gray-500">#{core.coreId}</div>
-                    <div className={`text-sm font-medium ${getUsageColor(core.usage)}`}>{core.usage.toFixed(0)}%</div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mt-1">
-                      <div className={`${getBarColor(core.usage)} h-1.5 rounded-full`} style={{ width: `${core.usage}%` }} />
+                  <motion.div 
+                    key={core.coreId}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: core.coreId * 0.05 }}
+                    style={{ textAlign: 'center' }}
+                  >
+                    <div style={{
+                      fontSize: 'var(--font-size-xs)',
+                      color: 'var(--text-muted)',
+                      marginBottom: '4px'
+                    }}>
+                      #{core.coreId}
                     </div>
-                  </div>
+                    <div style={{
+                      fontSize: 'var(--font-size-sm)',
+                      fontWeight: 'var(--font-weight-medium)',
+                      color: getUsageColor(core.usage),
+                      marginBottom: '6px'
+                    }}>
+                      {core.usage.toFixed(0)}%
+                    </div>
+                    <div style={{
+                      width: '100%',
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: 'var(--radius-full)',
+                      height: '4px'
+                    }}>
+                      <motion.div 
+                        initial={{ width: '0%' }}
+                        animate={{ width: `${core.usage}%` }}
+                        transition={{ duration: 0.6 }}
+                        style={{
+                          height: '100%',
+                          borderRadius: 'var(--radius-full)',
+                          background: getBarColor(core.usage)
+                        }}
+                      />
+                    </div>
+                  </motion.div>
                 ))}
               </div>
             </motion.div>
 
+            {/* Memory Card */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+              transition={{ duration: 0.4, delay: 0.1 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
+                padding: '24px',
+                boxShadow: 'var(--shadow-sm)'
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <MemoryStick className="w-5 h-5 text-purple-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('systemMonitor.memory')}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'linear-gradient(135deg, #a855f7, #c084fc)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white'
+                  }}>
+                    <MemoryStick size={18} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {t('systemMonitor.memory')}
+                  </h3>
                 </div>
-                <span className={`text-2xl font-bold ${getUsageColor(monitor.memory.percent)}`}>
+                <span style={{
+                  fontSize: 'var(--font-size-xl)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: getUsageColor(monitor.memory.percent)
+                }}>
                   {monitor.memory.percent.toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
-                <div className={`${getBarColor(monitor.memory.percent)} h-3 rounded-full transition-all`} style={{ width: `${monitor.memory.percent}%` }} />
+              <div style={{
+                width: '100%',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-full)',
+                height: '8px',
+                marginBottom: '20px',
+                overflow: 'hidden'
+              }}>
+                <motion.div 
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${monitor.memory.percent}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  style={{
+                    height: '100%',
+                    borderRadius: 'var(--radius-full)',
+                    background: getBarColor(monitor.memory.percent),
+                    boxShadow: '0 0 12px rgba(0,0,0,0.1)'
+                  }}
+                />
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '16px',
+                textAlign: 'center'
+              }}>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.total')}</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{monitor.memory.totalGb.toFixed(1)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.total')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {monitor.memory.totalGb.toFixed(1)} GB
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.used')}</p>
-                  <p className={`text-lg font-semibold ${getUsageColor(monitor.memory.percent)}`}>{monitor.memory.usedGb.toFixed(1)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.used')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: getUsageColor(monitor.memory.percent)
+                  }}>
+                    {monitor.memory.usedGb.toFixed(1)} GB
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.free')}</p>
-                  <p className="text-lg font-semibold text-green-600">{monitor.memory.freeGb.toFixed(1)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.free')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--success-color)'
+                  }}>
+                    {monitor.memory.freeGb.toFixed(1)} GB
+                  </p>
                 </div>
               </div>
             </motion.div>
 
+            {/* Disk Card */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+              transition={{ duration: 0.4, delay: 0.2 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
+                padding: '24px',
+                boxShadow: 'var(--shadow-sm)'
+              }}
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <HardDrive className="w-5 h-5 text-amber-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('systemMonitor.disk')}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white'
+                  }}>
+                    <HardDrive size={18} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {t('systemMonitor.disk')}
+                  </h3>
                 </div>
-                <span className={`text-2xl font-bold ${getUsageColor(monitor.disk.percent)}`}>
+                <span style={{
+                  fontSize: 'var(--font-size-xl)',
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: getUsageColor(monitor.disk.percent)
+                }}>
                   {monitor.disk.percent.toFixed(1)}%
                 </span>
               </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
-                <div className={`${getBarColor(monitor.disk.percent)} h-3 rounded-full transition-all`} style={{ width: `${monitor.disk.percent}%` }} />
+              <div style={{
+                width: '100%',
+                background: 'var(--bg-tertiary)',
+                borderRadius: 'var(--radius-full)',
+                height: '8px',
+                marginBottom: '20px',
+                overflow: 'hidden'
+              }}>
+                <motion.div 
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${monitor.disk.percent}%` }}
+                  transition={{ duration: 0.8, ease: 'easeOut' }}
+                  style={{
+                    height: '100%',
+                    borderRadius: 'var(--radius-full)',
+                    background: getBarColor(monitor.disk.percent),
+                    boxShadow: '0 0 12px rgba(0,0,0,0.1)'
+                  }}
+                />
               </div>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '16px',
+                textAlign: 'center'
+              }}>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.total')}</p>
-                  <p className="text-lg font-semibold text-gray-900 dark:text-white">{monitor.disk.totalGb.toFixed(0)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.total')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {monitor.disk.totalGb.toFixed(0)} GB
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.used')}</p>
-                  <p className={`text-lg font-semibold ${getUsageColor(monitor.disk.percent)}`}>{monitor.disk.usedGb.toFixed(0)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.used')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: getUsageColor(monitor.disk.percent)
+                  }}>
+                    {monitor.disk.usedGb.toFixed(0)} GB
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">{t('systemMonitor.free')}</p>
-                  <p className="text-lg font-semibold text-green-600">{monitor.disk.freeGb.toFixed(0)} GB</p>
+                  <p style={{
+                    fontSize: 'var(--font-size-xs)',
+                    color: 'var(--text-muted)',
+                    marginBottom: '4px'
+                  }}>
+                    {t('systemMonitor.free')}
+                  </p>
+                  <p style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--success-color)'
+                  }}>
+                    {monitor.disk.freeGb.toFixed(0)} GB
+                  </p>
                 </div>
               </div>
             </motion.div>
 
+            {/* Network Card */}
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6"
+              transition={{ duration: 0.4, delay: 0.3 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
+                padding: '24px',
+                boxShadow: 'var(--shadow-sm)'
+              }}
             >
-              <div className="flex items-center gap-2 mb-4">
-                <Network className="w-5 h-5 text-cyan-500" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">{t('systemMonitor.network')}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, #06b6d4, #38bdf8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white'
+                }}>
+                  <Network size={18} />
+                </div>
+                <h3 style={{
+                  margin: 0,
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  color: 'var(--text-primary)'
+                }}>
+                  {t('systemMonitor.network')}
+                </h3>
               </div>
               {monitor.network.length === 0 ? (
-                <p className="text-sm text-gray-400">{t('systemMonitor.noNetwork')}</p>
+                <div style={{
+                  padding: '20px',
+                  background: 'var(--bg-tertiary)',
+                  borderRadius: 'var(--radius-lg)',
+                  textAlign: 'center'
+                }}>
+                  <p style={{
+                    color: 'var(--text-muted)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}>
+                    {t('systemMonitor.noNetwork')}
+                  </p>
+                </div>
               ) : (
-                <div className="space-y-3">
+                <div style={{ gap: '12px', display: 'flex', flexDirection: 'column', marginBottom: '20px' }}>
                   {monitor.network.map((iface) => (
-                    <div key={iface.name} className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                    <motion.div 
+                      key={iface.name}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.3 }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        background: 'var(--bg-tertiary)',
+                        borderRadius: 'var(--radius-lg)',
+                        border: '1px solid var(--border-subtle)',
+                        transition: 'all var(--transition-fast)'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-secondary)';
+                        e.currentTarget.style.borderColor = 'var(--border-color)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'var(--bg-tertiary)';
+                        e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                      }}
+                    >
                       <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">{iface.name}</p>
-                        <p className="text-xs text-gray-500">{iface.ipv4 || '—'}</p>
+                        <p style={{
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: 'var(--text-primary)',
+                          marginBottom: '4px'
+                        }}>
+                          {iface.name}
+                        </p>
+                        <p style={{
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--text-muted)'
+                        }}>
+                          {iface.ipv4 || '—'}
+                        </p>
                       </div>
-                      <div className="text-right text-xs text-gray-500">
-                        <p>↑ {formatBytes(iface.bytesSent)}</p>
-                        <p>↓ {formatBytes(iface.bytesRecv)}</p>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--text-secondary)'
+                        }}>
+                          ↑ {formatBytes(iface.bytesSent)}
+                        </p>
+                        <p style={{
+                          fontSize: 'var(--font-size-xs)',
+                          color: 'var(--text-secondary)'
+                        }}>
+                          ↓ {formatBytes(iface.bytesRecv)}
+                        </p>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               )}
-              <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                <p className="text-sm text-gray-500">{t('systemMonitor.uptime')}</p>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatUptime(monitor.uptimeSeconds)}</p>
+              <div style={{
+                paddingTop: '16px',
+                borderTop: '1px solid var(--border-subtle)'
+              }}>
+                <p style={{
+                  fontSize: 'var(--font-size-xs)',
+                  color: 'var(--text-muted)',
+                  marginBottom: '4px'
+                }}>
+                  {t('systemMonitor.uptime')}
+                </p>
+                <p style={{
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: 'var(--font-weight-semibold)',
+                  color: 'var(--text-primary)'
+                }}>
+                  {formatUptime(monitor.uptimeSeconds)}
+                </p>
               </div>
             </motion.div>
           </div>
 
+          {/* Processes Table */}
           {processes.length > 0 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              style={{
+                background: 'var(--bg-card)',
+                borderRadius: 'var(--radius-xl)',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: 'var(--shadow-sm)',
+                overflow: 'hidden'
+              }}
             >
-              <button
+              <motion.button
                 onClick={() => setShowProcesses(!showProcesses)}
-                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '20px 24px',
+                  background: 'var(--bg-secondary)',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all var(--transition-fast)'
+                }}
+                whileHover={{ background: 'var(--bg-tertiary)' }}
               >
-                <div className="flex items-center gap-2">
-                  <Terminal className="w-5 h-5 text-gray-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">{t('systemMonitor.topProcesses')}</h3>
-                  <span className="text-sm text-gray-500">({processes.length})</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'var(--bg-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--text-secondary)'
+                  }}>
+                    <Terminal size={16} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)'
+                  }}>
+                    {t('systemMonitor.topProcesses')}
+                  </h3>
+                  <span style={{
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--text-muted)',
+                    background: 'var(--bg-primary)',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-full)'
+                  }}>
+                    ({processes.length})
+                  </span>
                 </div>
-                {showProcesses ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-              </button>
-              {showProcesses && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead className="bg-gray-50 dark:bg-gray-900">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.pid')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.processName')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.cpuUsage')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.memUsage')}</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.status')}</th>
-                        <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">{t('systemMonitor.actions')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {processes.slice(0, 20).map((proc) => (
-                        <tr key={proc.pid} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                          <td className="px-4 py-3 text-gray-900 dark:text-white font-mono">{proc.pid}</td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white truncate max-w-[200px]" title={proc.name}>{proc.name}</td>
-                          <td className={`px-4 py-3 font-medium ${getUsageColor(proc.cpuPercent)}`}>{proc.cpuPercent.toFixed(1)}%</td>
-                          <td className="px-4 py-3 text-gray-900 dark:text-white">{proc.memoryMb} MB</td>
-                          <td className="px-4 py-3"><span className="px-2 py-1 rounded-full text-xs bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">{proc.status}</span></td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={() => handleKillProcess(proc.pid, proc.name)}
-                              className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
-                              title={t('systemMonitor.kill')}
+                <motion.div
+                  animate={{ rotate: showProcesses ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <ChevronDown size={20} style={{ color: 'var(--text-muted)' }} />
+                </motion.div>
+              </motion.button>
+              <AnimatePresence>
+                {showProcesses && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{
+                        width: '100%',
+                        borderCollapse: 'collapse',
+                        fontSize: 'var(--font-size-sm)'
+                      }}>
+                        <thead style={{
+                          background: 'var(--bg-tertiary)'
+                        }}>
+                          <tr>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.pid')}
+                            </th>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.processName')}
+                            </th>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.cpuUsage')}
+                            </th>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.memUsage')}
+                            </th>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'left',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.status')}
+                            </th>
+                            <th style={{
+                              padding: '12px 16px',
+                              textAlign: 'right',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: 'var(--font-weight-semibold)',
+                              color: 'var(--text-muted)',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              borderBottom: '1px solid var(--border-subtle)'
+                            }}>
+                              {t('systemMonitor.actions')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {processes.slice(0, 20).map((proc) => (
+                            <motion.tr 
+                              key={proc.pid}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
+                              style={{
+                                borderBottom: '1px solid var(--border-subtle)',
+                                transition: 'all var(--transition-fast)'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--bg-tertiary)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
                             >
-                              <XCircle className="w-4 h-4" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                              <td style={{
+                                padding: '12px 16px',
+                                color: 'var(--text-primary)',
+                                fontFamily: 'monospace'
+                              }}>
+                                {proc.pid}
+                              </td>
+                              <td style={{
+                                padding: '12px 16px',
+                                color: 'var(--text-primary)',
+                                maxWidth: '200px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }} title={proc.name}>
+                                {proc.name}
+                              </td>
+                              <td style={{
+                                padding: '12px 16px',
+                                fontWeight: 'var(--font-weight-medium)',
+                                color: getUsageColor(proc.cpuPercent)
+                              }}>
+                                {proc.cpuPercent.toFixed(1)}%
+                              </td>
+                              <td style={{
+                                padding: '12px 16px',
+                                color: 'var(--text-primary)'
+                              }}>
+                                {proc.memoryMb} MB
+                              </td>
+                              <td style={{
+                                padding: '12px 16px'
+                              }}>
+                                <span style={{
+                                  padding: '4px 10px',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: 'var(--font-size-xs)',
+                                  background: 'var(--success-light)',
+                                  color: 'var(--success-color)',
+                                  fontWeight: 'var(--font-weight-medium)'
+                                }}>
+                                  {proc.status}
+                                </span>
+                              </td>
+                              <td style={{
+                                padding: '12px 16px',
+                                textAlign: 'right'
+                              }}>
+                                <motion.button
+                                  onClick={() => handleKillProcess(proc.pid, proc.name)}
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.95 }}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    cursor: 'pointer',
+                                    padding: '8px',
+                                    borderRadius: 'var(--radius-md)',
+                                    color: 'var(--error-color)',
+                                    transition: 'all var(--transition-fast)'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--error-light)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'none';
+                                  }}
+                                  title={t('systemMonitor.kill')}
+                                >
+                                  <XCircle size={16} />
+                                </motion.button>
+                              </td>
+                            </motion.tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </>

@@ -14,6 +14,7 @@ import {
   Clock,
 } from "lucide-react";
 import sdk from "../services/agentos-sdk";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChatMessage {
   id: string;
@@ -151,166 +152,318 @@ const AIChat: React.FC<{
         }}
       >
         {messages.length === 0 ? (
-          <div style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "20px",
-            color: "var(--text-muted)",
-          }}>
-            <div style={{
-              width: "72px",
-              height: "72px",
-              borderRadius: "50%",
-              background: "linear-gradient(135deg, #6366f1, #a78bfa)",
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5 }}
+            style={{
+              flex: 1,
               display: "flex",
+              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow: "0 8px 32px rgba(99,102,241,0.3)",
-            }}>
-              <Sparkles size={32} color="white" />
-            </div>
-            <div>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: "var(--text-primary)" }}>
+              gap: "24px",
+              color: "var(--text-muted)",
+            }}
+          >
+            <motion.div 
+              animate={{ 
+                scale: [1, 1.05, 1],
+                boxShadow: [
+                  '0 8px 32px rgba(99,102,241,0.3)',
+                  '0 12px 40px rgba(99,102,241,0.4)',
+                  '0 8px 32px rgba(99,102,241,0.3)'
+                ]
+              }}
+              transition={{ 
+                duration: 3,
+                repeat: Infinity,
+                repeatType: "reverse"
+              }}
+              style={{
+                width: "80px",
+                height: "80px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, var(--primary-color), var(--info-color))",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Sparkles size={36} color="white" />
+            </motion.div>
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: "var(--font-size-xl)", 
+                fontWeight: 'var(--font-weight-bold)', 
+                color: "var(--text-primary)"
+              }}>
                 AgentOS 智能助手
               </h3>
-              <p style={{ margin: "8px 0 0 0", fontSize: "14px", maxWidth: "400px", textAlign: "center", lineHeight: 1.5 }}>
+              <p style={{ 
+                margin: "12px 0 0 0", 
+                fontSize: "var(--font-size-md)", 
+                maxWidth: "400px", 
+                textAlign: "center", 
+                lineHeight: 1.5,
+                color: 'var(--text-secondary)'
+              }}>
                 通过自然语言与 AgentOS 交互，我可以帮您管理服务、操作智能体、查询系统状态、配置模型。
               </p>
             </div>
 
             {/* Suggestions */}
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", justifyContent: "center", marginTop: "8px" }}>
+            <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center", marginTop: "8px" }}>
               {SUGGESTIONS.map((s, i) => (
-                <button
+                <motion.button
                   key={i}
                   onClick={() => handleSuggestionClick(s)}
-                  className="btn btn-ghost"
+                  whileHover={{
+                    y: -2,
+                    boxShadow: 'var(--shadow-md)',
+                    borderColor: 'var(--primary-color)'
+                  }}
+                  whileTap={{ scale: 0.98 }}
                   style={{
-                    padding: "10px 18px",
-                    fontSize: "13px",
+                    padding: "12px 20px",
+                    fontSize: "var(--font-size-sm)",
                     border: "1px solid var(--border-subtle)",
-                    borderRadius: "var(--radius-md)",
+                    borderRadius: "var(--radius-lg)",
                     display: "flex",
                     alignItems: "center",
-                    gap: "6px",
+                    gap: "8px",
                     transition: "all var(--transition-fast)",
+                    background: "var(--bg-tertiary)",
+                    color: "var(--text-primary)",
+                    cursor: "pointer",
                   }}
                 >
-                  <s.icon size={14} />
+                  <s.icon size={16} style={{ color: 'var(--primary-color)' }} />
                   {s.text}
-                </button>
+                </motion.button>
               ))}
             </div>
-          </div>
+          </motion.div>
         ) : (
           <>
             {!compact && (
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
-                <span style={{ fontSize: "13px", color: "var(--text-muted)" }}>
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "space-between", 
+                alignItems: "center", 
+                marginBottom: "8px",
+                paddingBottom: "12px",
+                borderBottom: "1px solid var(--border-subtle)"
+              }}>
+                <span style={{ 
+                  fontSize: "var(--font-size-sm)", 
+                  color: "var(--text-muted)"
+                }}>
                   {messages.length} 条消息 · {messages.reduce((sum, m) => sum + (m.tokenCount || 0), 0)} tokens
                 </span>
-                <button onClick={handleClear} className="btn btn-ghost btn-sm">
-                  <Trash2 size={14} /> 清空
-                </button>
+                <motion.button 
+                  onClick={handleClear}
+                  whileHover={{ color: 'var(--error-color)' }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    padding: "6px 12px",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "var(--font-size-xs)",
+                    color: "var(--text-muted)",
+                    transition: "all var(--transition-fast)"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-tertiary)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                >
+                  <Trash2 size={14} />
+                  清空
+                </motion.button>
               </div>
             )}
 
-            {messages.map((msg) => (
-              <div key={msg.id} style={{
-                display: "flex",
-                gap: "12px",
-                maxWidth: compact ? "100%" : "85%",
-                alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
-                animation: "fadeIn 0.25s ease-out",
-              }}>
-                {msg.role !== "user" && (
+            <AnimatePresence>
+              {messages.map((msg) => (
+                <motion.div 
+                  key={msg.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    maxWidth: compact ? "100%" : "85%",
+                    alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
+                  }}
+                >
+                  {msg.role !== "user" && (
+                    <div style={{
+                      width: "36px", 
+                      height: "36px", 
+                      borderRadius: "var(--radius-md)",
+                      background: "linear-gradient(135deg, var(--primary-color), var(--info-color))",
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      boxShadow: 'var(--shadow-sm)',
+                    }}>
+                      <Bot size={18} color="white" />
+                    </div>
+                  )}
+
+                  <motion.div 
+                    initial={{ scale: 0.95, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.2, delay: 0.1 }}
+                    style={{
+                      maxWidth: "100%",
+                      padding: "16px 20px",
+                      borderRadius: msg.role === "user"
+                        ? "var(--radius-xl) var(--radius-xl) var(--radius-sm) var(--radius-xl)"
+                        : "var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm)",
+                      background: msg.role === "user"
+                        ? "linear-gradient(135deg, var(--primary-color), var(--primary-light))"
+                        : "var(--bg-secondary)",
+                      color: msg.role === "user" ? "white" : "var(--text-primary)",
+                      boxShadow: "var(--shadow-sm)",
+                      lineHeight: 1.65,
+                      fontSize: "var(--font-size-md)",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Render markdown-like content */}
+                    <div style={{ 
+                      whiteSpace: "pre-wrap", 
+                      wordBreak: "break-word",
+                      marginBottom: "8px"
+                    }}>{msg.content}</div>
+
+                    {/* Meta bar */}
+                    <div style={{
+                      display: "flex", 
+                      alignItems: "center", 
+                      gap: "10px",
+                      paddingTop: "8px",
+                      borderTop: msg.role === "user" ? "1px solid rgba(255,255,255,0.15)" : "1px solid var(--border-subtle)",
+                      fontSize: "var(--font-size-xs)",
+                      opacity: 0.7,
+                    }}>
+                      <span>{msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
+                      {msg.tokenCount && <span>{msg.tokenCount} tokens</span>}
+                      <motion.button
+                        onClick={() => handleCopy(msg.content, msg.id)}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        style={{ 
+                          background: "none", 
+                          border: "none", 
+                          cursor: "pointer", 
+                          padding: "4px", 
+                          marginLeft: "auto", 
+                          opacity: 0.7,
+                          borderRadius: "var(--radius-sm)"
+                        }}
+                        title="复制"
+                      >
+                        {copiedId === msg.id ? (
+                          <motion.div 
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                          >
+                            <Check size={14} style={{ color: msg.role === "user" ? "white" : "var(--text-primary)" }} />
+                          </motion.div>
+                        ) : (
+                          <Copy size={14} style={{ color: msg.role === "user" ? "white" : "var(--text-primary)" }} />
+                        )}
+                      </motion.button>
+                    </div>
+                  </motion.div>
+
+                  {msg.role === "user" && (
+                    <div style={{
+                      width: "36px", 
+                      height: "36px", 
+                      borderRadius: "var(--radius-md)",
+                      background: "var(--bg-tertiary)", 
+                      border: "1px solid var(--border-subtle)",
+                      display: "flex", 
+                      alignItems: "center", 
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      <User size={18} style={{ color: 'var(--text-secondary)' }} />
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+
+              {isLoading && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  style={{
+                    display: "flex", 
+                    gap: "12px",
+                    alignSelf: "flex-start", 
+                    maxWidth: "85%"
+                  }}
+                >
                   <div style={{
-                    width: "34px", height: "34px", borderRadius: "var(--radius-sm)",
-                    background: "linear-gradient(135deg, #6366f1, #a78bfa)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
+                    width: "36px", 
+                    height: "36px", 
+                    borderRadius: "var(--radius-md)",
+                    background: "linear-gradient(135deg, var(--primary-color), var(--info-color))",
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center", 
                     flexShrink: 0,
+                    boxShadow: 'var(--shadow-sm)',
                   }}>
-                    <Bot size={17} color="white" />
+                    <Bot size={18} color="white" />
                   </div>
-                )}
-
-                <div style={{
-                  maxWidth: "100%",
-                  padding: "12px 16px",
-                  borderRadius: msg.role === "user"
-                    ? "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm)"
-                    : "var(--radius-lg) var(--radius-lg) var(--radius-sm) var(--radius-lg)",
-                  background: msg.role === "user"
-                    ? "linear-gradient(135deg, #6366f1, #818cf8)"
-                    : "var(--bg-secondary)",
-                  color: msg.role === "user" ? "white" : "var(--text-primary)",
-                  boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                  lineHeight: 1.65,
-                  fontSize: "14px",
-                  position: "relative",
-                }}>
-                  {/* Render markdown-like content */}
-                  <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{msg.content}</div>
-
-                  {/* Meta bar */}
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: "10px",
-                    marginTop: "8px", paddingTop: "6px",
-                    borderTop: msg.role === "user" ? "1px solid rgba(255,255,255,0.15)" : "1px solid var(--border-subtle)",
-                    fontSize: "11px",
-                    opacity: 0.7,
-                  }}>
-                    <span>{msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>
-                    {msg.tokenCount && <span>{msg.tokenCount} tokens</span>}
-                    <button
-                      onClick={() => handleCopy(msg.content, msg.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", marginLeft: "auto", opacity: 0.7 }}
-                      title="复制"
-                    >
-                      {copiedId === msg.id ? <Check size={12} /> : <Copy size={12} />}
-                    </button>
-                  </div>
-                </div>
-
-                {msg.role === "user" && (
-                  <div style={{
-                    width: "34px", height: "34px", borderRadius: "var(--radius-sm)",
-                    background: "var(--bg-tertiary)", border: "1px solid var(--border-subtle)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0,
-                  }}>
-                    <User size={17} />
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {isLoading && (
-              <div style={{
-                display: "flex", gap: "12px",
-                alignSelf: "flex-start", maxWidth: "85%", animation: "fadeIn 0.25s ease-out",
-              }}>
-                <div style={{
-                  width: "34px", height: "34px", borderRadius: "var(--radius-sm)",
-                  background: "linear-gradient(135deg, #6366f1, #a78bfa)",
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>
-                  <Bot size={17} color="white" />
-                </div>
-                <div style={{
-                  padding: "14px 18px", borderRadius: "var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-sm)",
-                  background: "var(--bg-secondary)", border: "1px solid var(--border-subtle)",
-                }}>
-                  <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                    <div className="loading-spinner" style={{ width: 14, height: 14, borderWidth: "2px" }} />
-                    <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>正在思考...</span>
-                  </div>
-                </div>
-              </div>
-            )}
+                  <motion.div 
+                    animate={{ 
+                      opacity: [0.7, 1, 0.7]
+                    }}
+                    transition={{ 
+                      duration: 1.5,
+                      repeat: Infinity
+                    }}
+                    style={{
+                      padding: "16px 20px", 
+                      borderRadius: "var(--radius-xl) var(--radius-xl) var(--radius-xl) var(--radius-sm)",
+                      background: "var(--bg-secondary)", 
+                      border: "1px solid var(--border-subtle)",
+                      boxShadow: 'var(--shadow-sm)',
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                      <div style={{
+                        width: 16, 
+                        height: 16, 
+                        border: "2px solid var(--primary-color)",
+                        borderTop: "2px solid transparent",
+                        borderRadius: "50%",
+                        animation: "spin 1s linear infinite"
+                      }} />
+                      <span style={{ 
+                        fontSize: "var(--font-size-sm)", 
+                        color: "var(--text-secondary)" 
+                      }}>正在思考...</span>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             <div ref={messagesEndRef} />
           </>
         )}
@@ -318,29 +471,34 @@ const AIChat: React.FC<{
 
       {/* Input Area */}
       <div style={{
-        padding: compact ? "12px" : "16px 20px",
+        padding: compact ? "12px" : "20px",
         borderTop: "1px solid var(--border-subtle)",
         background: "var(--bg-secondary)",
       }}>
-        <div style={{
-          display: "flex",
-          gap: "10px",
-          alignItems: "flex-end",
-          background: "var(--bg-primary)",
-          border: "1px solid var(--border-color)",
-          borderRadius: "var(--radius-lg)",
-          padding: "8px 12px",
-          transition: "border-color var(--transition-fast)",
-        }}
-        onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary-color)"; }}
-        onBlur={(e) => { e.currentTarget.style.borderColor = ""; }}
+        <motion.div 
+          style={{
+            display: "flex",
+            gap: "12px",
+            alignItems: "flex-end",
+            background: "var(--bg-primary)",
+            border: "1px solid var(--border-color)",
+            borderRadius: "var(--radius-xl)",
+            padding: "12px 16px",
+            transition: "all var(--transition-fast)",
+          }}
+          whileHover={{ borderColor: 'var(--primary-color)' }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = "var(--primary-color)"; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = "var(--border-color)"; }}
         >
           <textarea
             ref={inputRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
+              if (e.key === "Enter" && !e.shiftKey) { 
+                e.preventDefault(); 
+                handleSend(); 
+              }
             }}
             placeholder="输入消息... (Enter 发送)"
             rows={1}
@@ -351,22 +509,52 @@ const AIChat: React.FC<{
               outline: "none",
               background: "transparent",
               color: "var(--text-primary)",
-              fontSize: "14px",
+              fontSize: "var(--font-size-md)",
               fontFamily: "inherit",
               maxHeight: "120px",
               lineHeight: 1.5,
             }}
           />
-          <button
-            className="btn btn-primary"
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
             onClick={() => handleSend()}
             disabled={!inputValue.trim() || isLoading}
-            style={{ flexShrink: 0, padding: "8px 14px" }}
+            style={{
+              flexShrink: 0,
+              padding: "10px 18px",
+              borderRadius: "var(--radius-lg)",
+              background: inputValue.trim() && !isLoading ? "linear-gradient(135deg, var(--primary-color), var(--info-color))" : "var(--bg-tertiary)",
+              color: inputValue.trim() && !isLoading ? "white" : "var(--text-muted)",
+              border: "none",
+              cursor: inputValue.trim() && !isLoading ? "pointer" : "not-allowed",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              boxShadow: inputValue.trim() && !isLoading ? "var(--shadow-sm)" : "none",
+              transition: "all var(--transition-fast)",
+            }}
           >
-            {isLoading ? <RotateCcw size={16} className="spin" /> : <Send size={16} />}
-          </button>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", fontSize: "11.5px", color: "var(--text-muted)" }}>
+            {isLoading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              >
+                <RotateCcw size={18} />
+              </motion.div>
+            ) : (
+              <Send size={18} />
+            )}
+          </motion.button>
+        </motion.div>
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginTop: "12px", 
+          fontSize: "var(--font-size-xs)", 
+          color: "var(--text-muted)"
+        }}>
           <span>Shift+Enter 换行 · Enter 发送</span>
           <span>模型: {model}</span>
         </div>

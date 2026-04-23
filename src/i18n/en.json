@@ -21,10 +21,16 @@
     "aiChat": "AI Chat",
     "memoryEvolution": "Memory Evolution",
     "tools": "Tool Manager",
-    "systemMonitor": "System Monitor",
     "cognitiveLoop": "Cognitive Loop",
     "protocols": "Protocol Playground",
-    "dualThinking": "Dual Thinking System"
+    "dualThinking": "Dual Thinking System",
+    "categories": {
+      "core": "Core",
+      "advanced": "Advanced",
+      "system": "System"
+    },
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
   },
   "dashboard": {
     "title": "System Overview",
@@ -336,8 +342,9 @@
     "title": "Settings",
     "description": "Customize your AgentOS Desktop experience",
     "general": "General",
+    "appearance": "Appearance & Preferences",
     "language": "Language",
-    "languageHelp": "Change the application language. Takes effect after saving.",
+    "languageHelp": "Change the application language. Takes effect immediately.",
     "theme": "Theme",
     "themeDark": "Dark",
     "themeLight": "Light",
