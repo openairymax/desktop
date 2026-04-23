@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,169 +18,445 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', path: '/', icon: <LayoutDashboard className="w-5 h-5" />, label: 'nav.dashboard', category: 'core' },
-  { key: 'services', path: '/services', icon: <Server className="w-5 h-5" />, label: 'nav.services', category: 'core' },
-  { key: 'agents', path: '/agents', icon: <Bot className="w-5 h-5" />, label: 'nav.agents', category: 'core' },
-  { key: 'tasks', path: '/tasks', icon: <ListTodo className="w-5 h-5" />, label: 'nav.tasks', category: 'core' },
-  { key: 'dual-thinking', path: '/dual-thinking', icon: <Sparkles className="w-5 h-5" />, label: 'nav.dualThinking', category: 'advanced' },
-  { key: 'agent-runtime', path: '/agent-runtime', icon: <Cpu className="w-5 h-5" />, label: 'nav.agentRuntime', category: 'advanced' },
-  { key: 'memory-evolution', path: '/memory-evolution', icon: <Brain className="w-5 h-5" />, label: 'nav.memoryEvolution', category: 'advanced' },
-  { key: 'cognitive-loop', path: '/cognitive-loop', icon: <Eye className="w-5 h-5" />, label: 'nav.cognitiveLoop', category: 'advanced' },
-  { key: 'tools', path: '/tools', icon: <Wrench className="w-5 h-5" />, label: 'nav.tools', category: 'advanced' },
-  { key: 'ai-chat', path: '/ai-chat', icon: <MessageSquare className="w-5 h-5" />, label: 'nav.aiChat', category: 'advanced' },
-  { key: 'protocols', path: '/protocols', icon: <Globe className="w-5 h-5" />, label: 'nav.protocols', category: 'advanced' },
-  { key: 'system-monitor', path: '/system-monitor', icon: <BarChart3 className="w-5 h-5" />, label: 'nav.systemMonitor', category: 'system' },
-  { key: 'logs', path: '/logs', icon: <FileText className="w-5 h-5" />, label: 'nav.logs', category: 'system' },
-  { key: 'terminal', path: '/terminal', icon: <Terminal className="w-5 h-5" />, label: 'nav.terminal', category: 'system' },
-  { key: 'settings', path: '/settings', icon: <SettingsIcon className="w-5 h-5" />, label: 'nav.settings', category: 'system' },
+  { key: 'dashboard', path: '/', icon: <LayoutDashboard size={18} />, label: 'nav.dashboard', category: 'core' },
+  { key: 'services', path: '/services', icon: <Server size={18} />, label: 'nav.services', category: 'core' },
+  { key: 'agents', path: '/agents', icon: <Bot size={18} />, label: 'nav.agents', category: 'core' },
+  { key: 'tasks', path: '/tasks', icon: <ListTodo size={18} />, label: 'nav.tasks', category: 'core' },
+  { key: 'dual-thinking', path: '/dual-thinking', icon: <Sparkles size={18} />, label: 'nav.dualThinking', category: 'advanced' },
+  { key: 'agent-runtime', path: '/agent-runtime', icon: <Cpu size={18} />, label: 'nav.agentRuntime', category: 'advanced' },
+  { key: 'memory-evolution', path: '/memory-evolution', icon: <Brain size={18} />, label: 'nav.memoryEvolution', category: 'advanced' },
+  { key: 'cognitive-loop', path: '/cognitive-loop', icon: <Eye size={18} />, label: 'nav.cognitiveLoop', category: 'advanced' },
+  { key: 'tools', path: '/tools', icon: <Wrench size={18} />, label: 'nav.tools', category: 'advanced' },
+  { key: 'ai-chat', path: '/ai-chat', icon: <MessageSquare size={18} />, label: 'nav.aiChat', category: 'advanced' },
+  { key: 'protocols', path: '/protocols', icon: <Globe size={18} />, label: 'nav.protocols', category: 'advanced' },
+  { key: 'system-monitor', path: '/system-monitor', icon: <BarChart3 size={18} />, label: 'nav.systemMonitor', category: 'system' },
+  { key: 'logs', path: '/logs', icon: <FileText size={18} />, label: 'nav.logs', category: 'system' },
+  { key: 'terminal', path: '/terminal', icon: <Terminal size={18} />, label: 'nav.terminal', category: 'system' },
+  { key: 'settings', path: '/settings', icon: <SettingsIcon size={18} />, label: 'nav.settings', category: 'system' },
 ];
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const location = useLocation();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme');
+      return saved ? saved === 'dark' : true;
+    }
+    return true;
+  });
 
-  const toggleDark = () => {
-    setDarkMode(!darkMode);
-    document.documentElement.classList.toggle('dark');
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.remove('dark', 'light');
+    root.classList.add(darkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+  }, [darkMode]);
+
+  const toggleDark = () => setDarkMode(prev => !prev);
+
+  const renderNavItem = (item: NavItem) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <Link
+        key={item.key}
+        to={item.path}
+        onClick={() => setMobileOpen(false)}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: sidebarCollapsed ? '10px' : '10px 14px',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          transition: 'all 150ms ease',
+          color: isActive ? 'var(--primary-color)' : 'var(--text-secondary)',
+          backgroundColor: isActive ? 'var(--primary-light)' : 'transparent',
+          textDecoration: 'none',
+          fontSize: '13px',
+          fontWeight: isActive ? '500' : '400',
+          marginBottom: '2px',
+          whiteSpace: 'nowrap',
+          overflow: 'hidden',
+          justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+        }}
+        onMouseEnter={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+            e.currentTarget.style.color = 'var(--text-primary)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!isActive) {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary)';
+          }
+        }}
+        title={item.label}
+      >
+        <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.8 }}>{item.icon}</span>
+        {!sidebarCollapsed && (
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(item.label)}</span>
+        )}
+      </Link>
+    );
   };
 
-  const renderNavItems = (category: string) => (
-    <>
-      {NAV_ITEMS.filter(item => item.category === category).map(item => (
-        <Link
-          key={item.key}
-          to={item.path}
-          onClick={() => setMobileOpen(false)}
-          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-sm font-medium ${
-            location.pathname === item.path
-              ? 'bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
-          } ${sidebarCollapsed ? 'justify-center' : ''}`}
-          title={t(item.label)}
-        >
-          {item.icon}
-          {!sidebarCollapsed && <span>{t(item.label)}</span>}
-        </Link>
-      ))}
-    </>
+  const renderNavSection = (category: string, title: string) => (
+    <div style={{ marginBottom: '16px' }}>
+      {!sidebarCollapsed && (
+        <div style={{
+          fontSize: '10px',
+          fontWeight: '600',
+          color: 'var(--text-muted)',
+          padding: '0 14px',
+          marginBottom: '6px',
+          textTransform: 'uppercase',
+          letterSpacing: '0.08em',
+        }}>
+          {t(title)}
+        </div>
+      )}
+      {NAV_ITEMS.filter(item => item.category === category).map(renderNavItem)}
+    </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex">
-      {/* Mobile overlay */}
+    <div style={{
+      display: 'flex',
+      height: '100vh',
+      overflow: 'hidden',
+      backgroundColor: 'var(--bg-primary)',
+    }}>
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
             onClick={() => setMobileOpen(false)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 40,
+            }}
           />
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
       <motion.aside
-        className={`fixed lg:sticky top-0 left-0 h-screen z-50 lg:z-auto bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col transition-all duration-300 ${
-          sidebarCollapsed ? 'w-16' : 'w-64'
-        } ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+        initial={false}
+        animate={{ width: sidebarCollapsed ? '64px' : '240px' }}
+        transition={{ duration: 0.2 }}
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderRight: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          zIndex: 50,
+          position: 'relative',
+          flexShrink: 0,
+        }}
       >
-        {/* Logo */}
-        <div className={`flex items-center h-16 border-b border-gray-200 dark:border-gray-800 ${sidebarCollapsed ? 'justify-center px-2' : 'px-6'}`}>
+        <div style={{
+          height: '56px',
+          display: 'flex',
+          alignItems: 'center',
+          padding: sidebarCollapsed ? '0 12px' : '0 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+          flexShrink: 0,
+        }}>
           <motion.span
-            className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent"
+            style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
           >
             {sidebarCollapsed ? 'A' : 'AgentOS'}
           </motion.span>
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:block ml-auto p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+            style={{
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: '6px',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              transition: 'all 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-muted)';
+            }}
           >
-            {sidebarCollapsed ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronLeft className="w-4 h-4 text-gray-400" />}
+            {sidebarCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-6">
-          {!sidebarCollapsed && <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 px-3 uppercase tracking-wider">{t('nav.categories.core')}</div>}
-          {renderNavItems('core')}
-          {!sidebarCollapsed && <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 px-3 uppercase tracking-wider">{t('nav.categories.advanced')}</div>}
-          {renderNavItems('advanced')}
-          {!sidebarCollapsed && <div className="text-xs font-semibold text-gray-400 dark:text-gray-500 px-3 uppercase tracking-wider">{t('nav.categories.system')}</div>}
-          {renderNavItems('system')}
+        <nav style={{
+          flex: 1,
+          padding: '12px 8px',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+        }}>
+          {renderNavSection('core', 'nav.categories.core')}
+          {renderNavSection('advanced', 'nav.categories.advanced')}
+          {renderNavSection('system', 'nav.categories.system')}
         </nav>
 
-        {/* Footer */}
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800 space-y-2">
+        <div style={{
+          padding: '12px 8px',
+          borderTop: '1px solid var(--border-subtle)',
+          flexShrink: 0,
+        }}>
           <button
             onClick={toggleDark}
-            className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all ${sidebarCollapsed ? 'justify-center' : ''}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              width: '100%',
+              padding: '10px 14px',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              backgroundColor: 'transparent',
+              border: 'none',
+              fontFamily: 'inherit',
+              transition: 'all 150ms ease',
+              justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+              e.currentTarget.style.color = 'var(--text-primary)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
           >
-            {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             {!sidebarCollapsed && <span>{darkMode ? t('nav.lightMode') : t('nav.darkMode')}</span>}
           </button>
         </div>
       </motion.aside>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-white/80 dark:bg-gray-900/80 backdrop-blur border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-4 lg:px-6">
-          <div className="flex items-center gap-3">
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        backgroundColor: 'var(--bg-primary)',
+        overflow: 'hidden',
+        minWidth: 0,
+      }}>
+        <header style={{
+          height: '48px',
+          backgroundColor: 'var(--bg-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 20px',
+          borderBottom: '1px solid var(--border-subtle)',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <button
               onClick={() => setMobileOpen(true)}
-              className="lg:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              style={{
+                display: 'none',
+              }}
+              className="md:flex"
             >
-              <Menu className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+              <Menu size={18} />
             </button>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 style={{
+              fontSize: '14px',
+              fontWeight: '500',
+              color: 'var(--text-primary)',
+              margin: 0,
+            }}>
               {t(NAV_ITEMS.find(n => n.path === location.pathname)?.label || 'nav.dashboard')}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg relative">
-              <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button
+              style={{
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'transparent',
+                position: 'relative',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
+            >
+              <Bell size={15} />
+              <span style={{
+                position: 'absolute',
+                top: '6px',
+                right: '6px',
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--error-color)',
+              }} />
             </button>
             <button
               onClick={toggleDark}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg lg:hidden"
+              style={{
+                width: '30px',
+                height: '30px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '6px',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                border: 'none',
+                background: 'transparent',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                e.currentTarget.style.color = 'var(--text-primary)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--text-secondary)';
+              }}
             >
-              {darkMode ? <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" /> : <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
+            <div style={{
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '12px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              transition: 'transform 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+            >
               U
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <div style={{
+          flex: 1,
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          backgroundColor: 'var(--bg-primary)',
+          padding: '24px',
+        }}>
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
             >
               {children}
             </motion.div>
           </ErrorBoundary>
-        </main>
+        </div>
+
+        <footer style={{
+          height: '28px',
+          backgroundColor: 'var(--bg-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0 20px',
+          fontSize: '11px',
+          color: 'var(--text-muted)',
+          borderTop: '1px solid var(--border-subtle)',
+          flexShrink: 0,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--success-color)',
+              }} />
+              <span>AgentOS v2.1.0</span>
+            </div>
+            <span>Ready</span>
+          </div>
+          <div>
+            <span>{new Date().toLocaleDateString()}</span>
+          </div>
+        </footer>
       </div>
 
-      {/* Mobile close button */}
       <AnimatePresence>
         {mobileOpen && (
           <button
             onClick={() => setMobileOpen(false)}
-            className="fixed top-4 right-4 z-50 p-2 bg-white dark:bg-gray-800 rounded-lg shadow-lg lg:hidden"
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '16px',
+              zIndex: 60,
+              padding: '8px',
+              backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '6px',
+              border: '1px solid var(--border-subtle)',
+              cursor: 'pointer',
+              color: 'var(--text-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
-            <X className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            <X size={18} />
           </button>
         )}
       </AnimatePresence>

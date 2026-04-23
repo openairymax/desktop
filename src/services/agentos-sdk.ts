@@ -46,6 +46,7 @@ export interface TaskInfo {
   type?: string;
   status: string;
   progress: number;
+  priority?: string;
   createdAt: string;
   updatedAt?: string;
   result?: Record<string, unknown>;
