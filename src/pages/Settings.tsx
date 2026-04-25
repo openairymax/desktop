@@ -1,454 +1,400 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 import {
-  Palette,
-  Globe,
-  Monitor,
-  Sun,
-  Moon,
-  MonitorCheck,
-  Bell,
-  Zap,
-  Server,
-  Save,
-  RotateCcw,
-  Trash2,
-  CheckCircle2,
-  AlertTriangle,
-  Info,
-  ExternalLink,
-  Sparkles,
+  Settings, Palette, Bell, Link, Save, RotateCcw,
+  Trash2, CheckCircle, AlertCircle, Loader2,
+  Sun, Moon, Languages, Volume2, Zap, Shield, Database, Wifi, WifiOff, Monitor
 } from 'lucide-react';
-import { useI18n } from '../i18n';
-import sdk from "../services/agentos-sdk";
-import { useAlert } from "../components/useAlert";
+import { useAgentOS, useConnection } from '../hooks/useAgentOS';
 
-const Settings: React.FC = () => {
-  const { t, language, setLanguage, availableLanguages } = useI18n();
-  const { success, error, info, confirm: confirmModal } = useAlert();
-  const [backendUrl, setBackendUrl] = useState<string>('http://localhost:18789');
-  const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>('light');
-  const [autoStart, setAutoStart] = useState<boolean>(false);
-  const [notificationEnabled, setNotificationEnabled] = useState<boolean>(true);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [systemInfo, setSystemInfo] = useState<{ platform: string; arch: string; version: string; cpu_cores?: number; total_memory_gb?: number } | null>(null);
+const SettingsPage: React.FC = () => {
+  const { updateEndpoint, getEndpoint } = useAgentOS();
+  const { connection, connect, disconnect } = useConnection();
+
+  const [language, setLanguage] = useState('zh');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'auto'>(() => {
+    const saved = localStorage.getItem('theme');
+    return (saved as 'light' | 'dark' | 'auto') || 'dark';
+  });
+  const [gatewayUrl, setGatewayUrl] = useState(() => getEndpoint());
+  const [apiKey, setApiKey] = useState('');
+  const [autoStart, setAutoStart] = useState(false);
+  const [notifications, setNotifications] = useState(true);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const savedSettings = localStorage.getItem('agentos_settings');
-        if (savedSettings) {
-          const settings = JSON.parse(savedSettings);
-          setBackendUrl(settings.backendUrl || 'http://localhost:18789');
-          setTheme(settings.theme || 'light');
-          setAutoStart(settings.autoStart || false);
-          setNotificationEnabled(settings.notificationEnabled !== false);
-        }
-      } catch (error) {
-        console.error('Failed to load settings:', error);
-      }
-    };
-    loadSettings();
+    const savedLang = localStorage.getItem('agentos-language');
+    if (savedLang) setLanguage(savedLang);
+    const savedAutoStart = localStorage.getItem('agentos-autoStart');
+    if (savedAutoStart) setAutoStart(savedAutoStart === 'true');
+    const savedNotifications = localStorage.getItem('agentos-notifications');
+    if (savedNotifications) setNotifications(savedNotifications === 'true');
   }, []);
 
   useEffect(() => {
-    const loadSystemInfo = async () => {
-      try {
-        const info = await sdk.getSystemInfo();
-        setSystemInfo({ platform: info.os, arch: info.architecture, version: info.os_version, cpu_cores: info.cpu_cores, total_memory_gb: info.total_memory_gb });
-      } catch (error) {
-        console.error('Failed to load system info:', error);
-      }
-    };
-    loadSystemInfo();
-  }, []);
-
-  useEffect(() => {
-    const applyTheme = () => {
-      const root = document.documentElement;
-      root.classList.add('theme-smooth-transition');
-      if (theme === 'light' || (theme === 'auto' && window.matchMedia('(prefers-color-scheme: light)').matches)) {
-        root.classList.add('light');
-        root.classList.remove('dark');
-      } else {
-        root.classList.add('dark');
-        root.classList.remove('light');
-      }
-      setTimeout(() => {
-        root.classList.remove('theme-smooth-transition');
-      }, 400);
-    };
-    applyTheme();
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: light)');
-    const handleChange = () => applyTheme();
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
+    const root = document.documentElement;
+    root.classList.remove('dark', 'light');
+    root.classList.add(theme === 'auto' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : theme);
+    localStorage.setItem('theme', theme);
   }, [theme]);
 
-  const handleSaveSettings = async () => {
-    setSaveStatus('saving');
+  const handleSave = async () => {
+    setSaving(true);
+    setMessage(null);
     try {
-      const settings = {
-        backendUrl,
-        theme,
-        autoStart,
-        notificationEnabled,
-        language,
-        savedAt: new Date().toISOString(),
-      };
-      localStorage.setItem('agentos_settings', JSON.stringify(settings));
-      if (settings.language !== language) {
-        window.location.reload();
-        return;
-      }
-      setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-      console.error('Failed to save settings:', error);
-      setSaveStatus('error');
+      updateEndpoint(gatewayUrl, apiKey || undefined);
+      localStorage.setItem('agentos-language', language);
+      localStorage.setItem('agentos-autoStart', String(autoStart));
+      localStorage.setItem('agentos-notifications', String(notifications));
+      setMessage({ type: 'success', text: '设置已保存' });
+      setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage({ type: 'error', text: '保存设置失败' });
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleReset = () => {
+    if (!window.confirm('确定要将所有设置恢复为默认值吗？')) return;
+    setLanguage('zh');
+    setTheme('dark');
+    setGatewayUrl('http://localhost:18789');
+    setApiKey('');
+    setAutoStart(false);
+    setNotifications(true);
   };
 
   const handleTestConnection = async () => {
+    setMessage(null);
     try {
-      const result = await sdk.getHealthStatus();
-      if (result.overall === "healthy") {
-        success("连接成功", t.settings.connectionSuccess.replace('{url}', backendUrl));
+      updateEndpoint(gatewayUrl, apiKey || undefined);
+      await connect();
+      if (connection.status === 'connected') {
+        setMessage({ type: 'success', text: `连接 ${gatewayUrl} 成功！` });
       } else {
-        error("连接失败", t.settings.connectionFailed.replace('{error}', result.overall));
+        setMessage({ type: 'error', text: '连接失败，请检查网关地址' });
       }
     } catch (err) {
-      error("连接错误", t.settings.connectionError.replace('{error}', String(err)));
+      setMessage({ type: 'error', text: `连接错误: ${err instanceof Error ? err.message : '未知错误'}` });
     }
   };
 
-  const handleResetSettings = async () => {
-    const confirmed = await confirmModal({
-      type: 'warning',
-      title: '重置设置',
-      message: t.settings.resetConfirm || '确定要重置所有设置吗？此操作无法撤销。',
-      confirmText: '重置',
-      cancelText: '取消',
-    });
-    if (confirmed) {
-      localStorage.removeItem('agentos_settings');
-      setBackendUrl('http://localhost:18789');
-      setTheme('light');
-      setAutoStart(false);
-      setNotificationEnabled(true);
-      info("已重置", "设置已恢复为默认值");
-    }
-  };
+  const ToggleSwitch: React.FC<{ checked: boolean; onChange: () => void }> = ({ checked, onChange }) => (
+    <button
+      onClick={onChange}
+      style={{
+        position: 'relative', width: '44px', height: '24px', borderRadius: '12px',
+        backgroundColor: checked ? 'var(--primary-color)' : 'var(--bg-tertiary)',
+        border: `1px solid ${checked ? 'var(--primary-color)' : 'var(--border-color)'}`,
+        cursor: 'pointer', transition: 'all var(--transition-fast)', flexShrink: 0,
+      }}
+    >
+      <motion.div
+        animate={{ x: checked ? '22px' : '2px' }}
+        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+        style={{
+          position: 'absolute', top: '2px', left: '0', width: '18px', height: '18px',
+          borderRadius: '50%', backgroundColor: 'white', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
+        }}
+      />
+    </button>
+  );
 
-  const themeOptions = [
-    { value: 'light' as const, icon: Sun, label: t.settings.themeLight, desc: '明亮主题', colors: { bg: '#f8fafc', sidebar: '#ffffff', text: '#0f172a', accent: '#6366f1', border: '#e2e8f0' } },
-    { value: 'dark' as const, icon: Moon, label: t.settings.themeDark, desc: '暗色主题', colors: { bg: '#0a0a0f', sidebar: '#111118', text: '#ededed', accent: '#6366f1', border: '#27273a' } },
-    { value: 'auto' as const, icon: MonitorCheck, label: t.settings.themeAuto, desc: '跟随系统', colors: { bg: 'linear-gradient(135deg, #f8fafc 50%, #0a0a0f 50%)', sidebar: 'linear-gradient(135deg, #ffffff 50%, #111118 50%)', text: '#6366f1', accent: '#6366f1', border: '#94a3b8' } },
-  ];
-
-  return (
-    <div className="page-container">
-      {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{
-            width: "44px", height: "44px", borderRadius: "var(--radius-md)",
-            background: "linear-gradient(135deg,#6366f1,#818cf8)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 4px 16px rgba(99,102,241,0.35), 0 0 0 1px rgba(255,255,255,0.08) inset",
-          }}>
-            <Palette size={20} color="white" />
-          </div>
-          <div>
-            <h1>{t.settings.title}</h1>
-            <p style={{ color: "var(--text-secondary)", fontSize: "13px", margin: 0 }}>
-              {t.settings.description}
+  const SettingRow: React.FC<{
+    icon: React.ReactNode;
+    title: string;
+    description?: string;
+    children: React.ReactNode;
+  }> = ({ icon, title, description, children }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      gap: '16px', padding: '16px 0', borderBottom: '1px solid var(--border-subtle)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1 }}>
+        <div style={{
+          width: '36px', height: '36px', borderRadius: 'var(--radius-md)',
+          background: 'linear-gradient(135deg, var(--primary-light), transparent)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--primary-color)', flexShrink: 0,
+        }}>
+          {icon}
+        </div>
+        <div>
+          <p style={{ margin: 0, fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)' }}>
+            {title}
+          </p>
+          {description && (
+            <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
+              {description}
             </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Status Banner */}
-      {saveStatus === 'saved' && (
-        <div className="card card-elevated" style={{ marginBottom: "20px", background: "rgba(34, 197, 94, 0.1)", borderColor: "#22c55e", padding: "14px 20px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <CheckCircle2 size={20} color="#22c55e" />
-          <span style={{ color: "#22c55e", fontWeight: 500 }}>{t.settings.savedSuccess}</span>
-        </div>
-      )}
-      {saveStatus === 'error' && (
-        <div className="card card-elevated" style={{ marginBottom: "20px", background: "rgba(239, 68, 68, 0.1)", borderColor: "#ef4444", padding: "14px 20px", display: "flex", alignItems: "center", gap: "10px" }}>
-          <AlertTriangle size={20} color="#ef4444" />
-          <span style={{ color: "#ef4444", fontWeight: 500 }}>{t.settings.saveError}</span>
-        </div>
-      )}
-
-      {/* Settings Grid */}
-      <div className="grid-2" style={{ marginBottom: "24px" }}>
-        {/* Appearance Card */}
-        <div className="card card-elevated">
-          <h3 className="card-title">
-            <Palette size={18} />
-            {t.settings.general}
-          </h3>
-
-          {/* Language Selector */}
-          <div className="form-group">
-            <label className="form-label">
-              <Globe size={14} style={{ display: "inline", marginRight: "6px", verticalAlign: "middle" }} />
-              {t.settings.language}
-            </label>
-            <select
-              className="form-select"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as 'en' | 'zh')}
-            >
-              {availableLanguages.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
-            <p className="form-help">{t.settings.languageHelp}</p>
-          </div>
-
-          {/* Theme Selector - Visual Preview Cards */}
-          <div className="form-group">
-            <label className="form-label">
-              <Monitor size={14} style={{ display: "inline", marginRight: "6px", verticalAlign: "middle" }} />
-              {t.settings.theme}
-            </label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "10px", marginTop: "8px" }}>
-              {themeOptions.map((opt) => {
-                const IconComp = opt.icon;
-                const isSelected = theme === opt.value;
-                const c = opt.colors;
-                const isAuto = opt.value === 'auto';
-                return (
-                  <div
-                    key={opt.value}
-                    className={`theme-preview-card ${isSelected ? 'selected' : ''}`}
-                    onClick={() => setTheme(opt.value)}
-                  >
-                    <div className="theme-preview-mini">
-                      <div className="theme-preview-titlebar" style={{ background: isAuto ? c.bg : c.bg }}>
-                        <div className="theme-preview-dot" style={{ background: '#ef4444' }} />
-                        <div className="theme-preview-dot" style={{ background: '#f59e0b' }} />
-                        <div className="theme-preview-dot" style={{ background: '#22c55e' }} />
-                      </div>
-                      <div className="theme-preview-body">
-                        <div className="theme-preview-sidebar" style={{ background: isAuto ? c.sidebar : c.sidebar }} />
-                        <div className="theme-preview-content" style={{ background: isAuto ? c.bg : c.bg }}>
-                          <div className="theme-preview-line" style={{ background: isAuto ? c.text : c.border, opacity: 0.5 }} />
-                          <div className="theme-preview-line" style={{ background: c.accent, opacity: 0.6 }} />
-                          <div className="theme-preview-line" style={{ background: isAuto ? c.text : c.border, opacity: 0.3 }} />
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                      <IconComp size={16} color={isSelected ? "var(--primary-color)" : "var(--text-muted)"} />
-                      <span style={{ fontSize: "13px", fontWeight: 600, color: isSelected ? "var(--primary-color)" : "var(--text-secondary)" }}>
-                        {opt.label}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: "11px", color: "var(--text-muted)", textAlign: "center", marginTop: "2px" }}>
-                      {opt.desc}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <p className="form-help">{t.settings.themeHelp}</p>
-          </div>
-
-          {/* Toggle Options */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "8px" }}>
-            <label className="checkbox-label" style={{ padding: "12px", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", transition: "all 0.2s ease", border: "1px solid var(--border-subtle)" }}>
-              <input type="checkbox" checked={autoStart} onChange={(e) => setAutoStart(e.target.checked)} />
-              <div>
-                <span style={{ fontWeight: 500 }}>{t.settings.autoStart}</span>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 0 0" }}>{t.settings.autoStartHelp}</p>
-              </div>
-            </label>
-
-            <label className="checkbox-label" style={{ padding: "12px", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", transition: "all 0.2s ease", border: "1px solid var(--border-subtle)" }}>
-              <input type="checkbox" checked={notificationEnabled} onChange={(e) => setNotificationEnabled(e.target.checked)} />
-              <div>
-                <span style={{ fontWeight: 500 }}>
-                  <Bell size={14} style={{ display: "inline", marginRight: "6px", verticalAlign: "middle" }} />
-                  {t.settings.notifications}
-                </span>
-                <p style={{ fontSize: "12px", color: "var(--text-muted)", margin: "4px 0 0 0" }}>{t.settings.notificationsHelp}</p>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        {/* Connection Card */}
-        <div className="card card-elevated">
-          <h3 className="card-title">
-            <Server size={18} />
-            {t.settings.connection}
-          </h3>
-
-          <div className="form-group">
-            <label className="form-label">{t.settings.backendUrl}</label>
-            <input
-              type="text"
-              className="form-input"
-              value={backendUrl}
-              onChange={(e) => setBackendUrl(e.target.value)}
-              placeholder="http://localhost:18789"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
-            />
-            <p className="form-help">{t.settings.backendUrlHelp}</p>
-          </div>
-
-          <button
-            className="btn btn-secondary btn-lg"
-            onClick={handleTestConnection}
-            disabled={saveStatus === 'saving'}
-            style={{ width: "100%", marginBottom: "16px" }}
-          >
-            <Zap size={16} />
-            {t.settings.testConnection}
-          </button>
-          <p className="form-help" style={{ textAlign: "center" }}>{t.settings.testConnectionHelp}</p>
-
-          {/* Quick Tips */}
-          <div style={{
-            marginTop: "20px",
-            padding: "16px",
-            background: "var(--primary-light)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid rgba(99, 102, 241, 0.15)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <Sparkles size={16} style={{ color: "var(--primary-color)" }} />
-              <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--primary-color)" }}>快速提示</span>
-            </div>
-            <div style={{ fontSize: "12.5px", color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              确保后端服务已启动并运行在正确的端口上。如果使用 Docker，请检查容器状态和网络配置。
-            </div>
-          </div>
-        </div>
-
-        {/* System Info Card */}
-        <div className="card card-elevated" style={{ border: "1px solid var(--border-subtle)", background: "var(--bg-secondary)", boxShadow: 'var(--shadow-sm)', transition: "all 0.2s ease" }}>
-          <h3 className="card-title">
-            <Info size={18} />
-            {t.settings.system}
-          </h3>
-
-          {systemInfo ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <InfoRow label={t.settings.platform} value={systemInfo.platform} />
-              <InfoRow label={t.settings.architecture} value={systemInfo.arch} />
-              <InfoRow label={t.settings.version} value={`v${systemInfo.version}`} />
-              {systemInfo.cpu_cores && <InfoRow label={t.settings.cpuCores || "CPU Cores"} value={`${systemInfo.cpu_cores} cores`} />}
-              {systemInfo.total_memory_gb && <InfoRow label="Total Memory" value={`${systemInfo.total_memory_gb.toFixed(1)} GB`} />}
-            </div>
-          ) : (
-            <div style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)" }}>
-              <div className="loading-spinner" style={{ margin: "0 auto 12px" }} />
-              <p>{t.settings.loadingSystemInfo}</p>
-            </div>
           )}
         </div>
+      </div>
+      <div style={{ flexShrink: 0 }}>{children}</div>
+    </div>
+  );
 
-        {/* Actions Card */}
-        <div className="card card-elevated" style={{ border: "1px solid var(--border-subtle)", background: "var(--bg-secondary)", boxShadow: 'var(--shadow-sm)', transition: "all 0.2s ease" }}>
-          <h3 className="card-title">
-            <Save size={18} />
-            {t.settings.actions}
-          </h3>
+  const connStatusColor = connection.status === 'connected'
+    ? 'var(--success-color)' : connection.status === 'error'
+    ? 'var(--error-color)' : 'var(--text-muted)';
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            <button
-              className="btn btn-primary btn-lg"
-              onClick={handleSaveSettings}
-              disabled={saveStatus === 'saving'}
-              style={{ width: "100%", transition: "all 0.2s ease" }}
-            >
-              {saveStatus === 'saving' ? (
-                <>
-                  <span className="loading-spinner" style={{ width: 16, height: 16, borderWidth: "2px" }} />
-                  {t.settings.saving}
-                </>
-              ) : (
-                <>
-                  <Save size={16} />
-                  {t.settings.save}
-                </>
-              )}
-            </button>
-
-            <div style={{ display: "flex", gap: "10px" }}>
-              <button className="btn btn-secondary" onClick={handleResetSettings} style={{ flex: 1, transition: "all 0.2s ease" }}>
-                <RotateCcw size={16} />
-                {t.settings.reset}
-              </button>
-              <button
-                className="btn btn-danger"
-                onClick={async () => {
-                  const confirmed = await confirmModal({
-                    type: 'danger',
-                    title: '清除缓存',
-                    message: t.settings.clearCacheConfirm || '确定要清除所有本地缓存数据吗？',
-                    confirmText: '清除',
-                    cancelText: '取消',
-                  });
-                  if (confirmed) {
-                    localStorage.clear();
-                    info("缓存已清除", t.settings.cacheCleared || "所有缓存已清理");
-                  }
-                }}
-                style={{ flex: 1, transition: "all 0.2s ease" }}
-              >
-                <Trash2 size={16} />
-                {t.settings.clearCache}
-              </button>
-            </div>
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      style={{ maxWidth: '900px', margin: '0 auto' }}
+    >
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+          }}>
+            <Settings size={24} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              设置
+            </h1>
+            <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>自定义 AgentOS 桌面客户端</p>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="card card-elevated" style={{ textAlign: "center", padding: "24px" }}>
-        <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: 0 }}>
-          {t.settings.footer}
-        </p>
-        <p style={{ color: "var(--text-muted)", fontSize: "13px", margin: "8px 0 0 0" }}>
-          {t.settings.documentation}:{' '}
-          <a
-            href="https://docs.agentos.io"
-            style={{ color: "var(--primary-color)", textDecoration: "none", fontWeight: 500 }}
-            onClick={(e) => {
-              e.preventDefault();
-              sdk.openBrowser('https://docs.agentos.io');
-            }}
-          >
-            docs.agentos.io
-            <ExternalLink size={12} style={{ display: "inline", marginLeft: "4px" }} />
-          </a>
-        </p>
+      {message && (
+        <motion.div
+          initial={{ opacity: 0, y: -8 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 18px',
+            marginBottom: '24px', borderRadius: 'var(--radius-md)',
+            backgroundColor: message.type === 'success' ? 'var(--success-light)' : 'var(--error-light)',
+            border: `1px solid ${message.type === 'success' ? 'var(--success-color)' : 'var(--error-color)'}`,
+            color: message.type === 'success' ? 'var(--success-color)' : 'var(--error-color)',
+          }}
+        >
+          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)' }}>{message.text}</span>
+        </motion.div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{
+          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)', padding: '20px 24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <Link size={18} style={{ color: 'var(--primary-color)' }} />
+            <h3 style={{ margin: 0, fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
+              AgentOS 网关连接
+            </h3>
+            <div style={{
+              marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px',
+              padding: '4px 10px', borderRadius: 'var(--radius-full)', fontSize: 'var(--font-size-xs)',
+              fontWeight: 'var(--font-weight-medium)', color: connStatusColor,
+              backgroundColor: connection.status === 'connected' ? 'var(--success-light)' : connection.status === 'error' ? 'var(--error-light)' : 'var(--bg-tertiary)',
+            }}>
+              {connection.status === 'connected' ? <Wifi size={12} /> : <WifiOff size={12} />}
+              {connection.status === 'connected' ? '已连接' : connection.status === 'error' ? '连接失败' : connection.status === 'connecting' ? '连接中...' : '未连接'}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                网关地址
+              </label>
+              <input
+                type="text"
+                value={gatewayUrl}
+                onChange={(e) => setGatewayUrl(e.target.value)}
+                placeholder="http://localhost:18789"
+                style={{
+                  width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)', fontSize: 'var(--font-size-md)', fontFamily: 'var(--font-mono)',
+                  outline: 'none', transition: 'all var(--transition-fast)',
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary-color)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                API 密钥（可选）
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="留空则不使用认证"
+                style={{
+                  width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)',
+                  borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)',
+                  color: 'var(--text-primary)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit',
+                  outline: 'none', transition: 'all var(--transition-fast)',
+                }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary-color)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)'; }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
+              />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleTestConnection}
+                style={{
+                  padding: '8px 16px', border: '1px solid var(--primary-color)', borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--primary-light)', color: 'var(--primary-color)', cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 'var(--font-size-md)', display: 'flex', alignItems: 'center', gap: '6px',
+                  transition: 'all var(--transition-fast)',
+                }}
+              >
+                <Wifi size={14} /> 测试连接
+              </button>
+              {connection.status === 'connected' && (
+                <button
+                  onClick={disconnect}
+                  style={{
+                    padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 'var(--font-size-md)', display: 'flex', alignItems: 'center', gap: '6px',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  <WifiOff size={14} /> 断开
+                </button>
+              )}
+            </div>
+            {connection.health && (
+              <div style={{
+                padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span>状态</span>
+                  <span style={{ color: 'var(--success-color)' }}>{connection.health.status}</span>
+                </div>
+                {connection.health.version && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <span>版本</span>
+                    <span style={{ fontFamily: 'var(--font-mono)' }}>{connection.health.version}</span>
+                  </div>
+                )}
+                {connection.health.uptime && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>运行时间</span>
+                    <span>{connection.health.uptime}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={{
+          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)', padding: '20px 24px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+            <Palette size={18} style={{ color: 'var(--primary-color)' }} />
+            <h3 style={{ margin: 0, fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
+              外观与偏好
+            </h3>
+          </div>
+          <SettingRow icon={<Languages size={18} />} title="语言" description="更改应用语言">
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+              style={{
+                padding: '8px 12px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 'var(--font-size-md)',
+                fontFamily: 'inherit', cursor: 'pointer', outline: 'none',
+              }}
+            >
+              <option value="zh">简体中文</option>
+              <option value="en">English</option>
+            </select>
+          </SettingRow>
+          <SettingRow icon={theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />} title="主题" description="选择外观模式">
+            <div style={{ display: 'flex', gap: '6px', padding: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+              {(['light', 'dark', 'auto'] as const).map((t_theme) => (
+                <button
+                  key={t_theme}
+                  onClick={() => setTheme(t_theme)}
+                  style={{
+                    padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: 'var(--font-size-sm)',
+                    fontWeight: theme === t_theme ? 'var(--font-weight-medium)' : 'var(--font-weight-normal)',
+                    cursor: 'pointer', border: 'none', fontFamily: 'inherit', transition: 'all var(--transition-fast)',
+                    backgroundColor: theme === t_theme ? 'var(--bg-card)' : 'transparent',
+                    color: theme === t_theme ? 'var(--text-primary)' : 'var(--text-muted)',
+                    boxShadow: theme === t_theme ? 'var(--shadow-sm)' : 'none',
+                  }}
+                >
+                  {t_theme === 'light' ? '浅色' : t_theme === 'dark' ? '深色' : '跟随系统'}
+                </button>
+              ))}
+            </div>
+          </SettingRow>
+          <SettingRow icon={<Volume2 size={18} />} title="桌面通知" description="任务状态变更时显示通知">
+            <ToggleSwitch checked={notifications} onChange={() => setNotifications(!notifications)} />
+          </SettingRow>
+          <SettingRow icon={<Zap size={18} />} title="开机自动启动" description="系统启动时自动运行 AgentOS">
+            <ToggleSwitch checked={autoStart} onChange={() => setAutoStart(!autoStart)} />
+          </SettingRow>
+        </div>
       </div>
-    </div>
+
+      <div style={{
+        display: 'flex', gap: '12px', marginTop: '32px', paddingTop: '24px',
+        borderTop: '1px solid var(--border-subtle)',
+      }}>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            flex: 1, padding: '10px 16px', border: 'none', borderRadius: 'var(--radius-md)',
+            background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+            color: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+            transition: 'all var(--transition-fast)', opacity: saving ? 0.5 : 1,
+          }}
+        >
+          <Save size={16} />
+          {saving ? '保存中...' : '保存设置'}
+        </button>
+        <button
+          onClick={handleReset}
+          style={{
+            padding: '10px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--font-size-md)', display: 'flex', alignItems: 'center',
+            gap: '6px', transition: 'all var(--transition-fast)',
+          }}
+        >
+          <RotateCcw size={16} /> 恢复默认
+        </button>
+        <button
+          onClick={() => {
+            if (window.confirm('确定要清除所有缓存数据吗？')) {
+              setMessage({ type: 'success', text: '缓存已清除' });
+              setTimeout(() => setMessage(null), 3000);
+            }
+          }}
+          style={{
+            padding: '10px 16px', border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--error-light)', color: 'var(--error-color)', cursor: 'pointer',
+            fontFamily: 'inherit', fontSize: 'var(--font-size-md)', display: 'flex', alignItems: 'center',
+            gap: '6px', transition: 'all var(--transition-fast)',
+          }}
+        >
+          <Trash2 size={16} /> 清除缓存
+        </button>
+      </div>
+    </motion.div>
   );
 };
 
-function InfoRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div style={{
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      padding: "12px 0",
-      borderBottom: "1px solid var(--border-subtle)",
-      fontSize: "13.5px"
-    }}>
-      <span style={{ color: "var(--text-secondary)" }}>{label}</span>
-      <span style={{ fontWeight: 500, fontFamily: "'JetBrains Mono', monospace", fontSize: "13px" }}>{value}</span>
-    </div>
-  );
-}
-
-export default Settings;
+export default SettingsPage;

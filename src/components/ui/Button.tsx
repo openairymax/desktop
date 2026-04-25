@@ -23,26 +23,9 @@ export const Button: React.FC<ButtonProps> = ({
   style = {},
   title,
 }) => {
-  const baseStyles: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '6px',
-    border: 'none',
-    borderRadius: '8px',
-    fontWeight: 'var(--font-weight-normal)',
-    cursor: disabled || loading ? 'not-allowed' : 'pointer',
-    transition: 'all 0.2s ease',
-    position: 'relative',
-    overflow: 'hidden',
-    fontFamily: 'inherit',
-    letterSpacing: 'var(--letter-spacing-normal)',
-    whiteSpace: 'nowrap',
-  };
-
   const sizeStyles: Record<string, React.CSSProperties> = {
     sm: {
-      padding: '6px 12px',
+      padding: '6px 14px',
       fontSize: 'var(--font-size-sm)',
       gap: '4px',
     },
@@ -51,57 +34,63 @@ export const Button: React.FC<ButtonProps> = ({
       fontSize: 'var(--font-size-md)',
     },
     lg: {
-      padding: '10px 20px',
+      padding: '12px 24px',
       fontSize: 'var(--font-size-lg)',
     },
   };
 
   const variantStyles: Record<string, React.CSSProperties> = {
     primary: {
-      backgroundColor: 'var(--primary-color)',
+      background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
       color: 'white',
+      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.1) inset',
     },
     secondary: {
-      backgroundColor: 'var(--bg-secondary)',
+      backgroundColor: 'var(--bg-tertiary)',
       color: 'var(--text-primary)',
+      border: '1px solid var(--border-color)',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
     },
     ghost: {
       backgroundColor: 'transparent',
-      color: 'var(--text-primary)',
+      color: 'var(--text-secondary)',
+      border: '1px solid transparent',
     },
     danger: {
-      backgroundColor: 'var(--error-color)',
+      background: 'linear-gradient(135deg, var(--error-color), #f87171)',
       color: 'white',
+      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
     },
     success: {
-      backgroundColor: 'var(--success-color)',
+      background: 'linear-gradient(135deg, var(--success-color), #4ade80)',
       color: 'white',
+      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
     },
   };
 
   const hoverStyles: Record<string, React.CSSProperties> = {
     primary: {
-      backgroundColor: 'var(--primary-hover)',
+      boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.2) inset',
       transform: 'translateY(-1px)',
-      boxShadow: '0 4px 12px rgba(0, 113, 227, 0.25)',
     },
     secondary: {
-      backgroundColor: 'var(--bg-tertiary)',
+      backgroundColor: 'var(--border-color)',
       transform: 'translateY(-1px)',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
     },
     ghost: {
       backgroundColor: 'var(--bg-tertiary)',
+      color: 'var(--text-primary)',
+      border: '1px solid var(--border-color)',
       transform: 'translateY(-1px)',
     },
     danger: {
-      backgroundColor: 'var(--error-hover)',
+      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.4)',
       transform: 'translateY(-1px)',
-      boxShadow: '0 4px 12px rgba(255, 59, 48, 0.25)',
     },
     success: {
-      backgroundColor: 'var(--success-hover)',
+      boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
       transform: 'translateY(-1px)',
-      boxShadow: '0 4px 12px rgba(52, 199, 89, 0.25)',
     },
   };
 
@@ -111,7 +100,20 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       className={className}
       style={{
-        ...baseStyles,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '6px',
+        border: variant === 'secondary' ? '1px solid var(--border-color)' : 'none',
+        borderRadius: 'var(--radius-md)',
+        fontWeight: 'var(--font-weight-normal)',
+        cursor: disabled || loading ? 'not-allowed' : 'pointer',
+        transition: 'all var(--transition-base)',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: 'inherit',
+        letterSpacing: 'var(--letter-spacing-normal)',
+        whiteSpace: 'nowrap',
         ...sizeStyles[size],
         ...variantStyles[variant],
         ...style,
@@ -126,28 +128,28 @@ export const Button: React.FC<ButtonProps> = ({
       onMouseLeave={(e) => {
         if (!disabled && !loading) {
           Object.assign(e.currentTarget.style, variantStyles[variant]);
+          e.currentTarget.style.transform = 'none';
         }
       }}
       onMouseDown={(e) => {
         if (!disabled && !loading) {
-          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.transform = 'scale(0.97)';
         }
       }}
       onMouseUp={(e) => {
         if (!disabled && !loading) {
-          Object.assign(e.currentTarget.style, hoverStyles[variant]);
+          e.currentTarget.style.transform = hoverStyles[variant].transform || 'none';
         }
       }}
     >
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div style={{
+          <div className="animate-spin" style={{
             width: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
             height: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
-            border: `2px solid ${variant === 'primary' || variant === 'danger' || variant === 'success' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}`,
+            border: `2px solid ${variant === 'primary' || variant === 'danger' || variant === 'success' ? 'rgba(255, 255, 255, 0.3)' : 'var(--border-color)'}`,
             borderTopColor: variant === 'primary' || variant === 'danger' || variant === 'success' ? 'white' : 'var(--text-primary)',
             borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
           }} />
           <span>处理中...</span>
         </div>

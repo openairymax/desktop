@@ -59,14 +59,14 @@ const CognitiveLoop: React.FC = () => {
   const [cycleCount, setCycleCount] = useState(0);
   const [activeThoughtIdx, setActiveThoughtIdx] = useState<number>(-1);
   const [inputText, setInputText] = useState("");
-  const [availableTools, setAvailableTools] = useState<Array<{ name: string; description: string; category: string; schema: Record<string, unknown> }>>([]);
+  const [availableTools, setAvailableTools] = useState<Record<string, unknown>[]>([]);
   const [loadingTools, setLoadingTools] = useState(true);
 
   const phases: CyclePhase[] = ["perception", "reasoning", "action", "reflection"];
 
   React.useEffect(() => {
     sdk.listAvailableTools().then(data => {
-      setAvailableTools(data || []);
+      setAvailableTools(data as Record<string, unknown>[] || []);
       setLoadingTools(false);
     }).catch(() => setLoadingTools(false));
   }, []);
@@ -89,20 +89,21 @@ const CognitiveLoop: React.FC = () => {
         setThoughts(prev => [...prev, step]);
         setActiveThoughtIdx(i);
 
-        if (step.tool_call) {
+        if (step.toolCall) {
           const toolId = `tc-${Date.now()}-${i}`;
           setTools(prev => [...prev, {
             id: toolId,
-            name: step.tool_call!.function.name,
+            name: (step.toolCall as Record<string, any>).function?.name || 'unknown',
             status: "running",
-            input: step.tool_call!.function.arguments,
+            input: JSON.stringify((step.toolCall as Record<string, any>).function?.arguments || ''),
           }]);
           setActiveThoughtIdx(i);
 
           await new Promise(r => setTimeout(r, 800));
 
           try {
-            const result = await sdk.callTool(step.tool_call.function.name, JSON.parse(step.tool_call.function.arguments));
+            const tc = step.toolCall as Record<string, any>;
+            const result = await sdk.callTool(tc.function?.name || 'unknown', JSON.stringify(tc.function?.arguments || {}));
             setTools(prev => prev.map(t =>
               t.id === toolId ? { ...t, status: "success" as const, output: JSON.stringify(result).slice(0, 120), duration: Math.floor(Math.random() * 300) + 50 } : t
             ));
@@ -113,7 +114,7 @@ const CognitiveLoop: React.FC = () => {
           }
         }
 
-        const phaseDuration = PHASES[step.phase]?.duration || 1500;
+        const phaseDuration = PHASES[step.phase as CyclePhase]?.duration || 1500;
         const progressSteps = Math.ceil(phaseDuration / 150);
         for (let s = 0; s < progressSteps; s++) {
           setPhaseProgress(((s + 1) / progressSteps) * 100);
@@ -130,8 +131,8 @@ const CognitiveLoop: React.FC = () => {
         phase: "reflection",
         thought: `认知循环执行出错: ${error}`,
         detail: "请检查后端服务是否正常运行",
-        timestamp: new Date(),
-      } as CognitiveStep]);
+        timestamp: new Date().toISOString(),
+      }]);
       setCurrentPhase("idle");
     } finally {
       setIsRunning(false);
@@ -289,23 +290,23 @@ const CognitiveLoop: React.FC = () => {
                 <div style={{ fontSize: "13px" }}>运行认知循环后将显示思维链</div>
               </div>
             ) : thoughts.map((thought, idx) => {
-              const data = PHASES[thought.phase] || PHASES.idle;
-              const IconComp = data.icon;
+              const phaseData = (PHASES as Record<string, StepData>)[thought.phase] || PHASES.idle;
+              const IconComp = phaseData.icon;
               const isActive = activeThoughtIdx === idx && isRunning;
               return (
-                <div key={`${idx}-${thought.timestamp.getTime()}`} onClick={() => setActiveThoughtIdx(isActive ? -1 : idx)} style={{
+                <div key={`${idx}-${thought.timestamp}`} onClick={() => setActiveThoughtIdx(isActive ? -1 : idx)} style={{
                   display: "flex", gap: "12px", padding: "12px 14px", borderRadius: "var(--radius-md)", cursor: "pointer",
-                  background: isActive ? `${data.color}15` : "transparent", borderLeft: `3px solid ${isActive ? data.color : data.color}40`,
+                  background: isActive ? `${phaseData.color}15` : "transparent", borderLeft: `3px solid ${isActive ? phaseData.color : phaseData.color}40`,
                   transition: "all var(--transition-fast)", animation: !isRunning ? `staggerFadeIn 0.3s ease-out ${idx * 60}ms both` : undefined,
                 }}>
-                  <div style={{ width: "30px", height: "30px", borderRadius: "var(--radius-sm)", background: isActive ? data.gradient : `${data.color}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <IconComp size={14} color={isActive ? "white" : data.color} />
+                  <div style={{ width: "30px", height: "30px", borderRadius: "var(--radius-sm)", background: isActive ? phaseData.gradient : `${phaseData.color}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <IconComp size={14} color={isActive ? "white" : phaseData.color} />
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: "13px", fontWeight: 500, lineHeight: 1.4 }}>{thought.thought}</div>
                     {(isActive || thought.detail) && (<div style={{ fontSize: "11.5px", color: "var(--text-muted)", marginTop: "4px", fontFamily: "'JetBrains Mono', monospace" }}>{thought.detail}</div>)}
                   </div>
-                  <div style={{ fontSize: "10px", color: "var(--text-muted)", flexShrink: 0, whiteSpace: "nowrap" }}>{new Date(thought.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</div>
+                  <div style={{ fontSize: "10px", color: "var(--text-muted)", flexShrink: 0, whiteSpace: "nowrap" }}>{typeof thought.timestamp === 'string' ? new Date(thought.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : ''}</div>
                 </div>
               );
             })}
