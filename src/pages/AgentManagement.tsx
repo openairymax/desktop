@@ -1,597 +1,475 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
 import {
-  Bot, Plus, Play, Square, RotateCcw, Trash2, Search, Filter,
-  Eye, Settings, Terminal, BarChart3, ChevronDown, CheckCircle2,
-  AlertCircle, Clock, X, Edit, Save, RefreshCw, Info, Zap
+  Bot, Plus, Play, Square, Search, Trash2, Eye,
+  AlertCircle, Clock, X, Zap, RefreshCw, Loader2, ChevronDown
 } from 'lucide-react';
-import {
-  listAgents, getAgentDetails, registerAgent, startAgent, stopAgent,
-  getAgentConfig, updateAgentConfig, deleteTask, type AgentInfo
-} from '../services/agentos-sdk';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useAgents } from '../hooks/useAgentOS';
 
-interface AgentFormData {
-  name: string;
-  type: string;
-  description: string;
-  capabilities: string[];
-}
-
-const AGENT_TYPES = [
-  { value: 'research', label: '研究型', icon: '🔍', description: '网络搜索、文档分析、信息聚合' },
-  { value: 'coding', label: '编程型', icon: '💻', description: '代码生成、调试、重构、审查' },
-  { value: 'analysis', label: '分析型', icon: '📊', description: '数据分析、可视化、报告生成' },
-  { value: 'assistant', label: '助手型', icon: '🤖', description: '通用任务处理、日程管理、邮件处理' },
-  { value: 'custom', label: '自定义', icon: '⚙️', description: '根据需求自定义 Agent 行为' },
-];
+const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; dot: string }> = {
+  running: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '运行中', dot: 'bg-green-500' },
+  idle: { color: 'var(--warning-color)', bg: 'var(--warning-light)', label: '空闲', dot: 'bg-yellow-500' },
+  stopped: { color: 'var(--text-muted)', bg: 'var(--bg-tertiary)', label: '已停止', dot: 'bg-gray-400' },
+  error: { color: 'var(--error-color)', bg: 'var(--error-light)', label: '错误', dot: 'bg-red-500' },
+};
 
 const AgentManagement: React.FC = () => {
-  const { t } = useTranslation();
-  const [agents, setAgents] = useState<AgentInfo[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { agents, loading, error: agentsError, fetchAgents, spawnAgent, terminateAgent, invokeAgent } = useAgents();
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedAgent, setSelectedAgent] = useState<AgentInfo | null>(null);
-  const [showDetail, setShowDetail] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [showInvokeModal, setShowInvokeModal] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<any>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [agentConfig, setAgentConfig] = useState<Record<string, unknown> | null>(null);
-  const [showConfigEditor, setShowConfigEditor] = useState(false);
-  const [configJson, setConfigJson] = useState('{}');
-  const [formData, setFormData] = useState<AgentFormData>({
-    name: '',
-    type: 'research',
-    description: '',
-    capabilities: [],
-  });
-  const [newCapability, setNewCapability] = useState('');
+  const [newName, setNewName] = useState('');
+  const [newDescription, setNewDescription] = useState('');
+  const [invokeInput, setInvokeInput] = useState('');
 
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await listAgents();
-      setAgents(data);
-    } catch (e) {
-      console.error('Failed to load agents:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => { fetchAgents(); }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleViewDetail = async (agent: AgentInfo) => {
-    try {
-      const detail = await getAgentDetails(agent.id);
-      setSelectedAgent(detail);
-      setShowDetail(true);
-    } catch (e) {
-      console.error('Failed to get agent details:', e);
-    }
-  };
-
-  const handleStartAgent = async (agentId: string) => {
-    setActionLoading(agentId);
-    try {
-      await startAgent(agentId);
-      loadData();
-    } catch (e) {
-      console.error('Failed to start agent:', e);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleStopAgent = async (agentId: string) => {
-    setActionLoading(agentId);
-    try {
-      await stopAgent(agentId);
-      loadData();
-    } catch (e) {
-      console.error('Failed to stop agent:', e);
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleViewConfig = async (agentId: string) => {
-    try {
-      const config = await getAgentConfig(agentId);
-      setAgentConfig(config);
-      setConfigJson(JSON.stringify(config, null, 2));
-      setShowConfigEditor(true);
-    } catch (e) {
-      console.error('Failed to get agent config:', e);
-    }
-  };
-
-  const handleSaveConfig = async (agentId: string) => {
-    try {
-      const parsed = JSON.parse(configJson);
-      await updateAgentConfig(agentId, parsed);
-      setAgentConfig(parsed);
-      setShowConfigEditor(false);
-    } catch (e) {
-      console.error('Invalid JSON or failed to save config:', e);
-    }
-  };
-
-  const handleCreateAgent = async () => {
-    if (!formData.name.trim()) return;
-    try {
-      await registerAgent(formData.name, formData.type, formData.description);
-      setFormData({ name: '', type: 'research', description: '', capabilities: [] });
-      setShowCreateModal(false);
-      loadData();
-    } catch (e) {
-      console.error('Failed to create agent:', e);
-    }
-  };
-
-  const addCapability = () => {
-    if (newCapability.trim() && !formData.capabilities.includes(newCapability.trim())) {
-      setFormData({ ...formData, capabilities: [...formData.capabilities, newCapability.trim()] });
-      setNewCapability('');
-    }
-  };
-
-  const removeCapability = (cap: string) => {
-    setFormData({ ...formData, capabilities: formData.capabilities.filter(c => c !== cap) });
-  };
-
-  const filteredAgents = agents.filter(a => {
-    const matchesSearch = !searchQuery ||
-      a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ((a as any).description || '').toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = typeFilter === 'all' || (a as any).type === typeFilter;
+  const filteredAgents = agents.filter((a: any) => {
+    const name = a.name || '';
+    const matchesSearch = !searchQuery || name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
-    return matchesSearch && matchesType && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
-  const runningCount = agents.filter(a => a.status === 'running').length;
-  const idleCount = agents.filter(a => a.status === 'idle').length;
+  const stats = {
+    total: agents.length,
+    running: agents.filter((a: any) => a.status === 'running').length,
+    idle: agents.filter((a: any) => a.status === 'idle').length,
+    stopped: agents.filter((a: any) => a.status === 'stopped' || a.status === 'error').length,
+  };
+
+  const handleSpawn = async () => {
+    if (!newName.trim()) return;
+    setActionLoading('spawn');
+    try {
+      await spawnAgent(newName.trim(), newDescription ? { description: newDescription } : undefined);
+      setNewName('');
+      setNewDescription('');
+      setShowCreateModal(false);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleTerminate = async (agentId: string) => {
+    setActionLoading(`terminate-${agentId}`);
+    try { await terminateAgent(agentId); } finally { setActionLoading(null); }
+  };
+
+  const handleOpenInvoke = (agent: any) => {
+    setSelectedAgent(agent);
+    setInvokeInput('');
+    setShowInvokeModal(true);
+  };
+
+  const handleInvoke = async () => {
+    if (!selectedAgent || !invokeInput.trim()) return;
+    setActionLoading('invoke');
+    try {
+      await invokeAgent(selectedAgent.id, invokeInput.trim());
+      setInvokeInput('');
+      setShowInvokeModal(false);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const viewDetail = (agent: any) => {
+    setSelectedAgent(agent);
+    setShowDetail(true);
+  };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Bot className="w-8 h-8 text-purple-600" />
-            智能体管理
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            AgentOS 智能体注册、配置与生命周期管理
-          </p>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+          }}>
+            <Bot size={20} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              智能体管理
+            </h1>
+            <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>AgentOS 智能体生命周期管理</p>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={loadData}
-            className="p-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${loading ? 'animate-spin' : ''}`} />
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={() => fetchAgents()} style={{
+            padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+            transition: 'all var(--transition-fast)',
+          }}>
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> 刷新
           </button>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            创建智能体
+          <button onClick={() => setShowCreateModal(true)} style={{
+            padding: '8px 16px', border: 'none', borderRadius: 'var(--radius-md)',
+            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+            transition: 'all var(--transition-fast)',
+          }}>
+            <Plus size={16} /> 创建智能体
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-1">
-            <Bot className="w-4 h-4 text-gray-500" />
-            <span className="text-sm text-gray-500">智能体总数</span>
-          </div>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{agents.length}</p>
+      {agentsError && (
+        <div style={{
+          padding: '12px 16px', marginBottom: '16px', backgroundColor: 'var(--error-light)',
+          border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
+          display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error-color)',
+        }}>
+          <AlertCircle size={16} />
+          <span style={{ fontSize: 'var(--font-size-sm)' }}>{agentsError}</span>
+          <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }} onClick={() => fetchAgents()}>重试</button>
         </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="w-4 h-4 text-green-500" />
-            <span className="text-sm text-gray-500">运行中</span>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {[
+          { label: '智能体总数', value: stats.total, icon: <Bot size={18} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
+          { label: '运行中', value: stats.running, icon: <Zap size={18} />, color: 'var(--success-color)', bg: 'var(--success-light)' },
+          { label: '空闲', value: stats.idle, icon: <Clock size={18} />, color: 'var(--warning-color)', bg: 'var(--warning-light)' },
+          { label: '已停止', value: stats.stopped, icon: <Square size={18} />, color: 'var(--text-muted)', bg: 'var(--bg-tertiary)' },
+        ].map(s => (
+          <div key={s.label} style={{
+            backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-lg)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px',
+            boxShadow: 'var(--shadow-sm)', transition: 'all var(--transition-fast)',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <div style={{
+              width: '40px', height: '40px', borderRadius: 'var(--radius-md)',
+              backgroundColor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              {s.icon}
+            </div>
+            <div>
+              <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>{s.label}</p>
+              <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>{s.value}</p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-green-600">{runningCount}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-1">
-            <Clock className="w-4 h-4 text-amber-500" />
-            <span className="text-sm text-gray-500">空闲</span>
-          </div>
-          <p className="text-2xl font-bold text-amber-600">{idleCount}</p>
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center gap-2 mb-1">
-            <BarChart3 className="w-4 h-4 text-blue-500" />
-            <span className="text-sm text-gray-500">总任务数</span>
-          </div>
-          <p className="text-2xl font-bold text-blue-600">{agents.reduce((sum, a) => sum + ((a as any).taskCount || 0), 0)}</p>
-        </div>
+        ))}
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索智能体..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索智能体..." style={{
+            width: '100%', padding: '10px 14px 10px 36px', border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)',
+            fontSize: 'var(--font-size-md)', fontFamily: 'inherit', outline: 'none', transition: 'all var(--transition-fast)',
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--primary-color)'; e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
         </div>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-        >
-          <option value="all">全部类型</option>
-          {AGENT_TYPES.map(at => (
-            <option key={at.value} value={at.value}>{at.icon} {at.label}</option>
+        <div style={{ display: 'flex', gap: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: '4px' }}>
+          {['all', 'running', 'idle', 'stopped', 'error'].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)} style={{
+              padding: '6px 12px', borderRadius: 'var(--radius-sm)', border: 'none',
+              backgroundColor: statusFilter === s ? 'var(--bg-card)' : 'transparent',
+              color: statusFilter === s ? 'var(--text-primary)' : 'var(--text-muted)',
+              fontSize: 'var(--font-size-sm)', fontWeight: statusFilter === s ? 'var(--font-weight-medium)' : 'var(--font-weight-normal)',
+              cursor: 'pointer', fontFamily: 'inherit', transition: 'all var(--transition-fast)',
+            }}>
+              {STATUS_CONFIG[s]?.label || '全部'}
+            </button>
           ))}
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-        >
-          <option value="all">全部状态</option>
-          <option value="running">运行中</option>
-          <option value="idle">空闲</option>
-        </select>
+        </div>
       </div>
 
-      {/* Agent List */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-500">加载中...</div>
-      ) : filteredAgents.length === 0 ? (
-        <div className="text-center py-12">
-          <Bot className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">无匹配的智能体</p>
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
+          <Loader2 size={32} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      )}
+
+      {!loading && filteredAgents.length === 0 && (
+        <div style={{
+          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center',
+        }}>
+          <Bot size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 16px auto', opacity: 0.5 }} />
+          <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>暂无智能体</p>
+          <button onClick={() => setShowCreateModal(true)} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
+            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
+            borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+            transition: 'all var(--transition-fast)',
+          }}>
+            <Plus size={16} /> 创建第一个智能体
+          </button>
+        </div>
+      )}
+
+      {!loading && filteredAgents.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
           <AnimatePresence>
-            {filteredAgents.map((agent, index) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
-              >
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
-                        agent.status === 'running'
-                          ? 'bg-green-50 dark:bg-green-900/30'
-                          : 'bg-gray-50 dark:bg-gray-700'
-                      }`}>
-                        {AGENT_TYPES.find(at => at.value === (agent as any).type)?.icon || '🤖'}
+            {filteredAgents.map((agent: any, index: number) => {
+              const statusCfg = STATUS_CONFIG[agent.status] || STATUS_CONFIG.idle;
+              return (
+                <motion.div
+                  key={agent.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.04 }}
+                  style={{
+                    backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-lg)', padding: '20px', boxShadow: 'var(--shadow-sm)',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center', color: 'white',
+                      }}>
+                        <Bot size={20} />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{agent.name}</h3>
-                        <p className="text-xs text-gray-500">
-                          {AGENT_TYPES.find(at => at.value === (agent as any).type)?.label || (agent as any).type}
-                        </p>
+                        <h3 style={{ margin: 0, fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
+                          {agent.name}
+                        </h3>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--font-size-xs)',
+                          padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: 'var(--font-weight-medium)',
+                          color: statusCfg.color, backgroundColor: statusCfg.bg,
+                        }}>
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: agent.status === 'running' ? 'var(--success-color)' : statusCfg.color, display: 'inline-block' }} />
+                          {statusCfg.label}
+                        </span>
                       </div>
                     </div>
-                    <div className={`w-2.5 h-2.5 rounded-full mt-2 ${
-                      agent.status === 'running' ? 'bg-green-500 animate-pulse' : 'bg-gray-400'
-                    }`} />
-                  </div>
-
-                  {(agent as any).description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">{(agent as any).description}</p>
-                  )}
-
-                  {(agent as any).capabilities && (agent as any).capabilities.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {((agent as any).capabilities as string[]).slice(0, 3).map(cap => (
-                        <span key={cap} className="px-2 py-0.5 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">
-                          {cap}
-                        </span>
-                      ))}
-                      {((agent as any).capabilities as string[]).length > 3 && (
-                        <span className="px-2 py-0.5 text-xs text-gray-500">
-                          +{((agent as any).capabilities as string[]).length - 3}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <BarChart3 className="w-3 h-3" /> 任务: {(agent as any).taskCount || 0}
-                    </span>
-                    <span className="text-xs text-gray-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {(agent as any).lastActive ? new Date((agent as any).lastActive).toLocaleTimeString() : '—'}
-                    </span>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => handleViewDetail(agent)}
-                      className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center justify-center gap-1"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> 详情
+                    <button onClick={() => viewDetail(agent)} style={{
+                      width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      border: 'none', borderRadius: 'var(--radius-sm)', backgroundColor: 'var(--bg-tertiary)',
+                      color: 'var(--text-muted)', cursor: 'pointer', transition: 'all var(--transition-fast)',
+                    }}>
+                      <ChevronDown size={14} />
                     </button>
+                  </div>
+
+                  {agent.description && (
+                    <p style={{ margin: '0 0 12px 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {agent.description}
+                    </p>
+                  )}
+
+                  <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+                    <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      #{agent.id?.slice(0, 8)}
+                    </span>
+                    {agent.createdAt && (
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>
+                        · {new Date(agent.createdAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
                     {agent.status === 'running' ? (
-                      <button
-                        onClick={() => handleStopAgent(agent.id)}
-                        disabled={actionLoading === agent.id}
-                        className="flex-1 px-2 py-1.5 text-sm border border-red-300 dark:border-red-600 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center gap-1"
-                      >
-                        {actionLoading === agent.id ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <Square className="w-3.5 h-3.5" />}
+                      <button onClick={() => handleTerminate(agent.id)} disabled={actionLoading === `terminate-${agent.id}`} style={{
+                        flex: 1, padding: '8px 12px', border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'var(--error-light)', color: 'var(--error-color)', cursor: 'pointer',
+                        fontFamily: 'inherit', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', gap: '4px', transition: 'all var(--transition-fast)',
+                        opacity: actionLoading === `terminate-${agent.id}` ? 0.5 : 1,
+                      }}>
+                        {actionLoading === `terminate-${agent.id}` ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Square size={14} />}
                         停止
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleStartAgent(agent.id)}
-                        disabled={actionLoading === agent.id}
-                        className="flex-1 px-2 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-1"
-                      >
-                        {actionLoading === agent.id ? <RotateCcw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                        启动
+                      <button onClick={() => {}} style={{
+                        flex: 1, padding: '8px 12px', border: 'none', borderRadius: 'var(--radius-md)',
+                        background: 'linear-gradient(135deg, var(--success-color), #4ade80)', color: 'white',
+                        cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-sm)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                        transition: 'all var(--transition-fast)',
+                      }}>
+                        <Play size={14} /> 启动
                       </button>
                     )}
-                    <button
-                      onClick={() => handleViewConfig(agent.id)}
-                      className="p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
+                    <button onClick={() => handleOpenInvoke(agent)} style={{
+                      flex: 1, padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer',
+                      fontFamily: 'inherit', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', gap: '4px', transition: 'all var(--transition-fast)',
+                    }}>
+                      <Zap size={14} /> 调用
                     </button>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
 
-      {/* Agent Detail Modal */}
-      <AnimatePresence>
-        {showDetail && selectedAgent && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowDetail(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Bot className="w-6 h-6 text-purple-600" />
-                  智能体详情
-                </h3>
-                <button onClick={() => setShowDetail(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <X className="w-5 h-5 text-gray-500" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">ID</p>
-                    <p className="text-sm font-mono text-gray-900 dark:text-white">{selectedAgent.id}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">名称</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{selectedAgent.name}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">类型</p>
-                    <p className="text-sm text-gray-900 dark:text-white">{AGENT_TYPES.find(at => at.value === (selectedAgent as any).type)?.label || (selectedAgent as any).type}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">状态</p>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                      selectedAgent.status === 'running'
-                        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${selectedAgent.status === 'running' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                      {selectedAgent.status}
-                    </span>
-                  </div>
-                </div>
-                {(selectedAgent as any).description && (
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-1">描述</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{(selectedAgent as any).description}</p>
-                  </div>
-                )}
-                {(selectedAgent as any).capabilities && (selectedAgent as any).capabilities.length > 0 && (
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 mb-2">能力</p>
-                    <div className="flex flex-wrap gap-1">
-                      {((selectedAgent as any).capabilities as string[]).map(cap => (
-                        <span key={cap} className="px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full">{cap}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {(selectedAgent as any).createdAt && (
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3">
-                    <p className="text-xs text-gray-500">创建时间</p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">{new Date((selectedAgent as any).createdAt).toLocaleString()}</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Create Agent Modal */}
       <AnimatePresence>
         {showCreateModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: '24px', backdropFilter: 'blur(8px)' }}
             onClick={() => setShowCreateModal(false)}
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', maxWidth: '480px', width: '100%', padding: '24px' }}
+              onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-purple-600" />
-                  创建智能体
-                </h3>
-                <button onClick={() => setShowCreateModal(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <X className="w-5 h-5 text-gray-500" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <h2 style={{ margin: 0, fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>创建智能体</h2>
+                <button onClick={() => setShowCreateModal(false)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={18} />
                 </button>
               </div>
-              <div className="space-y-4">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">名称</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                    placeholder="输入智能体名称..."
+                  <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: '6px' }}>名称</label>
+                  <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="输入智能体名称..." style={{
+                    width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit', outline: 'none', transition: 'all var(--transition-fast)',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.2)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">类型</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                  >
-                    {AGENT_TYPES.map(at => (
-                      <option key={at.value} value={at.value}>{at.icon} {at.label} — {at.description}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述</label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
-                    className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
-                    placeholder="描述智能体的功能..."
+                  <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: '6px' }}>描述</label>
+                  <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={3} placeholder="描述智能体的功能..." style={{
+                    width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                    backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', transition: 'all var(--transition-fast)',
+                  }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.2)'; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">能力标签</label>
-                  <div className="flex gap-2 mb-2">
-                    <input
-                      type="text"
-                      value={newCapability}
-                      onChange={(e) => setNewCapability(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addCapability()}
-                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                      placeholder="输入能力标签..."
-                    />
-                    <button onClick={addCapability} className="px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {formData.capabilities.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {formData.capabilities.map(cap => (
-                        <span key={cap} className="px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-full flex items-center gap-1">
-                          {cap}
-                          <button onClick={() => removeCapability(cap)} className="hover:text-red-500">×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-2 pt-2">
-                  <button
-                    onClick={() => setShowCreateModal(false)}
-                    className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    取消
-                  </button>
-                  <button
-                    onClick={handleCreateAgent}
-                    disabled={!formData.name.trim()}
-                    className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    创建
-                  </button>
-                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button onClick={() => setShowCreateModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)' }}>取消</button>
+                <button onClick={handleSpawn} disabled={!newName.trim() || actionLoading === 'spawn'} style={{
+                  padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
+                  borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+                  display: 'flex', alignItems: 'center', gap: '6px', opacity: (!newName.trim() || actionLoading === 'spawn') ? 0.5 : 1,
+                }}>
+                  {actionLoading === 'spawn' ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={16} />}
+                  创建
+                </button>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Config Editor Modal */}
       <AnimatePresence>
-        {showConfigEditor && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setShowConfigEditor(false)}
+        {showInvokeModal && selectedAgent && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: '24px', backdropFilter: 'blur(8px)' }}
+            onClick={() => setShowInvokeModal(false)}
           >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl shadow-xl max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', maxWidth: '520px', width: '100%', padding: '24px' }}
+              onClick={e => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-gray-500" />
-                  配置编辑器
-                </h3>
-                <button onClick={() => setShowConfigEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                  <X className="w-5 h-5 text-gray-500" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>调用智能体</h2>
+                  <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>{selectedAgent.name}</p>
+                </div>
+                <button onClick={() => setShowInvokeModal(false)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={18} />
                 </button>
               </div>
-              <textarea
-                value={configJson}
-                onChange={(e) => setConfigJson(e.target.value)}
-                rows={12}
-                className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm"
+              <textarea value={invokeInput} onChange={e => setInvokeInput(e.target.value)} rows={4} placeholder="输入要发送给智能体的指令..." style={{
+                width: '100%', padding: '12px 14px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', marginBottom: '16px', transition: 'all var(--transition-fast)',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = '#8b5cf6'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(139,92,246,0.2)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
               />
-              <div className="flex gap-2 mt-4">
-                <button
-                  onClick={() => setShowConfigEditor(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  取消
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                <button onClick={() => setShowInvokeModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)' }}>取消</button>
+                <button onClick={handleInvoke} disabled={!invokeInput.trim() || actionLoading === 'invoke'} style={{
+                  padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
+                  borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+                  display: 'flex', alignItems: 'center', gap: '6px', opacity: (!invokeInput.trim() || actionLoading === 'invoke') ? 0.5 : 1,
+                }}>
+                  {actionLoading === 'invoke' ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={16} />}
+                  发送
                 </button>
-                <button
-                  onClick={() => selectedAgent && handleSaveConfig(selectedAgent.id)}
-                  className="flex-1 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
-                >
-                  <Save className="w-4 h-4" />
-                  保存
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showDetail && selectedAgent && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: '24px', backdropFilter: 'blur(8px)' }}
+            onClick={() => setShowDetail(false)}
+          >
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-lg)', maxWidth: '480px', width: '100%', padding: '24px' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h2 style={{ margin: 0, fontSize: 'var(--font-size-xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>智能体详情</h2>
+                <button onClick={() => setShowDetail(false)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                  <X size={18} />
                 </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>ID</p>
+                  <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', wordBreak: 'break-all' }}>{selectedAgent.id}</p>
+                </div>
+                <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                  <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>名称</p>
+                  <p style={{ margin: 0, fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>{selectedAgent.name}</p>
+                </div>
+                {selectedAgent.description && (
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                    <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>描述</p>
+                    <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedAgent.description}</p>
+                  </div>
+                )}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                    <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>状态</p>
+                    <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: STATUS_CONFIG[selectedAgent.status]?.color, fontWeight: 'var(--font-weight-medium)' }}>
+                      {STATUS_CONFIG[selectedAgent.status]?.label || selectedAgent.status}
+                    </p>
+                  </div>
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                    <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>创建时间</p>
+                    <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)' }}>
+                      {selectedAgent.createdAt ? new Date(selectedAgent.createdAt).toLocaleString() : '—'}
+                    </p>
+                  </div>
+                </div>
+                {selectedAgent.metadata && Object.keys(selectedAgent.metadata).length > 0 && (
+                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
+                    <p style={{ margin: '0 0 8px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>元数据</p>
+                    <pre style={{ margin: 0, fontSize: 'var(--font-size-xs)', fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', maxHeight: '120px', overflow: 'auto' }}>
+                      {JSON.stringify(selectedAgent.metadata, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
