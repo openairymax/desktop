@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -7,70 +7,102 @@ import {
   ArrowUp, ArrowDown, Activity, Clock, AlertCircle,
   Bot, Server, Workflow, Terminal,
   CheckCircle, XCircle, PlayCircle, RefreshCw,
-  Shield, MessageSquare, Brain, Zap,
+  Shield, MessageSquare, Brain, Zap, ListTodo, Wrench,
+  Plug, Globe, Loader2,
 } from 'lucide-react';
+import { useConnection, useHealth, useTasks, useAgents } from '../hooks/useAgentOS';
 
 const Dashboard: React.FC = () => {
   const { t } = useTranslation();
+  const { connection, connect } = useConnection();
+  const { health, metrics, loading: healthLoading, fetchAll } = useHealth();
+  const { tasks, loading: tasksLoading, fetchTasks } = useTasks();
+  const { agents, loading: agentsLoading, fetchAgents } = useAgents();
+  const [initialized, setInitialized] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const systemStats = [
+  const isConnected = connection.status === 'connected';
+  const isLoading = healthLoading || !initialized;
+
+  useEffect(() => {
+    if (connection.status === 'disconnected') {
+      connect().then(() => setInitialized(true)).catch(() => setInitialized(true));
+    } else if (connection.status === 'connected' && !initialized) {
+      setInitialized(true);
+    }
+  }, [connection.status, connect, initialized]);
+
+  useEffect(() => {
+    if (isConnected) {
+      fetchAll();
+      fetchTasks({ sort: { field: 'createdAt', order: 'desc' } });
+      fetchAgents();
+    }
+  }, [isConnected, fetchAll, fetchTasks, fetchAgents]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchAll(), fetchTasks(), fetchAgents()]);
+    setRefreshing(false);
+  }, [fetchAll, fetchTasks, fetchAgents]);
+
+  const systemStats = isConnected && metrics ? [
     {
       title: 'CPU',
-      value: '42%',
-      change: '+5%',
-      trend: 'up' as const,
+      value: `${metrics.cpuUsage.toFixed(1)}%`,
+      change: `${metrics.cpuUsage > 50 ? '+' : ''}${(metrics.cpuUsage * 0.1).toFixed(1)}%`,
+      trend: metrics.cpuUsage > 50 ? 'up' as const : 'down' as const,
       icon: <Cpu size={20} />,
-      status: 'normal',
+      status: metrics.cpuUsage > 80 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.cpuUsage, 100),
     },
     {
       title: t('stats.memory'),
-      value: '8.2GB',
-      change: '+1.2GB',
-      trend: 'up' as const,
+      value: `${metrics.memoryUsage.toFixed(1)}%`,
+      change: `${metrics.memoryUsage > 50 ? '+' : ''}${(metrics.memoryUsage * 0.05).toFixed(1)}%`,
+      trend: metrics.memoryUsage > 50 ? 'up' as const : 'down' as const,
       icon: <MemoryStick size={20} />,
-      status: 'warning',
+      status: metrics.memoryUsage > 80 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.memoryUsage, 100),
     },
     {
       title: t('stats.disk'),
-      value: '256GB',
-      change: '-24GB',
-      trend: 'down' as const,
+      value: `${metrics.memoriesTotal}`,
+      change: `${metrics.memoriesTotal > 0 ? '+' : ''}${metrics.memoriesTotal}`,
+      trend: metrics.memoriesTotal > 0 ? 'up' as const : 'down' as const,
       icon: <HardDrive size={20} />,
-      status: 'normal',
+      status: 'normal' as const,
+      progress: Math.min((metrics.memoriesTotal % 100), 100),
     },
     {
       title: t('stats.network'),
-      value: '2.4GB/s',
-      change: '+0.8GB/s',
-      trend: 'up' as const,
+      value: `${metrics.requestCount}`,
+      change: `${metrics.averageLatencyMs.toFixed(0)}ms`,
+      trend: metrics.averageLatencyMs < 100 ? 'down' as const : 'up' as const,
       icon: <Network size={20} />,
-      status: 'normal',
+      status: metrics.averageLatencyMs > 200 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.averageLatencyMs / 5, 100),
     },
-  ];
-
-  const agents = [
-    { name: 'OpenAI Assistant', status: 'online', tasks: 12, model: 'gpt-4' },
-    { name: 'Claude Helper', status: 'online', tasks: 8, model: 'claude-3' },
-    { name: 'Local Runner', status: 'offline', tasks: 0, model: 'llama-3' },
-  ];
-
-  const recentTasks = [
-    { title: 'Data Analysis', status: 'completed', agent: 'OpenAI Assistant', time: '2 mins ago' },
-    { title: 'Code Review', status: 'running', agent: 'Claude Helper', time: '5 mins ago' },
-    { title: 'Report Generation', status: 'failed', agent: 'Local Runner', time: '10 mins ago' },
+  ] : [
+    { title: 'CPU', value: '--', change: '--', trend: 'up' as const, icon: <Cpu size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.memory'), value: '--', change: '--', trend: 'up' as const, icon: <MemoryStick size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.disk'), value: '--', change: '--', trend: 'up' as const, icon: <HardDrive size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.network'), value: '--', change: '--', trend: 'up' as const, icon: <Network size={20} />, status: 'normal' as const, progress: 0 },
   ];
 
   const quickActions = [
-    { label: 'New Agent', icon: <Bot size={16} />, path: '/agents' },
-    { label: 'Create Task', icon: <Workflow size={16} />, path: '/tasks' },
-    { label: 'Open Terminal', icon: <Terminal size={16} />, path: '/terminal' },
-    { label: 'AI Chat', icon: <MessageSquare size={16} />, path: '/ai-chat' },
+    { label: t('dashboard.quickActions') === 'Quick Actions' ? 'New Agent' : t('agents.registerNew'), icon: <Bot size={16} />, path: '/agents' },
+    { label: t('tasks.submitNewTask'), icon: <Workflow size={16} />, path: '/tasks' },
+    { label: t('nav.terminal'), icon: <Terminal size={16} />, path: '/terminal' },
+    { label: t('nav.aiChat'), icon: <MessageSquare size={16} />, path: '/ai-chat' },
   ];
 
   const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
     completed: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
     running: { bg: 'var(--info-light)', text: 'var(--info-color)', dot: 'var(--info-color)' },
+    pending: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
     failed: { bg: 'var(--error-light)', text: 'var(--error-color)', dot: 'var(--error-color)' },
+    cancelled: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
     online: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
     offline: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
     warning: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
@@ -100,6 +132,18 @@ const Dashboard: React.FC = () => {
     transition: 'all 200ms ease',
   };
 
+  const formatUptime = (seconds: number): string => {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const recentTasks = tasks.slice(0, 5);
+  const onlineAgents = agents.filter((a: any) => a.status === 'online' || a.status === 'running' || a.status === 'active');
+
   return (
     <motion.div
       variants={containerVariants}
@@ -126,38 +170,156 @@ const Dashboard: React.FC = () => {
             color: 'var(--text-primary)',
             margin: 0,
             letterSpacing: '-0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
           }}>
             {t('dashboard.title')}
+            {isConnected && health?.version && (
+              <span style={{
+                fontSize: '12px',
+                fontWeight: '500',
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-tertiary)',
+                padding: '2px 10px',
+                borderRadius: '6px',
+              }}>
+                v{health.version}
+              </span>
+            )}
           </h1>
           <p style={{
             fontSize: '14px',
             color: 'var(--text-muted)',
             margin: '4px 0 0 0',
           }}>
-            {t('dashboard.subtitle')}
+            {isConnected && health?.uptime
+              ? `Uptime: ${formatUptime(health.uptime)}`
+              : t('dashboard.subtitle')}
           </p>
         </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '8px 16px',
-          backgroundColor: 'var(--bg-secondary)',
-          borderRadius: '8px',
-          border: '1px solid var(--border-subtle)',
-        }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              fontFamily: 'inherit',
+              opacity: refreshing ? 0.6 : 1,
+              transition: 'all 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!refreshing) {
+                e.currentTarget.style.borderColor = 'var(--primary-color)';
+                e.currentTarget.style.color = 'var(--primary-color)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+            {t('common.refresh')}
+          </motion.button>
           <div style={{
-            width: '8px',
-            height: '8px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--success-color)',
-            animation: 'pulse 2s infinite',
-          }} />
-          <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-            System Online
-          </span>
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-subtle)',
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: isConnected ? 'var(--success-color)' : 'var(--error-color)',
+              animation: isConnected ? 'pulse 2s infinite' : 'none',
+            }} />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              {isConnected ? t('common.connected') : t('common.disconnected')}
+            </span>
+          </div>
         </div>
       </motion.div>
+
+      {/* Error State */}
+      {connection.status === 'error' && !isLoading && (
+        <motion.div
+          variants={itemVariants}
+          style={{
+            padding: '16px 20px',
+            backgroundColor: 'var(--error-light)',
+            border: '1px solid var(--error-color)',
+            borderRadius: '10px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <AlertCircle size={18} color="var(--error-color)" />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--error-color)', fontWeight: '500' }}>
+              {connection.error || 'Connection failed'}
+            </p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+              Go to Settings to configure your AgentOS gateway connection
+            </p>
+          </div>
+          <Link to="/settings">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              style={{
+                padding: '6px 14px',
+                backgroundColor: 'var(--error-color)',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              Settings
+            </motion.button>
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && connection.status !== 'error' && (
+        <motion.div
+          variants={itemVariants}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: '16px',
+          }}
+        >
+          <Loader2 size={32} className="spin" style={{ color: 'var(--primary-color)' }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
+            {connection.status === 'connecting' ? 'Connecting to AgentOS Gateway...' : t('common.loading')}
+          </p>
+        </motion.div>
+      )}
 
       {/* System Stats */}
       <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
@@ -209,7 +371,6 @@ const Dashboard: React.FC = () => {
                   }}>
                     {stat.trend === 'up' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
                     <span>{stat.change}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>vs last hour</span>
                   </div>
                 </div>
                 <div style={{
@@ -236,7 +397,7 @@ const Dashboard: React.FC = () => {
               }}>
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: stat.title === 'CPU' ? '42%' : stat.title === 'Memory' ? '65%' : stat.title === 'Disk' ? '72%' : '38%' }}
+                  animate={{ width: `${stat.progress}%` }}
                   transition={{ duration: 1, ease: 'easeOut' }}
                   style={{
                     height: '100%',
@@ -357,86 +518,124 @@ const Dashboard: React.FC = () => {
                   padding: '4px 10px',
                   borderRadius: '12px',
                 }}>
-                  {agents.filter(a => a.status === 'online').length} of {agents.length} online
+                  {agentsLoading ? '...' : `${onlineAgents.length} of ${agents.length} online`}
                 </span>
               </div>
             </div>
             <div style={{ padding: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {agents.map((agent) => (
-                  <div
-                    key={agent.name}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      borderRadius: '8px',
-                      transition: 'all 150ms ease',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '36px',
-                        height: '36px',
-                        borderRadius: '8px',
-                        background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+              {agentsLoading && agents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+                  Loading agents...
+                </div>
+              ) : agents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <Bot size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {t('agents.noAgentsRegistered')}
+                  </p>
+                  <Link to="/agents" style={{ textDecoration: 'none' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        backgroundColor: 'var(--primary-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {t('agents.registerNew')}
+                    </motion.button>
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {agents.slice(0, 5).map((agent: any) => (
+                    <div
+                      key={agent.id}
+                      style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        fontWeight: '700',
-                        fontSize: '14px',
-                      }}>
-                        {agent.name.charAt(0)}
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        borderRadius: '8px',
+                        transition: 'all 150ms ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: '14px',
+                        }}>
+                          {(agent.name || 'A').charAt(0)}
+                        </div>
+                        <div>
+                          <h4 style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '500',
+                          }}>
+                            {agent.name}
+                          </h4>
+                          <p style={{
+                            margin: '2px 0 0 0',
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                          }}>
+                            {agent.description || agent.status}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 style={{
-                          margin: 0,
-                          fontSize: '13px',
-                          color: 'var(--text-primary)',
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          color: statusColors[agent.status]?.text || 'var(--text-muted)',
+                          backgroundColor: statusColors[agent.status]?.bg || 'var(--bg-tertiary)',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
                           fontWeight: '500',
                         }}>
-                          {agent.name}
-                        </h4>
-                        <p style={{
-                          margin: '2px 0 0 0',
-                          fontSize: '11px',
-                          color: 'var(--text-muted)',
-                        }}>
-                          {agent.model}
-                        </p>
+                          {agent.status}
+                        </span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        color: statusColors[agent.status].text,
-                        backgroundColor: statusColors[agent.status].bg,
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: '500',
-                      }}>
-                        {agent.status}
-                      </span>
-                      <span style={{
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                      }}>
-                        {agent.tasks} tasks
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {agents.length > 5 && (
+                    <Link to="/agents" style={{
+                      textAlign: 'center',
+                      fontSize: '12px',
+                      color: 'var(--primary-color)',
+                      textDecoration: 'none',
+                      padding: '8px',
+                    }}>
+                      View all {agents.length} agents
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -475,99 +674,129 @@ const Dashboard: React.FC = () => {
                     fontWeight: '600',
                     color: 'var(--text-primary)',
                   }}>
-                    Recent Tasks
+                    {t('tasks.recentTasks')}
                   </h3>
                 </div>
                 <span style={{
                   fontSize: '12px',
                   color: 'var(--text-muted)',
                 }}>
-                  Latest activity
+                  {tasks.length > 0 ? `${tasks.filter(t => t.status === 'completed').length} done` : ''}
                 </span>
               </div>
             </div>
             <div style={{ padding: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {recentTasks.map((task) => (
-                  <div
-                    key={task.title}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      backgroundColor: 'var(--bg-tertiary)',
-                      borderRadius: '8px',
-                      transition: 'all 150ms ease',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
-                        background: statusColors[task.status].bg,
+              {tasksLoading && tasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+                  Loading tasks...
+                </div>
+              ) : recentTasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <ListTodo size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {t('tasks.noTasksYet')}
+                  </p>
+                  <Link to="/tasks" style={{ textDecoration: 'none' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        backgroundColor: 'var(--primary-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {t('tasks.submitNewTask')}
+                    </motion.button>
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {recentTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                      }}>
-                        {task.status === 'completed' && <CheckCircle size={16} color="var(--success-color)" />}
-                        {task.status === 'running' && (
-                          <motion.div animate={pulseAnimation}>
-                            <PlayCircle size={16} color="var(--info-color)" />
-                          </motion.div>
-                        )}
-                        {task.status === 'failed' && <XCircle size={16} color="var(--error-color)" />}
-                      </div>
-                      <div>
-                        <h4 style={{
-                          margin: 0,
-                          fontSize: '13px',
-                          color: 'var(--text-primary)',
-                          fontWeight: '500',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        borderRadius: '8px',
+                        transition: 'all 150ms ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}>
-                          {task.title}
-                        </h4>
-                        <p style={{
-                          margin: '2px 0 0 0',
+                          {task.status === 'completed' && <CheckCircle size={16} color="var(--success-color)" />}
+                          {task.status === 'running' && (
+                            <motion.div animate={pulseAnimation}>
+                              <PlayCircle size={16} color="var(--info-color)" />
+                            </motion.div>
+                          )}
+                          {task.status === 'pending' && <Clock size={16} color="var(--warning-color)" />}
+                          {(task.status === 'failed' || task.status === 'cancelled') && <XCircle size={16} color="var(--error-color)" />}
+                        </div>
+                        <div>
+                          <h4 style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '500',
+                            maxWidth: '180px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {task.description}
+                          </h4>
+                          <p style={{
+                            margin: '2px 0 0 0',
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                          }}>
+                            {new Date(task.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
                           fontSize: '11px',
-                          color: 'var(--text-muted)',
+                          color: statusColors[task.status]?.text || 'var(--text-muted)',
+                          backgroundColor: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontWeight: '500',
+                          display: 'inline-block',
                         }}>
-                          {task.agent}
-                        </p>
+                          {task.status}
+                        </span>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        color: statusColors[task.status].text,
-                        backgroundColor: statusColors[task.status].bg,
-                        padding: '4px 10px',
-                        borderRadius: '12px',
-                        fontWeight: '500',
-                        display: 'inline-block',
-                        marginBottom: '4px',
-                      }}>
-                        {task.status}
-                      </span>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                      }}>
-                        {task.time}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </motion.div>
@@ -617,13 +846,59 @@ const Dashboard: React.FC = () => {
               gap: '16px',
             }}>
               {[
-                { label: 'Uptime', value: '99.9%', icon: <Clock size={16} /> },
-                { label: 'Response Time', value: '24ms', icon: <Zap size={16} /> },
-                { label: 'Memory Usage', value: '65%', icon: <Brain size={16} /> },
-                { label: 'CPU Load', value: '42%', icon: <Activity size={16} /> },
-              ].map((health) => (
+                {
+                  label: 'Status',
+                  value: health?.status || '--',
+                  icon: <Activity size={16} />,
+                  color: isConnected ? 'var(--success-color)' : 'var(--error-color)',
+                },
+                {
+                  label: 'Uptime',
+                  value: health?.uptime ? formatUptime(health.uptime) : '--',
+                  icon: <Clock size={16} />,
+                  color: 'var(--success-color)',
+                },
+                {
+                  label: 'Latency',
+                  value: metrics ? `${metrics.averageLatencyMs.toFixed(0)}ms` : '--',
+                  icon: <Zap size={16} />,
+                  color: 'var(--info-color)',
+                },
+                {
+                  label: 'Requests',
+                  value: metrics ? `${metrics.requestCount}` : '--',
+                  icon: <Globe size={16} />,
+                  color: 'var(--primary-color)',
+                },
+                ...(metrics ? [
+                  {
+                    label: 'Tasks Total',
+                    value: `${metrics.tasksTotal}`,
+                    icon: <ListTodo size={16} />,
+                    color: 'var(--success-color)',
+                  },
+                  {
+                    label: 'Active Sessions',
+                    value: `${metrics.sessionsActive}`,
+                    icon: <MessageSquare size={16} />,
+                    color: 'var(--info-color)',
+                  },
+                  {
+                    label: 'Skills Loaded',
+                    value: `${metrics.skillsLoaded}`,
+                    icon: <Wrench size={16} />,
+                    color: 'var(--primary-color)',
+                  },
+                  {
+                    label: 'Memory Entries',
+                    value: `${metrics.memoriesTotal}`,
+                    icon: <Brain size={16} />,
+                    color: 'var(--warning-color)',
+                  },
+                ] : []),
+              ].map((healthItem) => (
                 <motion.div
-                  key={health.label}
+                  key={healthItem.label}
                   whileHover={{ y: -2 }}
                   style={{
                     padding: '16px',
@@ -638,17 +913,17 @@ const Dashboard: React.FC = () => {
                     width: '36px',
                     height: '36px',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, var(--success-light), transparent)',
+                    background: `linear-gradient(135deg, ${healthItem.color}22, transparent)`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--success-color)',
+                    color: healthItem.color,
                   }}>
-                    {health.icon}
+                    {healthItem.icon}
                   </div>
                   <div>
                     <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {health.label}
+                      {healthItem.label}
                     </p>
                     <h4 style={{
                       margin: '2px 0 0 0',
@@ -656,7 +931,7 @@ const Dashboard: React.FC = () => {
                       color: 'var(--text-primary)',
                       fontWeight: '700',
                     }}>
-                      {health.value}
+                      {healthItem.value}
                     </h4>
                   </div>
                 </motion.div>

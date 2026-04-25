@@ -6,7 +6,7 @@ import ErrorBoundary from './ErrorBoundary';
 import {
   LayoutDashboard, Server, Bot, ListTodo, Settings as SettingsIcon,
   FileText, Terminal, Cpu, Brain, Wrench, MessageSquare, Globe,
-  Menu, X, ChevronLeft, ChevronRight, Sun, Moon, Bell, Sparkles, Eye, BarChart3
+  Menu, X, ChevronLeft, ChevronRight, Sun, Moon, Bell, Sparkles, Eye, BarChart3, BookOpen
 } from 'lucide-react';
 
 interface NavItem {
@@ -22,6 +22,8 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'services', path: '/services', icon: <Server size={18} />, label: 'nav.services', category: 'core' },
   { key: 'agents', path: '/agents', icon: <Bot size={18} />, label: 'nav.agents', category: 'core' },
   { key: 'tasks', path: '/tasks', icon: <ListTodo size={18} />, label: 'nav.tasks', category: 'core' },
+  { key: 'sessions', path: '/sessions', icon: <MessageSquare size={18} />, label: 'nav.sessions', category: 'core' },
+  { key: 'skills', path: '/skills', icon: <Wrench size={18} />, label: 'nav.skills', category: 'core' },
   { key: 'dual-thinking', path: '/dual-thinking', icon: <Sparkles size={18} />, label: 'nav.dualThinking', category: 'advanced' },
   { key: 'agent-runtime', path: '/agent-runtime', icon: <Cpu size={18} />, label: 'nav.agentRuntime', category: 'advanced' },
   { key: 'memory-evolution', path: '/memory-evolution', icon: <Brain size={18} />, label: 'nav.memoryEvolution', category: 'advanced' },

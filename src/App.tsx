@@ -18,6 +18,8 @@ import ToolManager from './pages/ToolManager';
 import ProtocolPlayground from './pages/ProtocolPlayground';
 import DualThinkingSystem from './pages/DualThinkingSystem';
 import AIChatPage from './pages/AIChatPage';
+import SessionManagement from './pages/SessionManagement';
+import SkillRegistry from './pages/SkillRegistry';
 
 const App: React.FC = () => {
   return (
@@ -39,6 +41,8 @@ const App: React.FC = () => {
           <Route path="/cognitive-loop" element={<CognitiveLoop />} />
           <Route path="/tools" element={<ToolManager />} />
           <Route path="/protocols" element={<ProtocolPlayground />} />
+          <Route path="/sessions" element={<SessionManagement />} />
+          <Route path="/skills" element={<SkillRegistry />} />
           <Route path="/dual-thinking" element={<DualThinkingSystem />} />
           <Route path="/ai-chat" element={<AIChatPage />} />
         </Routes>

@@ -1,223 +1,234 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Wrench, Search, Play, ChevronDown, ChevronUp, Code,
-  Terminal, Brain, ListTodo, MessageSquare, HardDrive, Loader2
+  Wrench, Search, Play, Trash2, RefreshCw, Loader2,
+  AlertCircle, ChevronDown, ChevronUp, Code, Terminal, Brain, ListTodo, MessageSquare, HardDrive
 } from 'lucide-react';
-import { listTools, callTool, type RuntimeMetrics, runtimeMetrics } from '../services/agentos-sdk';
+import { useSkills } from '../hooks/useAgentOS';
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  system: <Terminal className="w-4 h-4" />,
-  agent: <Brain className="w-4 h-4" />,
-  task: <ListTodo className="w-4 h-4" />,
-  memory: <MessageSquare className="w-4 h-4" />,
-  io: <HardDrive className="w-4 h-4" />,
+  system: <Terminal size={14} />,
+  agent: <Brain size={14} />,
+  task: <ListTodo size={14} />,
+  memory: <MessageSquare size={14} />,
+  io: <HardDrive size={14} />,
 };
 
 const ToolManager: React.FC = () => {
-  const { t } = useTranslation();
-  const [tools, setTools] = useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { skills, loading, error: skillsError, fetchSkills, executeSkill, deleteSkill, getSkillCount } = useSkills();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [executingTool, setExecutingTool] = useState<string | null>(null);
-  const [selectedTool, setSelectedTool] = useState<Record<string, unknown> | null>(null);
+  const [selectedTool, setSelectedTool] = useState<any>(null);
   const [execArgs, setExecArgs] = useState('{}');
   const [execResult, setExecResult] = useState<Record<string, unknown> | null>(null);
-  const [execHistory, setExecHistory] = useState<Array<{ name: string; result: Record<string, unknown>; timestamp: string }>>([]);
-  const [metrics, setMetrics] = useState<RuntimeMetrics | null>(null);
+  const [execLoading, setExecLoading] = useState<string | null>(null);
+  const [execHistory, setExecHistory] = useState<Array<{ name: string; result: string; timestamp: string; success: boolean }>>([]);
 
-  const loadTools = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await listTools();
-      setTools(data);
-    } catch (e) {
-      console.error('Failed to load tools:', e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => { fetchSkills(); }, []);
 
-  const loadMetrics = useCallback(async () => {
-    try {
-      const data = await runtimeMetrics();
-      setMetrics(data);
-    } catch (e) {
-      console.error('Failed to load metrics:', e);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTools();
-    loadMetrics();
-  }, [loadTools, loadMetrics]);
-
-  const handleExecute = async (toolName: string) => {
-    setExecutingTool(toolName);
+  const handleExecute = async (skillId: string, skillName: string) => {
+    setExecLoading(skillId);
     setExecResult(null);
     try {
-      JSON.parse(execArgs);
-    } catch {
-      setExecResult({ error: t('protocols.errors.invalidJson') });
-      setExecutingTool(null);
-      return;
-    }
-    try {
-      const result = await callTool(toolName, execArgs);
-      setExecResult(result);
-      setExecHistory(prev => [{ name: toolName, result, timestamp: new Date().toISOString() }, ...prev].slice(0, 10));
+      const params = JSON.parse(execArgs);
+      await executeSkill(skillId, Object.keys(params).length > 0 ? params : undefined);
+      setExecResult({ success: true, message: `技能 ${skillName} 执行成功` });
+      setExecHistory(prev => [{ name: skillName, result: '执行成功', timestamp: new Date().toISOString(), success: true }, ...prev].slice(0, 10));
     } catch (e) {
-      setExecResult({ error: String(e) });
+      const errMsg = e instanceof Error ? e.message : String(e);
+      setExecResult({ error: errMsg });
+      setExecHistory(prev => [{ name: skillName, result: errMsg, timestamp: new Date().toISOString(), success: false }, ...prev].slice(0, 10));
     } finally {
-      setExecutingTool(null);
+      setExecLoading(null);
     }
   };
 
-  const filteredTools = tools.filter((tool) => {
-    const name = (tool.name as string)?.toLowerCase() || '';
-    const desc = (tool.description as string)?.toLowerCase() || '';
-    const cat = (tool.category as string) || '';
-    const matchesSearch = !searchQuery || name.includes(searchQuery.toLowerCase()) || desc.includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || cat === categoryFilter;
+  const handleDelete = async (skillId: string) => {
+    setExecLoading(`delete-${skillId}`);
+    try { await deleteSkill(skillId); } finally { setExecLoading(null); }
+  };
+
+  const filteredTools = skills.filter((s: any) => {
+    const name = s.name || '';
+    const desc = s.description || '';
+    const matchesSearch = !searchQuery || name.toLowerCase().includes(searchQuery.toLowerCase()) || desc.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === 'all' || (s.metadata as any)?.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ['all', ...new Set(tools.map(t => (t.category as string) || '').filter(Boolean))];
+  const categories = ['all', ...new Set(skills.map((s: any) => (s.metadata as any)?.category).filter(Boolean))];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Wrench className="w-8 h-8 text-amber-600" />
-          {t('tools.title')}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('tools.subtitle')}</p>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
+            background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+          }}>
+            <Wrench size={20} />
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+              工具管理
+            </h1>
+            <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>AgentOS 可用工具列表与执行控制台</p>
+          </div>
+        </div>
+        <button onClick={() => fetchSkills()} style={{
+          padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+          backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
+          transition: 'all var(--transition-fast)',
+        }}>
+          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> 刷新
+        </button>
       </div>
 
-      {metrics && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500">{t('cognitiveLoop.metrics.toolCallCount')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.toolCallCount}</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500">{t('cognitiveLoop.metrics.successRate')}</p>
-            <p className="text-2xl font-bold text-green-600">{metrics.successRate}%</p>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-500">{t('cognitiveLoop.metrics.avgLatencyMs')}</p>
-            <p className="text-2xl font-bold text-gray-900 dark:text-white">{metrics.avgLatencyMs}ms</p>
-          </div>
+      {skillsError && (
+        <div style={{
+          padding: '12px 16px', marginBottom: '16px', backgroundColor: 'var(--error-light)',
+          border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
+          display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error-color)',
+        }}>
+          <AlertCircle size={16} />
+          <span style={{ fontSize: 'var(--font-size-sm)' }}>{skillsError}</span>
         </div>
       )}
 
-      <div className="flex gap-3">
-        <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('tools.searchTools')}
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索工具..." style={{
+            width: '100%', padding: '10px 14px 10px 36px', border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)', backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)',
+            fontSize: 'var(--font-size-md)', fontFamily: 'inherit', outline: 'none', transition: 'all var(--transition-fast)',
+          }}
+          onFocus={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)'; }}
+          onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
           />
         </div>
-        <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-          className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-        >
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat === 'all' ? t('tools.allCategories') : t(`tools.${cat}`)}</option>
-          ))}
-        </select>
+        {categories.length > 1 && (
+          <select value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)} style={{
+            padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontFamily: 'inherit', outline: 'none',
+          }}>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat === 'all' ? '全部类别' : cat}</option>
+            ))}
+          </select>
+        )}
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-12 text-gray-500">{t('common.loading')}</div>
-      ) : filteredTools.length === 0 ? (
-        <div className="text-center py-12">
-          <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-500">{t('tools.noTools')}</p>
+      {loading && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
+          <Loader2 size={32} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
         </div>
-      ) : (
-        <div className="space-y-3">
+      )}
+
+      {!loading && filteredTools.length === 0 && (
+        <div style={{
+          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)', padding: '48px', textAlign: 'center',
+        }}>
+          <Wrench size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 16px auto', opacity: 0.5 }} />
+          <p style={{ color: 'var(--text-muted)' }}>暂无可用工具</p>
+        </div>
+      )}
+
+      {!loading && filteredTools.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           <AnimatePresence>
-            {filteredTools.map((tool, index) => {
-              const name = (tool.name as string) || '';
-              const desc = (tool.description as string) || '';
-              const cat = (tool.category as string) || '';
-              const isSelected = selectedTool === tool;
+            {filteredTools.map((tool: any, index: number) => {
+              const name = tool.name || '';
+              const desc = tool.description || '';
+              const cat = tool.metadata?.category || '';
+              const isSelected = selectedTool?.id === tool.id;
               return (
                 <motion.div
-                  key={name}
-                  initial={{ opacity: 0, y: 10 }}
+                  key={tool.id}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                  transition={{ delay: index * 0.04 }}
+                  style={{
+                    backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+                    borderRadius: 'var(--radius-lg)', overflow: 'hidden', boxShadow: 'var(--shadow-sm)',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
                 >
                   <div
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', cursor: 'pointer' }}
                     onClick={() => setSelectedTool(isSelected ? null : tool)}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-600">
-                        {CATEGORY_ICONS[cat] || <Code className="w-4 h-4" />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{
+                        width: '38px', height: '38px', borderRadius: 'var(--radius-md)',
+                        backgroundColor: 'rgba(245,158,11,0.1)', color: '#f59e0b', display: 'flex',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {CATEGORY_ICONS[cat] || <Code size={14} />}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 dark:text-white">{name}</p>
-                        <p className="text-sm text-gray-500">{desc}</p>
+                        <p style={{ margin: 0, fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)' }}>{name}</p>
+                        <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>{desc}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">{cat}</span>
-                      {isSelected ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {cat && <span style={{ fontSize: 'var(--font-size-xs)', padding: '2px 8px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-muted)' }}>{cat}</span>}
+                      {isSelected ? <ChevronUp size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={16} style={{ color: 'var(--text-muted)' }} />}
                     </div>
                   </div>
+
                   <AnimatePresence>
                     {isSelected && (
                       <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden border-t border-gray-100 dark:border-gray-700"
+                        style={{ overflow: 'hidden', borderTop: '1px solid var(--border-subtle)' }}
                       >
-                        <div className="p-4 space-y-4">
-                          {(tool.schema as any) && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tools.schema')}</p>
-                              <pre className="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded-lg overflow-x-auto">
-                                {JSON.stringify(tool.schema as any, null, 2)}
-                              </pre>
-                            </div>
-                          )}
+                        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('tools.execute')}</label>
-                            <textarea
-                              value={execArgs}
-                              onChange={(e) => setExecArgs(e.target.value)}
-                              placeholder={t('tools.argsPlaceholder')}
-                              rows={3}
-                              className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm"
+                            <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-secondary)', marginBottom: '6px' }}>参数 (JSON)</label>
+                            <textarea value={execArgs} onChange={e => setExecArgs(e.target.value)} rows={3} placeholder='{"key": "value"}' style={{
+                              width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
+                              backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontFamily: 'var(--font-mono)', outline: 'none', resize: 'vertical', transition: 'all var(--transition-fast)',
+                            }}
+                            onFocus={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)'; }}
+                            onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.boxShadow = 'none'; }}
                             />
                           </div>
-                          <button
-                            onClick={() => handleExecute(name)}
-                            disabled={executingTool === name}
-                            className="inline-flex items-center px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {executingTool === name ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                            {executingTool === name ? t('tools.executing') : t('tools.execute')}
-                          </button>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button onClick={() => handleExecute(tool.id, name)} disabled={execLoading === tool.id} style={{
+                              padding: '8px 16px', border: 'none', borderRadius: 'var(--radius-md)',
+                              background: 'linear-gradient(135deg, #f59e0b, #f97316)', color: 'white', cursor: 'pointer',
+                              fontFamily: 'inherit', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: '6px',
+                              transition: 'all var(--transition-fast)', opacity: execLoading === tool.id ? 0.5 : 1,
+                            }}>
+                              {execLoading === tool.id ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />}
+                              执行
+                            </button>
+                            <button onClick={() => handleDelete(tool.id)} disabled={execLoading === `delete-${tool.id}`} style={{
+                              padding: '8px 16px', border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
+                              backgroundColor: 'var(--error-light)', color: 'var(--error-color)', cursor: 'pointer',
+                              fontFamily: 'inherit', fontSize: 'var(--font-size-sm)', display: 'flex', alignItems: 'center', gap: '6px',
+                              transition: 'all var(--transition-fast)', opacity: execLoading === `delete-${tool.id}` ? 0.5 : 1,
+                            }}>
+                              <Trash2 size={14} /> 删除
+                            </button>
+                          </div>
                           {execResult && (
-                            <div>
-                              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tools.result')}</p>
-                              <pre className={`text-xs p-3 rounded-lg overflow-x-auto ${'error' in execResult ? 'bg-red-50 dark:bg-red-900/20 text-red-600' : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'}`}>
-                                {JSON.stringify(execResult, null, 2)}
-                              </pre>
-                            </div>
+                            <pre style={{
+                              margin: 0, padding: '12px', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-xs)',
+                              fontFamily: 'var(--font-mono)', maxHeight: '200px', overflow: 'auto', lineHeight: 1.6,
+                              backgroundColor: 'error' in execResult ? 'var(--error-light)' : 'var(--success-light)',
+                              color: 'error' in execResult ? 'var(--error-color)' : 'var(--success-color)',
+                            }}>
+                              {JSON.stringify(execResult, null, 2)}
+                            </pre>
                           )}
                         </div>
                       </motion.div>
@@ -231,20 +242,29 @@ const ToolManager: React.FC = () => {
       )}
 
       {execHistory.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Code className="w-5 h-5 text-gray-500" />
-            {t('tools.executionHistory')}
+        <div style={{
+          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)', padding: '20px', marginTop: '20px',
+        }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Code size={16} style={{ color: '#f59e0b' }} /> 执行历史
           </h3>
-          <div className="space-y-2">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {execHistory.map((item, i) => (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
-                <div>
-                  <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</span>
-                  <span className="text-xs text-gray-400 ml-2">{new Date(item.timestamp).toLocaleTimeString()}</span>
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)' }}>{item.name}</span>
+                  <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{new Date(item.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <span className="text-xs text-green-600 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                  {t('tools.executionSuccess')}
+                <span style={{
+                  fontSize: 'var(--font-size-xs)', padding: '2px 8px', borderRadius: 'var(--radius-full)',
+                  color: item.success ? 'var(--success-color)' : 'var(--error-color)',
+                  backgroundColor: item.success ? 'var(--success-light)' : 'var(--error-light)',
+                }}>
+                  {item.success ? '成功' : '失败'}
                 </span>
               </div>
             ))}
