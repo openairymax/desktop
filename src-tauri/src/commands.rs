@@ -42,7 +42,7 @@ pub struct AgentInfo {
     pub id: String,
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub type: Option<String>,
+    pub r#type: Option<String>,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub taskCount: Option<u32>,
@@ -81,15 +81,17 @@ pub struct TaskInfo {
 
 #[tauri::command]
 pub async fn get_system_info(state: State<'_, AppState>) -> Result<SystemInfo, String> {
-    let sys = sysinfo::System::new_all();
-    
-    let os = sysinfo::System::operating_system().to_string();
+    let _ = state;
+    let mut sys = sysinfo::System::new_all();
+    sys.refresh_cpu_usage();
+
+    let os = sysinfo::System::name().unwrap_or_else(|| "Unknown".to_string());
     let os_version = sysinfo::System::os_version()
         .unwrap_or_else(|| "Unknown".to_string());
     let architecture = std::env::consts::ARCH.to_string();
-    let cpu_cores = sysinfo::System::cpu_num() as usize;
+    let cpu_cores = sys.cpus().len();
     let total_memory_gb = sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
-    let free_memory_gb = sys.free_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
+    let free_memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
     let hostname = sysinfo::System::host_name()
         .unwrap_or_else(|| "Unknown".to_string());
 
@@ -97,9 +99,9 @@ pub async fn get_system_info(state: State<'_, AppState>) -> Result<SystemInfo, S
         os,
         osVersion: os_version,
         architecture,
-        cpuCores,
-        totalMemoryGb,
-        freeMemoryGb,
+        cpuCores: cpu_cores,
+        totalMemoryGb: total_memory_gb,
+        freeMemoryGb: free_memory_gb,
         hostname,
     })
 }
@@ -111,13 +113,13 @@ pub async fn execute_cli_command(
     state: State<'_, AppState>,
 ) -> Result<CliCommandResult, String> {
     let config = state.config.lock().map_err(|e| e.to_string())?;
-    
+
     let working_dir = config
         .detect_project_root()
         .ok();
 
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    
+
     cli::execute_command(
         &command,
         &args_refs,
@@ -158,7 +160,7 @@ pub async fn get_service_status(state: State<'_, AppState>) -> Result<Vec<Servic
 
         let name = parsed["Name"].as_str().unwrap_or("unknown").to_string();
         let status = parsed["Status"].as_str().unwrap_or("unknown").to_string();
-        
+
         let healthy = status.contains("running") || status.contains("healthy");
         let port = parsed["Publishers"]
             .as_array()
@@ -246,14 +248,14 @@ pub async fn get_logs(
     let docker_dir = config.get_docker_dir().map_err(|e| e.to_string())?;
 
     let tail_count = tail.unwrap_or(100).to_string();
-    
-    let mut args = vec!["logs", "--tail", &tail_count];
-    
+
+    let mut args: Vec<String> = vec!["logs".to_string(), "--tail".to_string(), tail_count];
+
     if let Some(svc) = service {
-        args.push(&svc);
+        args.push(svc);
     }
 
-    let args_refs: Vec<&str> = args.into_iter().collect();
+    let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
     let result = cli::execute_command(
         "docker",
@@ -273,7 +275,7 @@ pub async fn get_logs(
 #[tauri::command]
 pub async fn get_health_status(state: State<'_, AppState>) -> Result<Vec<ServiceStatus>, String> {
     let services = get_service_status(state).await?;
-    
+
     let health_results: Vec<ServiceStatus> = services
         .into_iter()
         .map(|mut svc| {
@@ -312,11 +314,11 @@ pub async fn list_agents(_state: State<'_, AppState>) -> Result<Vec<AgentInfo>, 
         AgentInfo {
             id: "agent-001".to_string(),
             name: "Research Assistant".to_string(),
-            type: Some("research".to_string()),
+            r#type: Some("research".to_string()),
             status: "idle".to_string(),
             taskCount: Some(0),
             lastActive: Some(chrono::Utc::now().to_rfc3339()),
-            description: Some("Web search, document analysis, information aggregation"),
+            description: Some("Web search, document analysis, information aggregation".to_string()),
             capabilities: Some(vec!["search".to_string(), "analyze".to_string(), "summarize".to_string()]),
             config: None,
             createdAt: Some(chrono::Utc::now().to_rfc3339()),
@@ -324,11 +326,11 @@ pub async fn list_agents(_state: State<'_, AppState>) -> Result<Vec<AgentInfo>, 
         AgentInfo {
             id: "agent-002".to_string(),
             name: "Code Reviewer".to_string(),
-            type: Some("coding".to_string()),
+            r#type: Some("coding".to_string()),
             status: "running".to_string(),
             taskCount: Some(3),
             lastActive: Some(chrono::Utc::now().to_rfc3339()),
-            description: Some("Code generation, debugging, refactoring, review"),
+            description: Some("Code generation, debugging, refactoring, review".to_string()),
             capabilities: Some(vec!["generate".to_string(), "debug".to_string(), "review".to_string()]),
             config: None,
             createdAt: Some(chrono::Utc::now().to_rfc3339()),
@@ -336,11 +338,11 @@ pub async fn list_agents(_state: State<'_, AppState>) -> Result<Vec<AgentInfo>, 
         AgentInfo {
             id: "agent-003".to_string(),
             name: "Data Analyst".to_string(),
-            type: Some("analysis".to_string()),
+            r#type: Some("analysis".to_string()),
             status: "idle".to_string(),
             taskCount: Some(1),
             lastActive: None,
-            description: Some("Data analysis, visualization, reporting"),
+            description: Some("Data analysis, visualization, reporting".to_string()),
             capabilities: Some(vec!["analyze".to_string(), "visualize".to_string()]),
             config: None,
             createdAt: Some(chrono::Utc::now().to_rfc3339()),
@@ -367,7 +369,7 @@ pub async fn submit_task(
     _state: State<'_, AppState>,
 ) -> Result<TaskInfo, String> {
     let task_id = uuid::Uuid::new_v4().to_string();
-    
+
     log::info!(
         "Submitting task '{}' to agent '{}'",
         task_description,
@@ -376,11 +378,15 @@ pub async fn submit_task(
 
     Ok(TaskInfo {
         id: task_id,
-        agent_id,
+        agentId: Some(agent_id),
+        name: Some(task_description),
+        type_: priority,
         status: "pending".to_string(),
         progress: 0.0,
-        created_at: chrono::Utc::now().to_rfc3339(),
-        updated_at: None,
+        createdAt: chrono::Utc::now().to_rfc3339(),
+        updatedAt: None,
+        result: None,
+        error: None,
     })
 }
 
@@ -391,11 +397,15 @@ pub async fn get_task_status(
 ) -> Result<TaskInfo, String> {
     Ok(TaskInfo {
         id: task_id,
-        agent_id: "agent-001".to_string(),
+        agentId: Some("agent-001".to_string()),
+        name: None,
+        type_: None,
         status: "completed".to_string(),
         progress: 100.0,
-        created_at: chrono::Utc::now().to_rfc3339(),
-        updated_at: Some(chrono::Utc::now().to_rfc3339()),
+        createdAt: chrono::Utc::now().to_rfc3339(),
+        updatedAt: Some(chrono::Utc::now().to_rfc3339()),
+        result: None,
+        error: None,
     })
 }
 
@@ -419,7 +429,7 @@ pub async fn open_terminal(
             .unwrap_or_default()
             .to_string_lossy()
             .to_string());
-        
+
         std::process::Command::new("open")
             .args(["-a", "Terminal", &dir])
             .spawn()
@@ -431,7 +441,7 @@ pub async fn open_terminal(
         let dir = working_dir.unwrap_or_else(|| {
             std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string())
         });
-        
+
         std::process::Command::new("cmd")
             .args(["/k", "cd", "/d", &dir])
             .spawn()
@@ -444,9 +454,9 @@ pub async fn open_terminal(
             .unwrap_or_default()
             .to_string_lossy()
             .to_string());
-        
+
         let terminals = ["gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
-        
+
         for terminal in &terminals {
             if which::which(terminal).is_ok() {
                 std::process::Command::new(terminal)
@@ -519,27 +529,27 @@ pub async fn download_and_install_update(
     _state: State<'_, AppState>,
 ) -> Result<(), String> {
     use tauri_plugin_updater::UpdaterExt;
-    
+
     let updater = app.updater().map_err(|e| e.to_string())?;
-    
+
     let update = updater.check().await.map_err(|e| e.to_string())?
         .ok_or("No update available")?;
-    
+
     log::info!("Downloading update {}...", update.version);
-    
-    let mut downloaded = 0;
-    let total = update.content_length.unwrap_or(0);
-    
+
+    let mut downloaded = 0u64;
+    let total: Option<u64> = None;
+
     update.download_and_install(
-        |chunk_length, content_length| {
-            downloaded += chunk_length;
-            log::info!("Downloaded {} of {} bytes", downloaded, content_length.unwrap_or(0));
+        |chunk_length, _content_length| {
+            downloaded += chunk_length as u64;
+            log::info!("Downloaded {} bytes", downloaded);
         },
         || {
             log::info!("Download complete, installing...");
         },
     ).await.map_err(|e| e.to_string())?;
-    
+
     log::info!("Update installed successfully");
 
     Ok(())
@@ -595,8 +605,8 @@ pub struct UsageInfo {
 #[tauri::command]
 pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String> {
     let model = request.model.as_deref().unwrap_or("gpt-4o").to_string();
-    let temperature = request.temperature.unwrap_or(0.7);
-    let max_tokens = request.max_tokens.unwrap_or(2048);
+    let _temperature = request.temperature.unwrap_or(0.7);
+    let _max_tokens = request.max_tokens.unwrap_or(2048);
 
     log::info!("LLM chat request: provider={}, model={}, messages={}", request.provider_id, model, request.messages.len());
 
@@ -610,7 +620,7 @@ pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String
 
     Ok(LLMChatResponse {
         id: format!("chatcmpl-{}", uuid::Uuid::new_v4()),
-        content: response_content,
+        content: response_content.clone(),
         role: "assistant".to_string(),
         model: model.clone(),
         finish_reason: "stop".to_string(),
@@ -740,7 +750,7 @@ fn estimate_tokens_str(text: &str) -> u32 {
 #[tauri::command]
 pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Value, String> {
     let start = std::time::Instant::now();
-    
+
     log::info!("Testing LLM connection for provider: {}", provider_id);
 
     tokio::time::sleep(std::time::Duration::from_millis(200)).await;
@@ -972,22 +982,22 @@ pub async fn run_cognitive_loop(
         },
         CognitiveStep {
             phase: "reasoning".to_string(),
-            thought: "分析用户意图：识别为系统操作请求",
-            detail: Some("置信度: 94% | 意图分类: system_operation"),
+            thought: "分析用户意图：识别为系统操作请求".to_string(),
+            detail: Some("置信度: 94% | 意图分类: system_operation".to_string()),
             timestamp: now.clone(),
             tool_call: None,
         },
         CognitiveStep {
             phase: "reasoning".to_string(),
-            thought: "检索相关记忆：发现上次类似操作的配置模式",
-            detail: Some("召回相关性: 0.88 | 记忆ID: m2"),
+            thought: "检索相关记忆：发现上次类似操作的配置模式".to_string(),
+            detail: Some("召回相关性: 0.88 | 记忆ID: m2".to_string()),
             timestamp: now.clone(),
             tool_call: None,
         },
         CognitiveStep {
             phase: "action".to_string(),
-            thought: "调用工具执行操作",
-            detail: Some("Tauri invoke → Rust backend → Docker CLI"),
+            thought: "调用工具执行操作".to_string(),
+            detail: Some("Tauri invoke → Rust backend → Docker CLI".to_string()),
             timestamp: now.clone(),
             tool_call: Some(serde_json::json!({
                 "id": "call_001",
@@ -1000,8 +1010,8 @@ pub async fn run_cognitive_loop(
         },
         CognitiveStep {
             phase: "reflection".to_string(),
-            thought: "评估结果：操作已完成，结果符合预期",
-            detail: Some("质量评分: A+ | 新增记忆: 1条"),
+            thought: "评估结果：操作已完成，结果符合预期".to_string(),
+            detail: Some("质量评分: A+ | 新增记忆: 1条".to_string()),
             timestamp: now,
             tool_call: None,
         },
@@ -1073,37 +1083,37 @@ pub async fn list_tasks() -> Result<Vec<TaskInfo>, String> {
     Ok(vec![
         TaskInfo {
             id: "task-001".to_string(),
-            agent_id: Some("agent-001".to_string()),
+            agentId: Some("agent-001".to_string()),
             name: Some("代码审查 PR #142".to_string()),
             type_: Some("coding".to_string()),
             status: "completed".to_string(),
             progress: 100.0,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            updated_at: Some(chrono::Utc::now().to_rfc3339()),
+            createdAt: chrono::Utc::now().to_rfc3339(),
+            updatedAt: Some(chrono::Utc::now().to_rfc3339()),
             result: Some(serde_json::json!({"issues_found": 3, "suggestions": 5})),
             error: None,
         },
         TaskInfo {
             id: "task-002".to_string(),
-            agent_id: Some("agent-002".to_string()),
+            agentId: Some("agent-002".to_string()),
             name: Some("数据分析报告 Q1".to_string()),
             type_: Some("analysis".to_string()),
             status: "running".to_string(),
             progress: 67.0,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            updated_at: None,
+            createdAt: chrono::Utc::now().to_rfc3339(),
+            updatedAt: None,
             result: None,
             error: None,
         },
         TaskInfo {
             id: "task-003".to_string(),
-            agent_id: Some("agent-003".to_string()),
+            agentId: Some("agent-003".to_string()),
             name: Some("竞品调研".to_string()),
             type_: Some("research".to_string()),
             status: "failed".to_string(),
             progress: 23.0,
-            created_at: chrono::Utc::now().to_rfc3339(),
-            updated_at: Some(chrono::Utc::now().to_rfc3339()),
+            createdAt: chrono::Utc::now().to_rfc3339(),
+            updatedAt: Some(chrono::Utc::now().to_rfc3339()),
             result: None,
             error: Some("API rate limit exceeded".to_string()),
         },
@@ -1121,13 +1131,13 @@ pub async fn restart_task(task_id: String) -> Result<TaskInfo, String> {
     log::info!("Task restarted: {}", task_id);
     Ok(TaskInfo {
         id: task_id,
-        agent_id: Some("agent-001".to_string()),
+        agentId: Some("agent-001".to_string()),
         name: None,
         type_: None,
         status: "pending".to_string(),
         progress: 0.0,
-        created_at: chrono::Utc::now().to_rfc3339(),
-        updated_at: None,
+        createdAt: chrono::Utc::now().to_rfc3339(),
+        updatedAt: None,
         result: None,
         error: None,
     })
@@ -1144,17 +1154,17 @@ pub async fn register_agent(
     let agent = AgentInfo {
         id: format!("agent-{}", uuid::Uuid::new_v4()),
         name: agent_name,
-        type_: Some(agent_type),
+        r#type: Some(agent_type),
         status: "idle".to_string(),
-        task_count: Some(0),
-        last_active: None,
+        taskCount: Some(0),
+        lastActive: None,
         description,
         capabilities: None,
         config: None,
-        created_at: Some(chrono::Utc::now().to_rfc3339()),
+        createdAt: Some(chrono::Utc::now().to_rfc3339()),
     };
 
-    log::info!("Agent registered: {} ({})", agent.name, agent.type_.as_deref().unwrap_or("unknown"));
+    log::info!("Agent registered: {} ({})", agent.name, agent.r#type.as_deref().unwrap_or("unknown"));
     Ok(agent)
 }
 
@@ -1183,10 +1193,14 @@ pub async fn start_agent(agent_id: String, _state: State<'_, AppState>) -> Resul
     Ok(AgentInfo {
         id: agent_id.clone(),
         name: format!("Agent-{}", &agent_id[8..16.min(agent_id.len())]),
-        type_: Some("running".to_string()),
+        r#type: Some("running".to_string()),
         status: "running".to_string(),
-        task_count: Some(0),
-        last_active: Some(chrono::Utc::now().to_rfc3339()),
+        taskCount: Some(0),
+        lastActive: Some(chrono::Utc::now().to_rfc3339()),
+        description: None,
+        capabilities: None,
+        config: None,
+        createdAt: None,
     })
 }
 
@@ -1196,10 +1210,14 @@ pub async fn stop_agent(agent_id: String, _state: State<'_, AppState>) -> Result
     Ok(AgentInfo {
         id: agent_id.clone(),
         name: format!("Agent-{}", &agent_id[8..16.min(agent_id.len())]),
-        type_: Some("stopped".to_string()),
+        r#type: Some("stopped".to_string()),
         status: "stopped".to_string(),
-        task_count: Some(0),
-        last_active: Some(chrono::Utc::now().to_rfc3339()),
+        taskCount: Some(0),
+        lastActive: Some(chrono::Utc::now().to_rfc3339()),
+        description: None,
+        capabilities: None,
+        config: None,
+        createdAt: None,
     })
 }
 
@@ -1221,7 +1239,15 @@ pub async fn get_agent_config(agent_id: String, _state: State<'_, AppState>) -> 
 #[tauri::command]
 pub async fn update_agent_config(agent_id: String, config: serde_json::Value, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     log::info!("Updating config for agent {}: {:?}", agent_id, config);
-    Ok(serde_json::json!({"id": agent_id, ...config}))
+    let mut result = serde_json::json!({"id": agent_id});
+    if let Some(obj) = result.as_object_mut() {
+        if let Some(cfg) = config.as_object() {
+            for (k, v) in cfg {
+                obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
+    Ok(result)
 }
 
 // ==================== File System Commands ====================
@@ -1305,10 +1331,11 @@ pub async fn copy_file(src: String, dst: String, _state: State<'_, AppState>) ->
     use std::fs;
     if std::path::Path::new(&src).is_dir() {
         copy_dir_all(&src, &dst)
+            .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
     } else {
-        fs::copy(&src, &dst).map(|_| ())?
+        fs::copy(&src, &dst).map(|_| ())
+            .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
     }
-    .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
 }
 
 fn copy_dir_all(src: &str, dst: &str) -> std::io::Result<()> {
@@ -1343,13 +1370,13 @@ pub async fn create_directory(path: String, _state: State<'_, AppState>) -> Resu
 #[tauri::command]
 pub async fn list_processes(_state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
     let mut processes = Vec::new();
-    let sys = sysinfo::System::new_all();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
+    let mut sys = sysinfo::System::new_all();
+    sys.refresh_processes();
 
     for (pid, process) in sys.processes() {
         processes.push(serde_json::json!({
             "pid": pid.as_u32(),
-            "name": process.name().to_string_lossy(),
+            "name": process.name().to_string(),
             "cpuPercent": process.cpu_usage(),
             "memoryMb": process.memory() / (1024 * 1024),
             "status": format!("{:?}", process.status()).to_lowercase(),
@@ -1367,7 +1394,7 @@ pub async fn list_processes(_state: State<'_, AppState>) -> Result<Vec<serde_jso
 pub async fn kill_process(pid: u32, force: bool, _state: State<'_, AppState>) -> Result<(), String> {
     use sysinfo::{Pid, System};
     let mut sys = System::new();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, false);
+    sys.refresh_processes();
 
     let pid_val = Pid::from_u32(pid);
     match sys.process(pid_val) {
@@ -1384,13 +1411,13 @@ pub async fn kill_process(pid: u32, force: bool, _state: State<'_, AppState>) ->
 pub async fn get_process_info(pid: u32, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     let mut sys = System::new();
-    sys.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
-    
+    sys.refresh_processes();
+
     let pid_val = Pid::from_u32(pid);
     sys.process(pid_val)
         .map(|p| serde_json::json!({
             "pid": pid,
-            "name": p.name().to_string_lossy(),
+            "name": p.name().to_string(),
             "cpuPercent": p.cpu_usage(),
             "memoryMb": p.memory() / (1024 * 1024),
             "status": format!("{:?}", p.status()).to_lowercase(),
@@ -1405,15 +1432,11 @@ pub async fn get_process_info(pid: u32, _state: State<'_, AppState>) -> Result<s
 #[tauri::command]
 pub async fn get_network_interfaces(_state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
     let mut interfaces = Vec::new();
-    let sys = sysinfo::System::new_all();
-    sys.refresh_networks_list();
-    sys.refresh_networks();
+    let networks = sysinfo::Networks::new_with_refreshed_list();
 
-    for (name, data) in sys.networks() {
+    for (name, data) in &networks {
         interfaces.push(serde_json::json!({
-            "name": name.to_string_lossy().to_string(),
-            "ipv4": data.ipv4().iter().next().map(|a| a.to_string()).unwrap_or_default(),
-            "ipv6": data.ipv6().iter().next().map(|a| a.to_string()).unwrap_or_default(),
+            "name": name.to_string(),
             "mac": data.mac_address().to_string(),
             "isUp": true,
             "bytesSent": data.transmitted(),
@@ -1429,19 +1452,19 @@ pub async fn check_port(host: String, port: u16, timeout_ms: Option<u64>, _state
     let timeout = std::time::Duration::from_millis(timeout_ms.unwrap_or(3000));
     let addr = format!("{}:{}", host, port);
 
-    match tokio::net::TcpStream::connect_timeout(&addr.parse::<std::net::SocketAddr>().map_err(|e| format!("Invalid address: {}", e))?, timeout).await {
-        Ok(_) => {
-            let latency = std::time::Instant::now();
-            Ok(serde_json::json!({
-                "port": port, "host": host, "open": true,
-                "latencyMs": latency.elapsed().as_millis() as u64,
-                "service": ""
-            }))
-        }
-        Err(e) => Ok(serde_json::json!({
+    match tokio::time::timeout(timeout, tokio::net::TcpStream::connect(&addr)).await {
+        Ok(Ok(_)) => Ok(serde_json::json!({
+            "port": port, "host": host, "open": true,
+            "service": ""
+        })),
+        Ok(Err(e)) => Ok(serde_json::json!({
             "port": port, "host": host, "open": false,
             "error": e.to_string()
-        }))
+        })),
+        Err(_) => Ok(serde_json::json!({
+            "port": port, "host": host, "open": false,
+            "error": "Connection timed out"
+        })),
     }
 }
 
@@ -1453,14 +1476,14 @@ pub async fn ping(host: String, count: Option<u32>, _state: State<'_, AppState>)
 
     for _ in 0..count {
         let start = std::time::Instant::now();
-        match check_port(host.clone(), 80, Some(1000)).await {
-            Ok(result) => {
-                if result.get("open").and_then(|v| v.as_bool()).unwrap_or(false) {
-                    received += 1;
-                    total_latency += start.elapsed().as_millis() as u64;
-                }
+        let timeout = std::time::Duration::from_millis(1000);
+        let addr = format!("{}:80", host);
+        match tokio::time::timeout(timeout, tokio::net::TcpStream::connect(&addr)).await {
+            Ok(Ok(_)) => {
+                received += 1;
+                total_latency += start.elapsed().as_millis() as u64;
             }
-            Err(_) => {}
+            _ => {}
         }
     }
 
@@ -1476,7 +1499,8 @@ pub async fn ping(host: String, count: Option<u32>, _state: State<'_, AppState>)
 #[tauri::command]
 pub async fn dns_lookup(hostname: String, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     use std::net::ToSocketAddrs;
-    match (hostname + ":80").to_socket_addrs() {
+    let hostname_clone = hostname.clone();
+    match (hostname_clone + ":80").to_socket_addrs() {
         Ok(addrs) => {
             let ips: Vec<String> = addrs.map(|a| a.ip().to_string()).collect();
             Ok(serde_json::json!({ "hostname": hostname, "addresses": ips }))
@@ -1490,14 +1514,10 @@ pub async fn dns_lookup(hostname: String, _state: State<'_, AppState>) -> Result
 #[tauri::command]
 pub async fn system_monitor(_state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let mut sys = sysinfo::System::new_all();
-    sys.refresh_cpu_all();
+    sys.refresh_cpu_usage();
     sys.refresh_memory();
-    sys.refresh_disks_list();
-    sys.refresh_disks();
-    sys.refresh_networks_list();
-    sys.refresh_networks();
 
-    let cpu_usage = sys.global_cpu_usage();
+    let cpu_usage = sys.global_cpu_info().cpu_usage();
     let cores: Vec<serde_json::Value> = sys.cpus().iter().enumerate().map(|(i, c)| {
         serde_json::json!({"coreId": i, "usage": c.cpu_usage()})
     }).collect();
@@ -1506,18 +1526,19 @@ pub async fn system_monitor(_state: State<'_, AppState>) -> Result<serde_json::V
     let used_mem = sys.used_memory();
     let free_mem = sys.available_memory();
 
+    let disks = sysinfo::Disks::new_with_refreshed_list();
     let mut disk_total = 0u64;
     let mut disk_used = 0u64;
-    for disk in sys.disks() {
+    for disk in &disks {
         disk_total += disk.total_space();
         disk_used += disk.total_space() - disk.available_space();
     }
 
+    let networks = sysinfo::Networks::new_with_refreshed_list();
     let mut net_ifaces = Vec::new();
-    for (name, data) in sys.networks() {
+    for (name, data) in &networks {
         net_ifaces.push(serde_json::json!({
-            "name": name.to_string_lossy(),
-            "ipv4": data.ipv4().iter().next().map(|a| a.to_string()).unwrap_or_default(),
+            "name": name.to_string(),
             "mac": data.mac_address().to_string(),
             "isUp": true,
             "bytesSent": data.transmitted(),
@@ -1530,6 +1551,6 @@ pub async fn system_monitor(_state: State<'_, AppState>) -> Result<serde_json::V
         "memory": {"totalGb": total_mem as f64 / 1073741824.0, "usedGb": used_mem as f64 / 1073741824.0, "freeGb": free_mem as f64 / 1073741824.0, "percent": (used_mem as f64 / total_mem as f64 * 10000.0).round() / 100.0},
         "disk": {"totalGb": disk_total as f64 / 1073741824.0, "usedGb": disk_used as f64 / 1073741824.0, "freeGb": (disk_total - disk_used) as f64 / 1073741824.0, "percent": if disk_total > 0 {(disk_used as f64 / disk_total as f64 * 10000.0).round() / 100.0} else { 0.0 }},
         "network": net_ifaces,
-        "uptimeSeconds": sys.uptime()
+        "uptimeSeconds": sysinfo::System::uptime()
     }))
 }
