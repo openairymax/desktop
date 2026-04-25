@@ -52,20 +52,21 @@ const AgentRuntime: React.FC = () => {
 
   const displayMetrics = metrics || {
     cycle_count: 0,
-    tool_call_count: 0,
-    memory_entries_count: 0,
-    avg_latency_ms: 0,
-    success_rate: 100.0,
-    total_tokens_consumed: 0,
+    cycleCount: 0,
+    toolCallCount: 0,
+    memoryEntriesCount: 0,
+    avgLatencyMs: 0,
+    successRate: 100.0,
+    totalTokensConsumed: 0,
   };
 
   const METRIC_CARDS = [
-    { key: "cycle_count", icon: Cpu, label: "认知循环", value: displayMetrics.cycle_count, unit: "", color: "#6366f1", bgLight: "rgba(99,102,241,0.08)" },
-    { key: "tool_call_count", icon: Wrench, label: "工具调用", value: displayMetrics.tool_call_count, unit: "", color: "#22c55e", bgLight: "rgba(34,197,94,0.08)" },
-    { key: "memory_entries_count", icon: Database, label: "记忆条目", value: displayMetrics.memory_entries_count, unit: "", color: "#f59e0b", bgLight: "rgba(245,158,11,0.08)" },
-    { key: "avg_latency_ms", icon: Clock, label: "平均延迟", value: (displayMetrics.avg_latency_ms / 1000).toFixed(2), unit: "s", color: "#06b6d4", bgLight: "rgba(6,182,212,0.08)" },
-    { key: "success_rate", icon: CheckCircle2, label: "成功率", value: displayMetrics.success_rate.toFixed(1), unit: "%", color: "#a855f7", bgLight: "rgba(168,85,247,0.08)" },
-    { key: "total_tokens_consumed", icon: Zap, label: "Token消耗", value: (displayMetrics.total_tokens_consumed / 1000).toFixed(1), unit: "K", color: "#ef4444", bgLight: "rgba(239,68,68,0.08)" },
+    { key: "cycleCount", icon: Cpu, label: "认知循环", value: displayMetrics.cycleCount, unit: "", color: "#6366f1", bgLight: "rgba(99,102,241,0.08)" },
+    { key: "toolCallCount", icon: Wrench, label: "工具调用", value: displayMetrics.toolCallCount, unit: "", color: "#22c55e", bgLight: "rgba(34,197,94,0.08)" },
+    { key: "memoryEntriesCount", icon: Database, label: "记忆条目", value: displayMetrics.memoryEntriesCount, unit: "", color: "#f59e0b", bgLight: "rgba(245,158,11,0.08)" },
+    { key: "avgLatencyMs", icon: Clock, label: "平均延迟", value: (displayMetrics.avgLatencyMs / 1000).toFixed(2), unit: "s", color: "#06b6d4", bgLight: "rgba(6,182,212,0.08)" },
+    { key: "successRate", icon: CheckCircle2, label: "成功率", value: displayMetrics.successRate.toFixed(1), unit: "%", color: "#a855f7", bgLight: "rgba(168,85,247,0.08)" },
+    { key: "totalTokensConsumed", icon: Zap, label: "Token消耗", value: (displayMetrics.totalTokensConsumed / 1000).toFixed(1), unit: "K", color: "#ef4444", bgLight: "rgba(239,68,68,0.08)" },
   ];
 
   const ARCHITECTURE_CARDS = [

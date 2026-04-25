@@ -1,913 +1,947 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useEffect, useCallback, useState } from 'react';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
-  Brain, Activity, Layers, Zap, Shield, Network,
-  RefreshCw, Eye, Database, Target, Workflow,
-  Bot, Wrench, Download, Terminal, Sparkles
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import sdk from "../services/agentos-sdk";
-import { exportToCSV } from "../utils/export";
-import { Button } from "../components/ui/Button";
-import { Card } from "../components/ui/Card";
-import { PageLayout } from "../components/PageLayout";
+  Cpu, MemoryStick, HardDrive, Network,
+  ArrowUp, ArrowDown, Activity, Clock, AlertCircle,
+  Bot, Server, Workflow, Terminal,
+  CheckCircle, XCircle, PlayCircle, RefreshCw,
+  Shield, MessageSquare, Brain, Zap, ListTodo, Wrench,
+  Plug, Globe, Loader2,
+} from 'lucide-react';
+import { useConnection, useHealth, useTasks, useAgents } from '../hooks/useAgentOS';
 
-const PHASES = [
-  { key: "perception", label: "感知", icon: Eye, color: "var(--info-color)", desc: "意图理解与上下文分析" },
-  { key: "planning", label: "规划", icon: Brain, color: "var(--primary-color)", desc: "DAG任务分解与策略生成" },
-  { key: "action", label: "行动", icon: Target, color: "var(--success-color)", desc: "执行调度与结果反馈" },
-];
-
-const MEM_LAYERS = [
-  { key: "L1", name: "L1 原始卷", color: "var(--primary-color)", entries: 1250, max: 1500, icon: Database, tech: ["Raw Storage", "JSON/Binary"] },
-  { key: "L2", name: "L2 特征层", color: "var(--info-color)", entries: 890, max: 1200, icon: Zap, tech: ["FAISS Vector", "768-dim"] },
-  { key: "L3", name: "L3 结构层", color: "var(--warning-color)", entries: 456, max: 600, icon: Network, tech: ["Knowledge Graph", "RDF"] },
-  { key: "L4", name: "L4 模式层", color: "var(--success-color)", entries: 128, max: 200, icon: Brain, tech: ["Persistent Homology", "Stable Rules"] },
-];
-
-const SERVICES = [
-  { name: "gateway_d", label: "网关服务", up: true, hrs: 48, cpu: 2.1, mem: 64 },
-  { name: "llm_d", label: "大模型引擎", up: true, hrs: 48, cpu: 12.4, mem: 512 },
-  { name: "tool_d", label: "工具调度器", up: true, hrs: 48, cpu: 0.8, mem: 32 },
-  { name: "sched_d", label: "任务调度器", up: true, hrs: 47, cpu: 1.5, mem: 48 },
-  { name: "monit_d", label: "系统监控器", up: true, hrs: 47, cpu: 3.2, mem: 96 },
-  { name: "market_d", label: "市场服务", up: false, hrs: 0, cpu: 0, mem: 0 },
-];
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* ─── Dual System Panel ─── */
-function DualPanel() {
-  return (
-    <Card>
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            background: "var(--warning-light)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Brain size={18} color="var(--warning-color)" />
-          </div>
-          <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>双系统思考</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          {
-            [
-              { name: "快思考 S1", desc: "直觉响应 · 模式匹配", latency: "~23ms", color: "var(--success-color)" },
-              { name: "慢推理 S2", desc: "深度分析 · 逻辑推演", latency: "~1.2s", color: "var(--primary-color)" },
-            ].map(sys => (
-              <div
-                key={sys.name}
-                style={{
-                  padding: "16px",
-                  borderLeft: `3px solid ${sys.color}`,
-                  background: "var(--bg-secondary)",
-                  borderRadius: "8px",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'var(--bg-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ fontSize: "14px", fontWeight: 500, color: sys.color, marginBottom: "8px" }}>{sys.name}</div>
-                <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "12px" }}>{sys.desc}</div>
-                <div style={{ fontSize: "16px", color: sys.color, fontWeight: 500 }}>{sys.latency}</div>
-              </div>
-            ))
-          }
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ─── Security Shield ─── */
-function SecShield() {
-  const shields = [
-    { emoji: "\ud83d\udce6", name: "虚拟工作空间", sub: "进程级隔离沙箱", c: "#10b981" },
-    { emoji: "\ud83d\udd11", name: "RBAC 权限裁决", sub: "细粒度访问控制", c: "#06b6d4" },
-    { emoji: "\ud83d\udee1\ufe0f", name: "输入净化过滤", sub: "注入攻击防护", c: "#f59e0b" },
-    { emoji: "\ud83d\udccb", name: "全链路审计追踪", sub: "不可篡改日志", c: "#8b5cf6" },
-  ];
-  return (
-    <Card>
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            background: "var(--error-light)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Shield size={18} color="var(--error-color)" />
-          </div>
-          <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>安全状态</span>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "16px" }}>
-          {shields.map(s => (
-            <div
-              key={s.name}
-              style={{
-                padding: "16px",
-                borderLeft: `3px solid ${s.c}`,
-                background: "var(--bg-secondary)",
-                borderRadius: "8px",
-                transition: "all 0.2s ease",
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.background = 'var(--bg-tertiary)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.background = 'var(--bg-secondary)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <div style={{ fontSize: "13px", fontWeight: 500, color: s.c, marginBottom: "4px" }}>{s.emoji} {s.name}</div>
-              <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>{s.sub}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{
-          padding: "16px",
-          background: "var(--bg-secondary)",
-          borderLeft: "3px solid var(--success-color)",
-          borderRadius: "8px",
-        }}>
-          <div style={{ fontSize: "14px", fontWeight: 500, color: "var(--success-color)", marginBottom: "6px" }}>安全罩已激活 — 零信任架构运行正常</div>
-          <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>所有防护层在线，实时监控中</div>
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ─── Service Grid ─── */
-function SvcGrid() {
-  const live = SERVICES.filter(s => s.up).length;
-  return (
-    <Card>
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            background: "var(--primary-light)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Network size={18} color="var(--primary-color)" />
-          </div>
-          <div>
-            <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>守护服务</span>
-            <span style={{ fontSize: "12px", color: "var(--text-muted)", marginLeft: "12px" }}>{live}/6 服务在线</span>
-          </div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-          {SERVICES.map(svc => {
-            const up = svc.up;
-            return (
-              <div
-                key={svc.name}
-                style={{
-                  padding: "16px",
-                  borderLeft: up ? "3px solid var(--success-color)" : "3px solid var(--border-color)",
-                  background: "var(--bg-secondary)",
-                  borderRadius: "8px",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'var(--bg-secondary)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                  <div style={{
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: up ? "var(--success-color)" : "var(--border-color)",
-                    boxShadow: up ? '0 0 0 2px var(--success-light)' : 'none',
-                    transition: "all 0.2s ease",
-                  }} />
-                  <span style={{ fontSize: "14px", fontWeight: 500, color: 'var(--text-primary)' }}>{svc.label}</span>
-                </div>
-                {up && (
-                  <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--text-muted)" }}>
-                    <span>{svc.hrs}h</span>
-                    <span>CPU {svc.cpu}%</span>
-                    <span>{svc.mem}MB</span>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ─── Activity Timeline ─── */
-function TimeLine() {
-  const events = [
-    { time: "刚刚", text: "认知循环完成一轮 感知→规划→行动 全流程", type: "cycle", c: "var(--primary-color)", icon: Workflow },
-    { time: "2m前", text: "memory_store(): 写入 12 条新记忆到 L2 特征层向量索引", type: "memory", c: "var(--info-color)", icon: Database },
-    { time: "5m前", text: "tool_d.read_file() 执行完成，耗时 23ms，返回 1.2KB 数据", type: "tool", c: "var(--success-color)", icon: Wrench },
-    { time: "8m前", text: "Cupolas 输入净化模块拦截了 1 个异常请求（SQL注入尝试）", type: "sec", c: "var(--error-color)", icon: Shield },
-    { time: "12m前", text: "System 2 深度推理：对用户问题进行了多角度逻辑分析", type: "think", c: "var(--warning-color)", icon: Brain },
-  ];
-  return (
-    <Card>
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-          <div style={{
-            width: "32px",
-            height: "32px",
-            borderRadius: "8px",
-            background: "var(--primary-light)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <Activity size={18} color="var(--primary-color)" />
-          </div>
-          <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>实时流</span>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          {events.map((ev, i) => {
-            const EvIcon = ev.icon;
-            return (
-              <div
-                key={i}
-                style={{
-                  display: "flex",
-                  gap: "16px",
-                  padding: "12px 0",
-                  borderBottom: "1px solid var(--border-subtle)",
-                  transition: "all 0.2s ease",
-                }}
-                onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'var(--bg-tertiary)';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = 'transparent';
-                }}
-              >
-                <div style={{
-                  width: "32px",
-                  height: "32px",
-                  borderRadius: "8px",
-                  background: `${ev.c}15`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}>
-                  <EvIcon size={16} color={ev.c} />
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "6px" }}>
-                    <span style={{ fontSize: "12px", color: ev.c, fontWeight: 500 }}>{ev.time}</span>
-                    <span style={{
-                      fontSize: "11px",
-                      padding: "2px 8px",
-                      background: `${ev.c}12`,
-                      color: ev.c,
-                      borderRadius: "4px",
-                      fontWeight: 500,
-                    }}>
-                      {ev.type}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.4 }}>{ev.text}</div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ─── Quick Navigation Cards ─── */
-function QNav({ nav }: { nav: (p: string) => void }) {
-  const items = [
-    { Ic: Target, label: "任务编排", path: "/tasks", c: "var(--primary-color)" },
-    { Ic: Eye, label: "可观测性", path: "/logs", c: "var(--info-color)" },
-    { Ic: Database, label: "记忆管理", path: "/memory-evolution", c: "var(--warning-color)" },
-    { Ic: Wrench, label: "工具管理", path: "/tools", c: "var(--success-color)" },
-  ];
-  return (
-    <Card>
-      <div style={{ padding: '20px' }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px" }}>
-          {items.map(it => {
-            const Icon = it.Ic;
-            return (
-              <div
-                key={it.path}
-                onClick={() => nav(it.path)}
-                style={{
-                  padding: "16px",
-                  borderLeft: `3px solid ${it.c}`,
-                  background: "var(--bg-secondary)",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  borderRadius: "8px",
-                }}
-                onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = "var(--bg-tertiary)";
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                  e.currentTarget.style.background = "var(--bg-secondary)";
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                  <div style={{
-                    width: "24px",
-                    height: "24px",
-                    borderRadius: "8px",
-                    background: `${it.c}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <Icon size={14} color={it.c} />
-                  </div>
-                  <span style={{ fontSize: "14px", fontWeight: 500, color: 'var(--text-primary)' }}>{it.label}</span>
-                </div>
-                <div style={{ fontSize: "12px", color: it.c, fontWeight: 500 }}>进入模块</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </Card>
-  );
-}
-
-/* ═ Phase 2 Enhanced Metrics Component ═ */
-function Phase2Metrics() {
-  const metrics = [
-    {
-      title: "双模型协调",
-      icon: Brain,
-      color: "#8b5cf6",
-      values: [
-        { label: "决策一致率", value: "94.2%", trend: "+1.2%" },
-        { label: "自适应阈值", value: "0.72", trend: "动态" },
-        { label: "历史记录", value: "87/100", trend: "环形缓冲" },
-      ],
-      description: "第二阶段增强：自适应学习与交叉验证",
-    },
-    {
-      title: "缓存优化",
-      icon: Database,
-      color: "#06b6d4",
-      values: [
-        { label: "命中率", value: "87.5%", trend: "+3.1%" },
-        { label: "TTL过期", value: "124", trend: "惰性清理" },
-        { label: "访问频率", value: "2.4k", trend: "LFU辅助" },
-      ],
-      description: "第二阶段增强：TTL支持与统计系统",
-    },
-    {
-      title: "遗忘策略",
-      icon: Activity,
-      color: "#10b981",
-      values: [
-        { label: "Lambda参数", value: "0.85", trend: "自适应" },
-        { label: "样本误差", value: "0.12", trend: "持续优化" },
-        { label: "调整历史", value: "42", trend: "100条记录" },
-      ],
-      description: "第二阶段增强：基于误差反馈的自适应学习",
-    },
-    {
-      title: "安全沙箱",
-      icon: Shield,
-      color: "#ef4444",
-      values: [
-        { label: "审计日志", value: "856", trend: "1000条缓冲" },
-        { label: "违规检测", value: "3", trend: "输入净化" },
-        { label: "动态策略", value: "v2.1", trend: "已启用" },
-      ],
-      description: "第二阶段增强：动态策略与审计增强",
-    },
-  ];
-
-  return (
-    <div className="card" style={{ marginTop: "20px", padding: "20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-        <Sparkles size={18} color="#6366f1" />
-        <span style={{ fontSize: "15px", fontWeight: 600 }}>第二阶段增强功能监控</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
-        {metrics.map((metric) => {
-          const Icon = metric.icon;
-          return (
-            <div key={metric.title} style={{
-              padding: "16px",
-              borderLeft: `3px solid ${metric.color}`,
-              background: "var(--bg-secondary)",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-                <Icon size={16} color={metric.color} />
-                <div>
-                  <div style={{ fontSize: "13px", fontWeight: 600, color: metric.color }}>{metric.title}</div>
-                  <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{metric.description}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                {metric.values.map((v, i) => (
-                  <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>{v.label}</span>
-                    <span style={{ fontSize: "12px", fontWeight: 600 }}>{v.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ════════════════════════════════════
-   DASHBOARD MAIN COMPONENT
-   ════════════════════════════════════ */
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [phaseIdx, setPhaseIdx] = useState(1);
+const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
+  const { connection, connect } = useConnection();
+  const { health, metrics, loading: healthLoading, fetchAll } = useHealth();
+  const { tasks, loading: tasksLoading, fetchTasks } = useTasks();
+  const { agents, loading: agentsLoading, fetchAgents } = useAgents();
+  const [initialized, setInitialized] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
-  const [refreshInterval, setRefreshInterval] = useState(10000);
-  const [isPaused, setIsPaused] = useState(false);
-  const [cpuHistory, setCpuHistory] = useState<number[]>([]);
-  const [memHistory, setMemHistory] = useState<number[]>([]);
-  const [systemData, setSystemData] = useState<{
-    cpu: number; memory: number; disk: number; processes: number;
-    servicesUp: number; servicesTotal: number;
-    uptime: string; version: string;
-  } | null>(null);
 
-  const fetchDashboardData = useCallback(async () => {
-    setRefreshing(true);
-    setConnectionStatus('checking');
-    try {
-      const [monitorData, serviceStatus] = await Promise.all([
-        sdk.getSystemMonitorData().catch(() => null),
-        sdk.getServiceStatus().catch(() => null),
-      ]);
-      if (monitorData || serviceStatus) {
-        setConnectionStatus('connected');
-      } else {
-        setConnectionStatus('disconnected');
-      }
-      if (monitorData) {
-        const newCpu = Math.round(monitorData.cpu.usage_percent);
-        const newMem = Math.round(monitorData.memory.percent);
-        setSystemData({
-          cpu: newCpu,
-          memory: newMem,
-          disk: Math.round(monitorData.disk.percent),
-          processes: monitorData.cpu.cores.length,
-          servicesUp: serviceStatus ? serviceStatus.filter((s: any) => s.healthy).length : 5,
-          servicesTotal: serviceStatus ? serviceStatus.length : 6,
-          uptime: Math.floor(monitorData.uptime_seconds / 3600) + "h",
-          version: "v2.1.0",
-        });
-        setCpuHistory(prev => [...prev.slice(-19), newCpu]);
-        setMemHistory(prev => [...prev.slice(-19), newMem]);
-      }
-      setLastUpdate(new Date());
-    } catch {
-      setConnectionStatus('disconnected');
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
+  const isConnected = connection.status === 'connected';
+  const isLoading = healthLoading || !initialized;
 
-  useEffect(() => { const t = setTimeout(() => setLoading(false), 500); return () => clearTimeout(t); }, []);
-  useEffect(() => { const tm = setInterval(() => setPhaseIdx(p => (p + 1) % 3), 4000); return () => clearInterval(tm); }, []);
   useEffect(() => {
-    fetchDashboardData();
-    if (refreshInterval > 0 && !isPaused) {
-      const iv = setInterval(fetchDashboardData, refreshInterval);
-      return () => clearInterval(iv);
+    if (connection.status === 'disconnected') {
+      connect().then(() => setInitialized(true)).catch(() => setInitialized(true));
+    } else if (connection.status === 'connected' && !initialized) {
+      setInitialized(true);
     }
-  }, [fetchDashboardData, refreshInterval, isPaused]);
+  }, [connection.status, connect, initialized]);
 
-  const cpuVal = systemData?.cpu ?? 23;
-  const memVal = systemData?.memory ?? 26;
-  const diskVal = systemData?.disk ?? 75;
-  const procVal = systemData ? Math.round((systemData.servicesUp / systemData.servicesTotal) * 100) : 83;
+  useEffect(() => {
+    if (isConnected) {
+      fetchAll();
+      fetchTasks({ sort: { field: 'createdAt', order: 'desc' } });
+      fetchAgents();
+    }
+  }, [isConnected, fetchAll, fetchTasks, fetchAgents]);
 
-  if (loading) {
-    return (
-      <PageLayout title="AgentOS 控制中心">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "72vh" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{
-              width: "48px", height: "48px", margin: "0 auto 16px", borderRadius: "8px",
-              background: "var(--primary-color)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Bot size={24} color="white" />
-            </div>
-            <div className="loading-spinner" />
-            <p style={{ color: "var(--text-muted)", marginTop: "12px", fontSize: "13px", fontWeight: 500 }}>正在加载控制中心...</p>
-          </div>
-        </div>
-      </PageLayout>
-    );
-  }
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([fetchAll(), fetchTasks(), fetchAgents()]);
+    setRefreshing(false);
+  }, [fetchAll, fetchTasks, fetchAgents]);
+
+  const systemStats = isConnected && metrics ? [
+    {
+      title: 'CPU',
+      value: `${metrics.cpuUsage.toFixed(1)}%`,
+      change: `${metrics.cpuUsage > 50 ? '+' : ''}${(metrics.cpuUsage * 0.1).toFixed(1)}%`,
+      trend: metrics.cpuUsage > 50 ? 'up' as const : 'down' as const,
+      icon: <Cpu size={20} />,
+      status: metrics.cpuUsage > 80 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.cpuUsage, 100),
+    },
+    {
+      title: t('stats.memory'),
+      value: `${metrics.memoryUsage.toFixed(1)}%`,
+      change: `${metrics.memoryUsage > 50 ? '+' : ''}${(metrics.memoryUsage * 0.05).toFixed(1)}%`,
+      trend: metrics.memoryUsage > 50 ? 'up' as const : 'down' as const,
+      icon: <MemoryStick size={20} />,
+      status: metrics.memoryUsage > 80 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.memoryUsage, 100),
+    },
+    {
+      title: t('stats.disk'),
+      value: `${metrics.memoriesTotal}`,
+      change: `${metrics.memoriesTotal > 0 ? '+' : ''}${metrics.memoriesTotal}`,
+      trend: metrics.memoriesTotal > 0 ? 'up' as const : 'down' as const,
+      icon: <HardDrive size={20} />,
+      status: 'normal' as const,
+      progress: Math.min((metrics.memoriesTotal % 100), 100),
+    },
+    {
+      title: t('stats.network'),
+      value: `${metrics.requestCount}`,
+      change: `${metrics.averageLatencyMs.toFixed(0)}ms`,
+      trend: metrics.averageLatencyMs < 100 ? 'down' as const : 'up' as const,
+      icon: <Network size={20} />,
+      status: metrics.averageLatencyMs > 200 ? 'warning' as const : 'normal' as const,
+      progress: Math.min(metrics.averageLatencyMs / 5, 100),
+    },
+  ] : [
+    { title: 'CPU', value: '--', change: '--', trend: 'up' as const, icon: <Cpu size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.memory'), value: '--', change: '--', trend: 'up' as const, icon: <MemoryStick size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.disk'), value: '--', change: '--', trend: 'up' as const, icon: <HardDrive size={20} />, status: 'normal' as const, progress: 0 },
+    { title: t('stats.network'), value: '--', change: '--', trend: 'up' as const, icon: <Network size={20} />, status: 'normal' as const, progress: 0 },
+  ];
+
+  const quickActions = [
+    { label: t('dashboard.quickActions') === 'Quick Actions' ? 'New Agent' : t('agents.registerNew'), icon: <Bot size={16} />, path: '/agents' },
+    { label: t('tasks.submitNewTask'), icon: <Workflow size={16} />, path: '/tasks' },
+    { label: t('nav.terminal'), icon: <Terminal size={16} />, path: '/terminal' },
+    { label: t('nav.aiChat'), icon: <MessageSquare size={16} />, path: '/ai-chat' },
+  ];
+
+  const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
+    completed: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
+    running: { bg: 'var(--info-light)', text: 'var(--info-color)', dot: 'var(--info-color)' },
+    pending: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
+    failed: { bg: 'var(--error-light)', text: 'var(--error-color)', dot: 'var(--error-color)' },
+    cancelled: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
+    online: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
+    offline: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
+    warning: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
+    normal: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const } },
+  };
+
+  const pulseAnimation = {
+    scale: [1, 1.05, 1],
+    transition: { duration: 2, repeat: Infinity, ease: [0.25, 0.1, 0.25, 1] as const },
+  };
+
+  const cardHoverStyle = {
+    cursor: 'pointer' as const,
+    transition: 'all 200ms ease',
+  };
+
+  const formatUptime = (seconds: number): string => {
+    const d = Math.floor(seconds / 86400);
+    const h = Math.floor((seconds % 86400) / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (d > 0) return `${d}d ${h}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  };
+
+  const recentTasks = tasks.slice(0, 5);
+  const onlineAgents = agents.filter((a: any) => a.status === 'online' || a.status === 'running' || a.status === 'active');
 
   return (
-    <PageLayout
-      title="AgentOS 控制中心"
-      subtitle="工业级 AI 智能体 · 实时状态监控"
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      style={{ maxWidth: '1400px', margin: '0 auto' }}
     >
-      {/* Header Actions */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "16px",
-        marginBottom: "24px",
-        flexWrap: 'wrap',
-      }}>
-        {/* Connection Status Indicator */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "8px 16px",
-          borderRadius: "9999px",
-          background: connectionStatus === 'connected' ? "var(--bg-secondary)" : "var(--bg-tertiary)",
-          border: `1px solid ${
-            connectionStatus === 'connected' ? "#10b98120"
-            : connectionStatus === 'disconnected' ? "#ef444420"
-            : "var(--border-subtle)"
-          }`,
-          transition: 'all 0.2s ease',
-        }}>
-          <div style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: connectionStatus === 'connected' ? "#10b981"
-              : connectionStatus === 'disconnected' ? "#ef4444"
-              : "#f59e0b",
-            boxShadow: connectionStatus === 'connected' ? '0 0 0 2px rgba(16, 185, 129, 0.2)' : 'none',
-          }} />
-          <span style={{
-            fontSize: "12px",
-            fontWeight: 500,
-            color: connectionStatus === 'connected' ? "#10b981"
-              : connectionStatus === 'disconnected' ? "#ef4444"
-              : "#f59e0b"
-          }}>
-            {connectionStatus === 'connected' ? "已连接"
-              : connectionStatus === 'disconnected' ? "未连接"
-              : "检测中"}
-          </span>
-        </div>
-
-        {/* Quick Actions */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/agents')}
-            title="管理智能体"
-            style={{
-              transition: 'all 0.2s ease',
-              borderRadius: '6px',
-            }}
-          >
-            <Bot size={14} />
-            智能体
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/tasks')}
-            title="任务队列"
-            style={{
-              transition: 'all 0.2s ease',
-              borderRadius: '6px',
-            }}
-          >
-            <Workflow size={14} />
-            任务
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/ai-chat')}
-            title="AI 助手"
-            style={{
-              transition: 'all 0.2s ease',
-              borderRadius: '6px',
-            }}
-          >
-            <Brain size={14} />
-            AI 助手
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate('/terminal')}
-            title="终端"
-            style={{
-              transition: 'all 0.2s ease',
-              borderRadius: '6px',
-            }}
-          >
-            <Terminal size={14} />
-            终端
-          </Button>
-        </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={fetchDashboardData}
-          disabled={refreshing}
-          title="刷新"
-          style={{
-            transition: 'all 0.2s ease',
-            borderRadius: '6px',
-          }}
-        >
-          <RefreshCw size={14} className={refreshing ? "spin" : ""} />
-          刷新
-        </Button>
-
-        <div style={{
+      {/* Header Section */}
+      <motion.div
+        variants={itemVariants}
+        style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          borderLeft: '1px solid var(--border-subtle)',
-          paddingLeft: '16px',
-          marginLeft: '8px',
-          flexShrink: 0,
-        }}>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              if (systemData) {
-                exportToCSV([{
-                  指标: 'CPU使用率', 值: systemData.cpu, 单位: '%',
-                  时间: lastUpdate.toLocaleString('zh-CN'),
-                }, {
-                  指标: '内存使用率', 值: systemData.memory, 单位: '%',
-                  时间: lastUpdate.toLocaleString('zh-CN'),
-                }, {
-                  指标: '磁盘使用率', 值: systemData.disk, 单位: '%',
-                  时间: lastUpdate.toLocaleString('zh-CN'),
-                }], 'agentos_system_metrics');
+          justifyContent: 'space-between',
+          marginBottom: '32px',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
+        <div>
+          <h1 style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: 'var(--text-primary)',
+            margin: 0,
+            letterSpacing: '-0.02em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}>
+            {t('dashboard.title')}
+            {isConnected && health?.version && (
+              <span style={{
+                fontSize: '12px',
+                fontWeight: '500',
+                color: 'var(--text-muted)',
+                backgroundColor: 'var(--bg-tertiary)',
+                padding: '2px 10px',
+                borderRadius: '6px',
+              }}>
+                v{health.version}
+              </span>
+            )}
+          </h1>
+          <p style={{
+            fontSize: '14px',
+            color: 'var(--text-muted)',
+            margin: '4px 0 0 0',
+          }}>
+            {isConnected && health?.uptime
+              ? `Uptime: ${formatUptime(health.uptime)}`
+              : t('dashboard.subtitle')}
+          </p>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={handleRefresh}
+            disabled={refreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '8px',
+              cursor: refreshing ? 'not-allowed' : 'pointer',
+              color: 'var(--text-secondary)',
+              fontSize: '13px',
+              fontFamily: 'inherit',
+              opacity: refreshing ? 0.6 : 1,
+              transition: 'all 150ms ease',
+            }}
+            onMouseEnter={(e) => {
+              if (!refreshing) {
+                e.currentTarget.style.borderColor = 'var(--primary-color)';
+                e.currentTarget.style.color = 'var(--primary-color)';
               }
             }}
-            title="导出CSV"
-            style={{
-              transition: 'all 0.2s ease',
-              borderRadius: '6px',
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
             }}
           >
-            <Download size={14} />
-            导出
-          </Button>
-          <span style={{
-            fontSize: "12px",
-            color: "var(--text-muted)",
-            fontWeight: 500,
+            <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
+            {t('common.refresh')}
+          </motion.button>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 16px',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '8px',
+            border: '1px solid var(--border-subtle)',
           }}>
-            {lastUpdate.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" })}
-          </span>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: isConnected ? 'var(--success-color)' : 'var(--error-color)',
+              animation: isConnected ? 'pulse 2s infinite' : 'none',
+            }} />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+              {isConnected ? t('common.connected') : t('common.disconnected')}
+            </span>
+          </div>
         </div>
-      </div>
+      </motion.div>
 
-      {/* Resource Gauges */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "24px" }}>
-        {
-          [
-            { v: cpuVal, u: "%", l: "CPU", s: systemData ? `${systemData.processes}核心` : "8核/16线程", c: "var(--primary-color)" },
-            { v: memVal, u: "%", l: "内存", s: systemData ? `${systemData.memory}% 已用` : "4.2 / 16 GB", c: "var(--info-color)" },
-            { v: diskVal, u: "%", l: "磁盘", s: systemData ? `${systemData.disk}% 已用` : "128 / 512 GB", c: "var(--warning-color)" },
-            { v: procVal, u: "%", l: "进程", s: systemData ? `${systemData.servicesUp}/${systemData.servicesTotal} 在线` : "5/6 在线", c: "var(--success-color)" },
-          ].map((m) => (
-            <Card
-              key={m.l}
+      {/* Error State */}
+      {connection.status === 'error' && !isLoading && (
+        <motion.div
+          variants={itemVariants}
+          style={{
+            padding: '16px 20px',
+            backgroundColor: 'var(--error-light)',
+            border: '1px solid var(--error-color)',
+            borderRadius: '10px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+          }}
+        >
+          <AlertCircle size={18} color="var(--error-color)" />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--error-color)', fontWeight: '500' }}>
+              {connection.error || 'Connection failed'}
+            </p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+              Go to Settings to configure your AgentOS gateway connection
+            </p>
+          </div>
+          <Link to="/settings">
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
               style={{
-                borderLeft: `3px solid ${m.c}`,
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                e.currentTarget.style.transform = 'translateY(0)';
+                padding: '6px 14px',
+                backgroundColor: 'var(--error-color)',
+                border: 'none',
+                borderRadius: '6px',
+                color: 'white',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
               }}
             >
-              <div style={{ padding: '16px' }}>
-                <div style={{
-                  fontSize: "12px",
-                  color: "var(--text-muted)",
-                  marginBottom: "12px",
-                  fontWeight: 500,
-                }}>
-                  {m.l}
+              Settings
+            </motion.button>
+          </Link>
+        </motion.div>
+      )}
+
+      {/* Loading State */}
+      {isLoading && connection.status !== 'error' && (
+        <motion.div
+          variants={itemVariants}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '60px 20px',
+            gap: '16px',
+          }}
+        >
+          <Loader2 size={32} className="spin" style={{ color: 'var(--primary-color)' }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
+            {connection.status === 'connecting' ? 'Connecting to AgentOS Gateway...' : t('common.loading')}
+          </p>
+        </motion.div>
+      )}
+
+      {/* System Stats */}
+      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '16px',
+        }}>
+          {systemStats.map((stat) => (
+            <motion.div
+              key={stat.title}
+              whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.15)' }}
+              style={{
+                padding: '20px',
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: '12px',
+                border: '1px solid var(--border-subtle)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                ...cardHoverStyle,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted)',
+                    margin: '0 0 8px 0',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                  }}>
+                    {stat.title}
+                  </p>
+                  <h3 style={{
+                    fontSize: '22px',
+                    fontWeight: '700',
+                    color: 'var(--text-primary)',
+                    margin: '0 0 8px 0',
+                    letterSpacing: '-0.02em',
+                  }}>
+                    {stat.value}
+                  </h3>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '12px',
+                    color: stat.trend === 'up' ? 'var(--success-color)' : 'var(--info-color)',
+                  }}>
+                    {stat.trend === 'up' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                    <span>{stat.change}</span>
+                  </div>
                 </div>
                 <div style={{
-                  fontSize: "28px",
-                  fontWeight: 500,
-                  color: m.c,
-                  marginBottom: "8px",
-                  lineHeight: 1,
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '8px',
+                  background: stat.status === 'warning'
+                    ? 'linear-gradient(135deg, var(--warning-light), transparent)'
+                    : 'linear-gradient(135deg, var(--primary-light), transparent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: stat.status === 'warning' ? 'var(--warning-color)' : 'var(--primary-color)',
                 }}>
-                  {m.v}{m.u}
-                </div>
-                <div style={{
-                  fontSize: "12px",
-                  color: "var(--text-muted)",
-                  fontWeight: 500,
-                }}>
-                  {m.s}
+                  {stat.icon}
                 </div>
               </div>
-            </Card>
-          ))
-        }
+              <div style={{
+                marginTop: '16px',
+                height: '4px',
+                backgroundColor: 'var(--bg-tertiary)',
+                borderRadius: '4px',
+                overflow: 'hidden',
+              }}>
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${stat.progress}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                  style={{
+                    height: '100%',
+                    borderRadius: '4px',
+                    background: stat.status === 'warning'
+                      ? 'var(--warning-color)'
+                      : 'linear-gradient(90deg, var(--primary-color), var(--info-color))',
+                  }}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Quick Actions */}
+      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
+        <h2 style={{
+          fontSize: '16px',
+          fontWeight: '600',
+          color: 'var(--text-primary)',
+          margin: '0 0 16px 0',
+        }}>
+          Quick Actions
+        </h2>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+          gap: '12px',
+        }}>
+          {quickActions.map((action) => (
+            <Link to={action.path} key={action.label} style={{ textDecoration: 'none' }}>
+              <motion.button
+                whileHover={{ scale: 1.02, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                style={{
+                  width: '100%',
+                  padding: '14px 16px',
+                  backgroundColor: 'var(--bg-secondary)',
+                  border: '1px solid var(--border-subtle)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  fontSize: '13px',
+                  color: 'var(--text-primary)',
+                  fontFamily: 'inherit',
+                  fontWeight: '500',
+                  transition: 'all 200ms ease',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--primary-color)';
+                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.04)';
+                }}
+              >
+                <span style={{ color: 'var(--primary-color)' }}>{action.icon}</span>
+                {action.label}
+              </motion.button>
+            </Link>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Agents and Tasks Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
+        gap: '24px',
+        marginBottom: '24px',
+      }}>
+        {/* Agents */}
+        <motion.div variants={itemVariants}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border-subtle)',
+              backgroundColor: 'var(--bg-secondary)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                  }}>
+                    <Bot size={16} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                  }}>
+                    Active Agents
+                  </h3>
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                  backgroundColor: 'var(--bg-tertiary)',
+                  padding: '4px 10px',
+                  borderRadius: '12px',
+                }}>
+                  {agentsLoading ? '...' : `${onlineAgents.length} of ${agents.length} online`}
+                </span>
+              </div>
+            </div>
+            <div style={{ padding: '12px' }}>
+              {agentsLoading && agents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+                  Loading agents...
+                </div>
+              ) : agents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <Bot size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {t('agents.noAgentsRegistered')}
+                  </p>
+                  <Link to="/agents" style={{ textDecoration: 'none' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        backgroundColor: 'var(--primary-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {t('agents.registerNew')}
+                    </motion.button>
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {agents.slice(0, 5).map((agent: any) => (
+                    <div
+                      key={agent.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        borderRadius: '8px',
+                        transition: 'all 150ms ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                          fontWeight: '700',
+                          fontSize: '14px',
+                        }}>
+                          {(agent.name || 'A').charAt(0)}
+                        </div>
+                        <div>
+                          <h4 style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '500',
+                          }}>
+                            {agent.name}
+                          </h4>
+                          <p style={{
+                            margin: '2px 0 0 0',
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                          }}>
+                            {agent.description || agent.status}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          color: statusColors[agent.status]?.text || 'var(--text-muted)',
+                          backgroundColor: statusColors[agent.status]?.bg || 'var(--bg-tertiary)',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontWeight: '500',
+                        }}>
+                          {agent.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {agents.length > 5 && (
+                    <Link to="/agents" style={{
+                      textAlign: 'center',
+                      fontSize: '12px',
+                      color: 'var(--primary-color)',
+                      textDecoration: 'none',
+                      padding: '8px',
+                    }}>
+                      View all {agents.length} agents
+                    </Link>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Recent Tasks */}
+        <motion.div variants={itemVariants}>
+          <div style={{
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '12px',
+            border: '1px solid var(--border-subtle)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            overflow: 'hidden',
+          }}>
+            <div style={{
+              padding: '16px 20px',
+              borderBottom: '1px solid var(--border-subtle)',
+              backgroundColor: 'var(--bg-secondary)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                  }}>
+                    <Workflow size={16} />
+                  </div>
+                  <h3 style={{
+                    margin: 0,
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                  }}>
+                    {t('tasks.recentTasks')}
+                  </h3>
+                </div>
+                <span style={{
+                  fontSize: '12px',
+                  color: 'var(--text-muted)',
+                }}>
+                  {tasks.length > 0 ? `${tasks.filter(t => t.status === 'completed').length} done` : ''}
+                </span>
+              </div>
+            </div>
+            <div style={{ padding: '12px' }}>
+              {tasksLoading && tasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+                  Loading tasks...
+                </div>
+              ) : recentTasks.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center' }}>
+                  <ListTodo size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {t('tasks.noTasksYet')}
+                  </p>
+                  <Link to="/tasks" style={{ textDecoration: 'none' }}>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      style={{
+                        marginTop: '12px',
+                        padding: '6px 14px',
+                        backgroundColor: 'var(--primary-color)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        color: 'white',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {t('tasks.submitNewTask')}
+                    </motion.button>
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {recentTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        borderRadius: '8px',
+                        transition: 'all 150ms ease',
+                        cursor: 'pointer',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '8px',
+                          background: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                          {task.status === 'completed' && <CheckCircle size={16} color="var(--success-color)" />}
+                          {task.status === 'running' && (
+                            <motion.div animate={pulseAnimation}>
+                              <PlayCircle size={16} color="var(--info-color)" />
+                            </motion.div>
+                          )}
+                          {task.status === 'pending' && <Clock size={16} color="var(--warning-color)" />}
+                          {(task.status === 'failed' || task.status === 'cancelled') && <XCircle size={16} color="var(--error-color)" />}
+                        </div>
+                        <div>
+                          <h4 style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            color: 'var(--text-primary)',
+                            fontWeight: '500',
+                            maxWidth: '180px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {task.description}
+                          </h4>
+                          <p style={{
+                            margin: '2px 0 0 0',
+                            fontSize: '11px',
+                            color: 'var(--text-muted)',
+                          }}>
+                            {new Date(task.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{
+                          fontSize: '11px',
+                          color: statusColors[task.status]?.text || 'var(--text-muted)',
+                          backgroundColor: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontWeight: '500',
+                          display: 'inline-block',
+                        }}>
+                          {task.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </div>
 
-      {/* Cognitive Pipeline */}
-      <Card style={{ marginBottom: "24px" }}>
-        <div style={{ padding: '20px' }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-            <div style={{
-              width: "32px",
-              height: "32px",
-              borderRadius: "8px",
-              background: "var(--primary-light)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}>
-              <Workflow size={18} color="var(--primary-color)" />
+      {/* System Health */}
+      <motion.div variants={itemVariants}>
+        <div style={{
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: '12px',
+          border: '1px solid var(--border-subtle)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-secondary)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: 'linear-gradient(135deg, var(--success-color), var(--success-light))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+              }}>
+                <Shield size={16} />
+              </div>
+              <h3 style={{
+                margin: 0,
+                fontSize: '14px',
+                fontWeight: '600',
+                color: 'var(--text-primary)',
+              }}>
+                System Health
+              </h3>
             </div>
-            <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>认知处理流程</span>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
-            {PHASES.map((p) => {
-              const Icon = p.icon;
-              return (
-                <div
-                  key={p.key}
+          <div style={{ padding: '16px 20px' }}>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '16px',
+            }}>
+              {[
+                {
+                  label: 'Status',
+                  value: health?.status || '--',
+                  icon: <Activity size={16} />,
+                  color: isConnected ? 'var(--success-color)' : 'var(--error-color)',
+                },
+                {
+                  label: 'Uptime',
+                  value: health?.uptime ? formatUptime(health.uptime) : '--',
+                  icon: <Clock size={16} />,
+                  color: 'var(--success-color)',
+                },
+                {
+                  label: 'Latency',
+                  value: metrics ? `${metrics.averageLatencyMs.toFixed(0)}ms` : '--',
+                  icon: <Zap size={16} />,
+                  color: 'var(--info-color)',
+                },
+                {
+                  label: 'Requests',
+                  value: metrics ? `${metrics.requestCount}` : '--',
+                  icon: <Globe size={16} />,
+                  color: 'var(--primary-color)',
+                },
+                ...(metrics ? [
+                  {
+                    label: 'Tasks Total',
+                    value: `${metrics.tasksTotal}`,
+                    icon: <ListTodo size={16} />,
+                    color: 'var(--success-color)',
+                  },
+                  {
+                    label: 'Active Sessions',
+                    value: `${metrics.sessionsActive}`,
+                    icon: <MessageSquare size={16} />,
+                    color: 'var(--info-color)',
+                  },
+                  {
+                    label: 'Skills Loaded',
+                    value: `${metrics.skillsLoaded}`,
+                    icon: <Wrench size={16} />,
+                    color: 'var(--primary-color)',
+                  },
+                  {
+                    label: 'Memory Entries',
+                    value: `${metrics.memoriesTotal}`,
+                    icon: <Brain size={16} />,
+                    color: 'var(--warning-color)',
+                  },
+                ] : []),
+              ].map((healthItem) => (
+                <motion.div
+                  key={healthItem.label}
+                  whileHover={{ y: -2 }}
                   style={{
-                    padding: "16px",
-                    borderLeft: `3px solid ${p.color}`,
-                    background: "var(--bg-secondary)",
-                    borderRadius: "8px",
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'var(--bg-tertiary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'var(--bg-secondary)';
+                    padding: '16px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-                    <div style={{
-                      width: "28px",
-                      height: "28px",
-                      borderRadius: "8px",
-                      background: `${p.color}15`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}>
-                      <Icon size={16} color={p.color} />
-                    </div>
-                    <span style={{ fontSize: "14px", fontWeight: 500, color: p.color }}>{p.label}</span>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '8px',
+                    background: `linear-gradient(135deg, ${healthItem.color}22, transparent)`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: healthItem.color,
+                  }}>
+                    {healthItem.icon}
                   </div>
-                  <div style={{ fontSize: "12px", color: "var(--text-muted)", lineHeight: 1.4 }}>{p.desc}</div>
-                </div>
-              );
-            })}
+                  <div>
+                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
+                      {healthItem.label}
+                    </p>
+                    <h4 style={{
+                      margin: '2px 0 0 0',
+                      fontSize: '18px',
+                      color: 'var(--text-primary)',
+                      fontWeight: '700',
+                    }}>
+                      {healthItem.value}
+                    </h4>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
           </div>
         </div>
-      </Card>
-
-      {/* Main Grid: Memory + Dual System */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-        <Card>
-          <div style={{ padding: '20px' }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-              <div style={{
-                width: "32px",
-                height: "32px",
-                borderRadius: "8px",
-                background: "var(--primary-light)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}>
-                <Layers size={18} color="var(--primary-color)" />
-              </div>
-              <span style={{ fontSize: "15px", fontWeight: 500, color: 'var(--text-primary)' }}>记忆体系</span>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              {MEM_LAYERS.map((layer) => {
-                const Ic = layer.icon;
-                const pct = Math.round((layer.entries / layer.max) * 100);
-                return (
-                  <div key={layer.key} style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "12px 0",
-                    borderBottom: "1px solid var(--border-subtle)",
-                  }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{
-                        width: "24px",
-                        height: "24px",
-                        borderRadius: "8px",
-                        background: `${layer.color}15`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}>
-                        <Ic size={14} color={layer.color} />
-                      </div>
-                      <span style={{ fontSize: "14px", color: 'var(--text-primary)' }}>{layer.name}</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span style={{ fontSize: "13px", color: layer.color, fontWeight: 500 }}>{pct}%</span>
-                      <span style={{ fontSize: "12px", color: "var(--text-muted)" }}>{layer.entries}/{layer.max}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </Card>
-        <DualPanel />
-      </div>
-
-      {/* Security + Services */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "24px" }}>
-        <SecShield />
-        <SvcGrid />
-      </div>
-
-      {/* Timeline + Quick Nav */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
-        <TimeLine />
-        <QNav nav={navigate} />
-      </div>
-    </PageLayout>
+      </motion.div>
+    </motion.div>
   );
-}
+};
+
+export default Dashboard;

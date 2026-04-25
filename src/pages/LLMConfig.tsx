@@ -97,14 +97,14 @@ const LLMConfig: React.FC = () => {
     try {
       const saved = await sdk.saveLLMProvider({
         id: `${newProviderType}-${Date.now()}`,
-        type: newProviderType as LLMProviderConfig["type"],
+        type: newProviderType,
         name: providerConfig[newProviderType]?.label || newProviderType,
-        api_key: newApiKey,
-        base_url: newBaseUrl || (newProviderType === "openai" ? "https://api.openai.com/v1" : newProviderType === "anthropic" ? "https://api.anthropic.com/v1" : "http://localhost:8080/v1"),
+        apiKey: newApiKey,
+        baseUrl: newBaseUrl || (newProviderType === "openai" ? "https://api.openai.com/v1" : newProviderType === "anthropic" ? "https://api.anthropic.com/v1" : "http://localhost:8080/v1"),
         model: newModel,
         configured: true,
       });
-      setProviders(prev => [...prev, saved]);
+      setProviders(prev => [...prev, saved as unknown as LLMProviderConfig]);
       setShowAddModal(false);
       setNewApiKey("");
       setNewBaseUrl("");
@@ -243,7 +243,7 @@ const LLMConfig: React.FC = () => {
                         )}
                       </div>
                       <div style={{ fontSize: "12.5px", color: "var(--text-muted)", marginTop: "2px" }}>
-                        {provider?.model || "未配置"} · {provider?.base_url || "—"}
+                        {provider?.model || "未配置"} · {(provider as any).base_url || provider?.baseUrl || "—"}
                       </div>
                     </div>
 
