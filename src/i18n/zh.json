@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "AgentOS 桌面客户端",
+    "title": "Airymax AgentOS 桌面客户端",
     "version": "版本 {version}",
     "quickDeploy": "快速部署"
   },
@@ -11,6 +11,8 @@
   "services": "服务",
   "agents": "智能体",
   "tasks": "任务",
+  "sessions": "会话管理",
+  "skills": "技能注册",
   "config": "配置",
   "logs": "日志",
   "terminal": "终端",

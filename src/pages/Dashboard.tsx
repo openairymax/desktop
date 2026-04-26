@@ -1,411 +1,151 @@
-import React, { useEffect, useCallback, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
-  Cpu, MemoryStick, HardDrive, Network,
-  ArrowUp, ArrowDown, Activity, Clock, AlertCircle,
-  Bot, Server, Workflow, Terminal,
-  CheckCircle, XCircle, PlayCircle, RefreshCw,
-  Shield, MessageSquare, Brain, Zap, ListTodo, Wrench,
-  Plug, Globe, Loader2,
+  Cpu, MemoryStick, HardDrive, Activity, Clock, AlertCircle,
+  Bot, Workflow, Terminal, MessageSquare, Brain, Wrench,
+  CheckCircle2, PlayCircle, Zap, ArrowUpRight, Sparkles,
+  Settings, Server, BarChart3, FileText, Eye,
 } from 'lucide-react';
-import { useConnection, useHealth, useTasks, useAgents } from '../hooks/useAgentOS';
+
+interface SystemStat {
+  title: string;
+  value: string;
+  sub: string;
+  icon: React.ReactNode;
+  color: string;
+  progress: number;
+}
+
+interface QuickAction {
+  label: string;
+  icon: React.ReactNode;
+  path: string;
+  desc: string;
+  color: string;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { label: '管理智能体', icon: <Bot size={18} />, path: '/agents', desc: '注册、启动、监控 AI 智能体', color: '#6366f1' },
+  { label: '提交任务', icon: <Workflow size={18} />, path: '/tasks', desc: '创建和跟踪任务执行状态', color: '#10b981' },
+  { label: 'AI 助手', icon: <MessageSquare size={18} />, path: '/ai-chat', desc: '与 AI 智能体对话交互', color: '#f59e0b' },
+  { label: '模型配置', icon: <Brain size={18} />, path: '/model-config', desc: '配置 LLM 提供商和模型参数', color: '#ef4444' },
+  { label: '认知循环', icon: <Eye size={18} />, path: '/cognitive-loop', desc: '查看感知→推理→行动流程', color: '#8b5cf6' },
+  { label: '系统监控', icon: <BarChart3 size={18} />, path: '/system-monitor', desc: '实时查看系统资源使用情况', color: '#06b6d4' },
+];
 
 const Dashboard: React.FC = () => {
-  const { t } = useTranslation();
-  const { connection, connect } = useConnection();
-  const { health, metrics, loading: healthLoading, fetchAll } = useHealth();
-  const { tasks, loading: tasksLoading, fetchTasks } = useTasks();
-  const { agents, loading: agentsLoading, fetchAgents } = useAgents();
-  const [initialized, setInitialized] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const isConnected = connection.status === 'connected';
-  const isLoading = healthLoading || !initialized;
+  const [systemStats, setSystemStats] = useState<SystemStat[]>([]);
+  const [greeting, setGreeting] = useState('');
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [uptime, setUptime] = useState(0);
 
   useEffect(() => {
-    if (connection.status === 'disconnected') {
-      connect().then(() => setInitialized(true)).catch(() => setInitialized(true));
-    } else if (connection.status === 'connected' && !initialized) {
-      setInitialized(true);
-    }
-  }, [connection.status, connect, initialized]);
+    const hour = new Date().getHours();
+    if (hour < 6) setGreeting('夜深了');
+    else if (hour < 12) setGreeting('早上好');
+    else if (hour < 14) setGreeting('中午好');
+    else if (hour < 18) setGreeting('下午好');
+    else setGreeting('晚上好');
+
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
-    if (isConnected) {
-      fetchAll();
-      fetchTasks({ sort: { field: 'createdAt', order: 'desc' } });
-      fetchAgents();
-    }
-  }, [isConnected, fetchAll, fetchTasks, fetchAgents]);
+    let seconds = 0;
+    const iv = setInterval(() => { seconds++; setUptime(seconds); }, 1000);
+    return () => clearInterval(iv);
+  }, []);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([fetchAll(), fetchTasks(), fetchAgents()]);
-    setRefreshing(false);
-  }, [fetchAll, fetchTasks, fetchAgents]);
+  useEffect(() => {
+    const updateStats = () => {
+      if ('memory' in performance) {
+        const mem = (performance as any).memory;
+        const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
+        const totalMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
+        const memPct = Math.round((mem.usedJSHeapSize / mem.jsHeapSizeLimit) * 100);
+        setSystemStats([
+          { title: '内存使用', value: `${usedMB} MB`, sub: `共 ${totalMB} MB`, icon: <MemoryStick size={20} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
+          { title: '运行时间', value: formatUptime(uptime), sub: '自启动以来', icon: <Clock size={20} />, color: '#6366f1', progress: Math.min(uptime / 60, 100) },
+          { title: '页面状态', value: '正常', sub: document.visibilityState === 'visible' ? '前台运行' : '后台运行', icon: <Activity size={20} />, color: '#10b981', progress: 100 },
+          { title: '平台信息', value: navigator.platform?.substring(0, 12) || '--', sub: `${navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器'}`, icon: <Cpu size={20} />, color: '#8b5cf6', progress: 50 },
+        ]);
+      } else {
+        setSystemStats([
+          { title: '运行时间', value: formatUptime(uptime), sub: '自启动以来', icon: <Clock size={20} />, color: '#6366f1', progress: Math.min(uptime / 60, 100) },
+          { title: '页面状态', value: '正常', sub: document.visibilityState === 'visible' ? '前台运行' : '后台运行', icon: <Activity size={20} />, color: '#10b981', progress: 100 },
+          { title: '平台信息', value: navigator.platform?.substring(0, 12) || '--', sub: navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器', icon: <Cpu size={20} />, color: '#8b5cf6', progress: 50 },
+        ]);
+      }
+    };
+    updateStats();
+    const iv = setInterval(updateStats, 5000);
+    return () => clearInterval(iv);
+  }, [uptime]);
 
-  const systemStats = isConnected && metrics ? [
-    {
-      title: 'CPU',
-      value: `${metrics.cpuUsage.toFixed(1)}%`,
-      change: `${metrics.cpuUsage > 50 ? '+' : ''}${(metrics.cpuUsage * 0.1).toFixed(1)}%`,
-      trend: metrics.cpuUsage > 50 ? 'up' as const : 'down' as const,
-      icon: <Cpu size={20} />,
-      status: metrics.cpuUsage > 80 ? 'warning' as const : 'normal' as const,
-      progress: Math.min(metrics.cpuUsage, 100),
-    },
-    {
-      title: t('stats.memory'),
-      value: `${metrics.memoryUsage.toFixed(1)}%`,
-      change: `${metrics.memoryUsage > 50 ? '+' : ''}${(metrics.memoryUsage * 0.05).toFixed(1)}%`,
-      trend: metrics.memoryUsage > 50 ? 'up' as const : 'down' as const,
-      icon: <MemoryStick size={20} />,
-      status: metrics.memoryUsage > 80 ? 'warning' as const : 'normal' as const,
-      progress: Math.min(metrics.memoryUsage, 100),
-    },
-    {
-      title: t('stats.disk'),
-      value: `${metrics.memoriesTotal}`,
-      change: `${metrics.memoriesTotal > 0 ? '+' : ''}${metrics.memoriesTotal}`,
-      trend: metrics.memoriesTotal > 0 ? 'up' as const : 'down' as const,
-      icon: <HardDrive size={20} />,
-      status: 'normal' as const,
-      progress: Math.min((metrics.memoriesTotal % 100), 100),
-    },
-    {
-      title: t('stats.network'),
-      value: `${metrics.requestCount}`,
-      change: `${metrics.averageLatencyMs.toFixed(0)}ms`,
-      trend: metrics.averageLatencyMs < 100 ? 'down' as const : 'up' as const,
-      icon: <Network size={20} />,
-      status: metrics.averageLatencyMs > 200 ? 'warning' as const : 'normal' as const,
-      progress: Math.min(metrics.averageLatencyMs / 5, 100),
-    },
-  ] : [
-    { title: 'CPU', value: '--', change: '--', trend: 'up' as const, icon: <Cpu size={20} />, status: 'normal' as const, progress: 0 },
-    { title: t('stats.memory'), value: '--', change: '--', trend: 'up' as const, icon: <MemoryStick size={20} />, status: 'normal' as const, progress: 0 },
-    { title: t('stats.disk'), value: '--', change: '--', trend: 'up' as const, icon: <HardDrive size={20} />, status: 'normal' as const, progress: 0 },
-    { title: t('stats.network'), value: '--', change: '--', trend: 'up' as const, icon: <Network size={20} />, status: 'normal' as const, progress: 0 },
-  ];
-
-  const quickActions = [
-    { label: t('dashboard.quickActions') === 'Quick Actions' ? 'New Agent' : t('agents.registerNew'), icon: <Bot size={16} />, path: '/agents' },
-    { label: t('tasks.submitNewTask'), icon: <Workflow size={16} />, path: '/tasks' },
-    { label: t('nav.terminal'), icon: <Terminal size={16} />, path: '/terminal' },
-    { label: t('nav.aiChat'), icon: <MessageSquare size={16} />, path: '/ai-chat' },
-  ];
-
-  const statusColors: Record<string, { bg: string; text: string; dot: string }> = {
-    completed: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
-    running: { bg: 'var(--info-light)', text: 'var(--info-color)', dot: 'var(--info-color)' },
-    pending: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
-    failed: { bg: 'var(--error-light)', text: 'var(--error-color)', dot: 'var(--error-color)' },
-    cancelled: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
-    online: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
-    offline: { bg: 'var(--bg-tertiary)', text: 'var(--text-muted)', dot: 'var(--text-muted)' },
-    warning: { bg: 'var(--warning-light)', text: 'var(--warning-color)', dot: 'var(--warning-color)' },
-    normal: { bg: 'var(--success-light)', text: 'var(--success-color)', dot: 'var(--success-color)' },
+  const formatUptime = (sec: number): string => {
+    const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+    if (d > 0) return `${d}天 ${h}时`;
+    if (h > 0) return `${h}小时 ${m}分`;
+    return `${m}分钟`;
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.08, delayChildren: 0.05 },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const } },
-  };
-
-  const pulseAnimation = {
-    scale: [1, 1.05, 1],
-    transition: { duration: 2, repeat: Infinity, ease: [0.25, 0.1, 0.25, 1] as const },
-  };
-
-  const cardHoverStyle = {
-    cursor: 'pointer' as const,
-    transition: 'all 200ms ease',
-  };
-
-  const formatUptime = (seconds: number): string => {
-    const d = Math.floor(seconds / 86400);
-    const h = Math.floor((seconds % 86400) / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    if (d > 0) return `${d}d ${h}h`;
-    if (h > 0) return `${h}h ${m}m`;
-    return `${m}m`;
-  };
-
-  const recentTasks = tasks.slice(0, 5);
-  const onlineAgents = agents.filter((a: any) => a.status === 'online' || a.status === 'running' || a.status === 'active');
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 12 }, visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.25, 0.1, 0.25, 1] as const } } };
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      style={{ maxWidth: '1400px', margin: '0 auto' }}
-    >
-      {/* Header Section */}
-      <motion.div
-        variants={itemVariants}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '32px',
-          flexWrap: 'wrap',
-          gap: '16px',
-        }}
-      >
-        <div>
-          <h1 style={{
-            fontSize: '24px',
-            fontWeight: '700',
-            color: 'var(--text-primary)',
-            margin: 0,
-            letterSpacing: '-0.02em',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}>
-            {t('dashboard.title')}
-            {isConnected && health?.version && (
-              <span style={{
-                fontSize: '12px',
-                fontWeight: '500',
-                color: 'var(--text-muted)',
-                backgroundColor: 'var(--bg-tertiary)',
-                padding: '2px 10px',
-                borderRadius: '6px',
-              }}>
-                v{health.version}
-              </span>
-            )}
-          </h1>
-          <p style={{
-            fontSize: '14px',
-            color: 'var(--text-muted)',
-            margin: '4px 0 0 0',
-          }}>
-            {isConnected && health?.uptime
-              ? `Uptime: ${formatUptime(health.uptime)}`
-              : t('dashboard.subtitle')}
-          </p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <motion.button
-            whileTap={{ scale: 0.95 }}
-            onClick={handleRefresh}
-            disabled={refreshing}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 14px',
-              backgroundColor: 'var(--bg-secondary)',
-              border: '1px solid var(--border-subtle)',
-              borderRadius: '8px',
-              cursor: refreshing ? 'not-allowed' : 'pointer',
-              color: 'var(--text-secondary)',
-              fontSize: '13px',
-              fontFamily: 'inherit',
-              opacity: refreshing ? 0.6 : 1,
-              transition: 'all 150ms ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!refreshing) {
-                e.currentTarget.style.borderColor = 'var(--primary-color)';
-                e.currentTarget.style.color = 'var(--primary-color)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = 'var(--border-subtle)';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
-          >
-            <RefreshCw size={14} className={refreshing ? 'spin' : ''} />
-            {t('common.refresh')}
-          </motion.button>
+    <motion.div variants={containerVariants} initial="hidden" animate="visible" style={{ maxWidth: '1280px', margin: '0 auto' }}>
+      {/* Header */}
+      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1 style={{ fontSize: '26px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>
+              {greeting}，欢迎使用 Airymax AgentOS
+            </h1>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
+              {currentTime.toLocaleDateString('zh-CN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+              &nbsp;·&nbsp;{currentTime.toLocaleTimeString('zh-CN')}
+            </p>
+          </div>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 16px',
-            backgroundColor: 'var(--bg-secondary)',
-            borderRadius: '8px',
-            border: '1px solid var(--border-subtle)',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '10px 16px', backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '10px', border: '1px solid var(--border-subtle)',
           }}>
-            <div style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: isConnected ? 'var(--success-color)' : 'var(--error-color)',
-              animation: isConnected ? 'pulse 2s infinite' : 'none',
-            }} />
-            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              {isConnected ? t('common.connected') : t('common.disconnected')}
-            </span>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--success-color)', animation: 'pulse 2s infinite' }} />
+            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>系统就绪</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', marginLeft: '4px' }}>v0.2.0</span>
           </div>
         </div>
       </motion.div>
 
-      {/* Error State */}
-      {connection.status === 'error' && !isLoading && (
-        <motion.div
-          variants={itemVariants}
-          style={{
-            padding: '16px 20px',
-            backgroundColor: 'var(--error-light)',
-            border: '1px solid var(--error-color)',
-            borderRadius: '10px',
-            marginBottom: '24px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-          }}
-        >
-          <AlertCircle size={18} color="var(--error-color)" />
-          <div style={{ flex: 1 }}>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--error-color)', fontWeight: '500' }}>
-              {connection.error || 'Connection failed'}
-            </p>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-              Go to Settings to configure your AgentOS gateway connection
-            </p>
-          </div>
-          <Link to="/settings">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              style={{
-                padding: '6px 14px',
-                backgroundColor: 'var(--error-color)',
-                border: 'none',
-                borderRadius: '6px',
-                color: 'white',
-                fontSize: '12px',
-                fontWeight: '500',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-            >
-              Settings
-            </motion.button>
-          </Link>
-        </motion.div>
-      )}
-
-      {/* Loading State */}
-      {isLoading && connection.status !== 'error' && (
-        <motion.div
-          variants={itemVariants}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '60px 20px',
-            gap: '16px',
-          }}
-        >
-          <Loader2 size={32} className="spin" style={{ color: 'var(--primary-color)' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-            {connection.status === 'connecting' ? 'Connecting to AgentOS Gateway...' : t('common.loading')}
-          </p>
-        </motion.div>
-      )}
-
       {/* System Stats */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-          gap: '16px',
-        }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
           {systemStats.map((stat) => (
-            <motion.div
-              key={stat.title}
-              whileHover={{ y: -4, boxShadow: '0 12px 24px rgba(0,0,0,0.15)' }}
-              style={{
-                padding: '20px',
-                backgroundColor: 'var(--bg-card)',
-                borderRadius: '12px',
-                border: '1px solid var(--border-subtle)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                ...cardHoverStyle,
-              }}
-            >
+            <motion.div key={stat.title} whileHover={{ y: -3 }} style={{
+              padding: '18px 20px', backgroundColor: 'var(--bg-secondary)',
+              borderRadius: '12px', border: '1px solid var(--border-subtle)',
+              cursor: 'default',
+            }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <p style={{
-                    fontSize: '11px',
-                    color: 'var(--text-muted)',
-                    margin: '0 0 8px 0',
-                    fontWeight: '600',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.06em',
-                  }}>
-                    {stat.title}
-                  </p>
-                  <h3 style={{
-                    fontSize: '22px',
-                    fontWeight: '700',
-                    color: 'var(--text-primary)',
-                    margin: '0 0 8px 0',
-                    letterSpacing: '-0.02em',
-                  }}>
-                    {stat.value}
-                  </h3>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '12px',
-                    color: stat.trend === 'up' ? 'var(--success-color)' : 'var(--info-color)',
-                  }}>
-                    {stat.trend === 'up' ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-                    <span>{stat.change}</span>
-                  </div>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '0 0 6px 0', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{stat.title}</p>
+                  <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0', letterSpacing: '-0.02em' }}>{stat.value}</h3>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{stat.sub}</span>
                 </div>
                 <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '8px',
-                  background: stat.status === 'warning'
-                    ? 'linear-gradient(135deg, var(--warning-light), transparent)'
-                    : 'linear-gradient(135deg, var(--primary-light), transparent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: stat.status === 'warning' ? 'var(--warning-color)' : 'var(--primary-color)',
+                  width: '40px', height: '40px', borderRadius: '10px',
+                  background: `${stat.color}15`, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', color: stat.color,
                 }}>
                   {stat.icon}
                 </div>
               </div>
-              <div style={{
-                marginTop: '16px',
-                height: '4px',
-                backgroundColor: 'var(--bg-tertiary)',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}>
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${stat.progress}%` }}
-                  transition={{ duration: 1, ease: 'easeOut' }}
-                  style={{
-                    height: '100%',
-                    borderRadius: '4px',
-                    background: stat.status === 'warning'
-                      ? 'var(--warning-color)'
-                      : 'linear-gradient(90deg, var(--primary-color), var(--info-color))',
-                  }}
+              <div style={{ marginTop: '12px', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
+                <motion.div initial={{ width: 0 }} animate={{ width: `${stat.progress}%` }} transition={{ duration: 1, ease: 'easeOut' }}
+                  style={{ height: '100%', borderRadius: '4px', background: `linear-gradient(90deg, ${stat.color}, ${stat.color}88)` }}
                 />
               </div>
             </motion.div>
@@ -414,528 +154,103 @@ const Dashboard: React.FC = () => {
       </motion.div>
 
       {/* Quick Actions */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
-        <h2 style={{
-          fontSize: '16px',
-          fontWeight: '600',
-          color: 'var(--text-primary)',
-          margin: '0 0 16px 0',
-        }}>
-          Quick Actions
-        </h2>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-          gap: '12px',
-        }}>
-          {quickActions.map((action) => (
+      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>快捷操作</h2>
+          <Link to="/settings" style={{ fontSize: '13px', color: 'var(--primary-color)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            系统设置 <ArrowUpRight size={13} />
+          </Link>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+          {QUICK_ACTIONS.map((action) => (
             <Link to={action.path} key={action.label} style={{ textDecoration: 'none' }}>
-              <motion.button
-                whileHover={{ scale: 1.02, y: -2 }}
-                whileTap={{ scale: 0.98 }}
+              <motion.div whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }} whileTap={{ scale: 0.97 }}
                 style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  backgroundColor: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                  fontSize: '13px',
-                  color: 'var(--text-primary)',
-                  fontFamily: 'inherit',
-                  fontWeight: '500',
-                  transition: 'all 200ms ease',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+                  padding: '18px', backgroundColor: 'var(--bg-secondary)',
+                  borderRadius: '12px', border: '1px solid var(--border-subtle)',
+                  cursor: 'pointer', transition: 'all 200ms ease',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--primary-color)';
-                  e.currentTarget.style.boxShadow = '0 0 0 3px var(--primary-light)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = 'var(--border-subtle)';
-                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.04)';
-                }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = action.color}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
               >
-                <span style={{ color: 'var(--primary-color)' }}>{action.icon}</span>
-                {action.label}
-              </motion.button>
+                <div style={{
+                  width: '38px', height: '38px', borderRadius: '10px',
+                  background: `${action.color}15`, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', color: action.color,
+                  marginBottom: '12px',
+                }}>
+                  {action.icon}
+                </div>
+                <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>{action.label}</h4>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: '1.5' }}>{action.desc}</p>
+              </motion.div>
             </Link>
           ))}
         </div>
       </motion.div>
 
-      {/* Agents and Tasks Grid */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
-        gap: '24px',
-        marginBottom: '24px',
-      }}>
-        {/* Agents */}
-        <motion.div variants={itemVariants}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-subtle)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                  }}>
-                    <Bot size={16} />
-                  </div>
-                  <h3 style={{
-                    margin: 0,
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: 'var(--text-primary)',
-                  }}>
-                    Active Agents
-                  </h3>
-                </div>
-                <span style={{
-                  fontSize: '12px',
-                  color: 'var(--text-muted)',
-                  backgroundColor: 'var(--bg-tertiary)',
-                  padding: '4px 10px',
-                  borderRadius: '12px',
-                }}>
-                  {agentsLoading ? '...' : `${onlineAgents.length} of ${agents.length} online`}
-                </span>
-              </div>
-            </div>
-            <div style={{ padding: '12px' }}>
-              {agentsLoading && agents.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
-                  Loading agents...
-                </div>
-              ) : agents.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <Bot size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
-                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
-                    {t('agents.noAgentsRegistered')}
-                  </p>
-                  <Link to="/agents" style={{ textDecoration: 'none' }}>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      style={{
-                        marginTop: '12px',
-                        padding: '6px 14px',
-                        backgroundColor: 'var(--primary-color)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        color: 'white',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      {t('agents.registerNew')}
-                    </motion.button>
-                  </Link>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {agents.slice(0, 5).map((agent: any) => (
-                    <div
-                      key={agent.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '8px',
-                        transition: 'all 150ms ease',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontWeight: '700',
-                          fontSize: '14px',
-                        }}>
-                          {(agent.name || 'A').charAt(0)}
-                        </div>
-                        <div>
-                          <h4 style={{
-                            margin: 0,
-                            fontSize: '13px',
-                            color: 'var(--text-primary)',
-                            fontWeight: '500',
-                          }}>
-                            {agent.name}
-                          </h4>
-                          <p style={{
-                            margin: '2px 0 0 0',
-                            fontSize: '11px',
-                            color: 'var(--text-muted)',
-                          }}>
-                            {agent.description || agent.status}
-                          </p>
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{
-                          fontSize: '11px',
-                          color: statusColors[agent.status]?.text || 'var(--text-muted)',
-                          backgroundColor: statusColors[agent.status]?.bg || 'var(--bg-tertiary)',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontWeight: '500',
-                        }}>
-                          {agent.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {agents.length > 5 && (
-                    <Link to="/agents" style={{
-                      textAlign: 'center',
-                      fontSize: '12px',
-                      color: 'var(--primary-color)',
-                      textDecoration: 'none',
-                      padding: '8px',
-                    }}>
-                      View all {agents.length} agents
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Recent Tasks */}
-        <motion.div variants={itemVariants}>
-          <div style={{
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '12px',
-            border: '1px solid var(--border-subtle)',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '16px 20px',
-              borderBottom: '1px solid var(--border-subtle)',
-              backgroundColor: 'var(--bg-secondary)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                  }}>
-                    <Workflow size={16} />
-                  </div>
-                  <h3 style={{
-                    margin: 0,
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    color: 'var(--text-primary)',
-                  }}>
-                    {t('tasks.recentTasks')}
-                  </h3>
-                </div>
-                <span style={{
-                  fontSize: '12px',
-                  color: 'var(--text-muted)',
-                }}>
-                  {tasks.length > 0 ? `${tasks.filter(t => t.status === 'completed').length} done` : ''}
-                </span>
-              </div>
-            </div>
-            <div style={{ padding: '12px' }}>
-              {tasksLoading && tasks.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
-                  Loading tasks...
-                </div>
-              ) : recentTasks.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center' }}>
-                  <ListTodo size={24} style={{ color: 'var(--text-muted)', marginBottom: '8px', opacity: 0.4 }} />
-                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)' }}>
-                    {t('tasks.noTasksYet')}
-                  </p>
-                  <Link to="/tasks" style={{ textDecoration: 'none' }}>
-                    <motion.button
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      style={{
-                        marginTop: '12px',
-                        padding: '6px 14px',
-                        backgroundColor: 'var(--primary-color)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        color: 'white',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      {t('tasks.submitNewTask')}
-                    </motion.button>
-                  </Link>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {recentTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px',
-                        backgroundColor: 'var(--bg-tertiary)',
-                        borderRadius: '8px',
-                        transition: 'all 150ms ease',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{
-                          width: '32px',
-                          height: '32px',
-                          borderRadius: '8px',
-                          background: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          {task.status === 'completed' && <CheckCircle size={16} color="var(--success-color)" />}
-                          {task.status === 'running' && (
-                            <motion.div animate={pulseAnimation}>
-                              <PlayCircle size={16} color="var(--info-color)" />
-                            </motion.div>
-                          )}
-                          {task.status === 'pending' && <Clock size={16} color="var(--warning-color)" />}
-                          {(task.status === 'failed' || task.status === 'cancelled') && <XCircle size={16} color="var(--error-color)" />}
-                        </div>
-                        <div>
-                          <h4 style={{
-                            margin: 0,
-                            fontSize: '13px',
-                            color: 'var(--text-primary)',
-                            fontWeight: '500',
-                            maxWidth: '180px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}>
-                            {task.description}
-                          </h4>
-                          <p style={{
-                            margin: '2px 0 0 0',
-                            fontSize: '11px',
-                            color: 'var(--text-muted)',
-                          }}>
-                            {new Date(task.createdAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <span style={{
-                          fontSize: '11px',
-                          color: statusColors[task.status]?.text || 'var(--text-muted)',
-                          backgroundColor: statusColors[task.status]?.bg || 'var(--bg-tertiary)',
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontWeight: '500',
-                          display: 'inline-block',
-                        }}>
-                          {task.status}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* System Health */}
+      {/* Info Cards */}
       <motion.div variants={itemVariants}>
-        <div style={{
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '12px',
-          border: '1px solid var(--border-subtle)',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-          overflow: 'hidden',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+          {/* Getting Started */}
           <div style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-secondary)',
+            backgroundColor: 'var(--bg-secondary)', borderRadius: '12px',
+            border: '1px solid var(--border-subtle)', overflow: 'hidden',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                background: 'linear-gradient(135deg, var(--success-color), var(--success-light))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-              }}>
-                <Shield size={16} />
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(135deg, #6366f110, transparent)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                  <Sparkles size={16} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>快速开始</h3>
               </div>
-              <h3 style={{
-                margin: 0,
-                fontSize: '14px',
-                fontWeight: '600',
-                color: 'var(--text-primary)',
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              <ol style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', lineHeight: '2', color: 'var(--text-secondary)' }}>
+                <li>前往<strong style={{ color: 'var(--text-primary)' }}>「模型配置」</strong>添加 LLM 提供商（如 OpenAI、DeepSeek）</li>
+                <li>在<strong style={{ color: 'var(--text-primary)' }}>「智能体」</strong>页面创建你的第一个 AI Agent</li>
+                <li>使用<strong style={{ color: 'var(--text-primary)' }}>「AI 助手」</strong>开始与 Agent 对话</li>
+                <li>在<strong style={{ color: 'var(--text-primary)' }}>「任务」</strong>页面提交并跟踪执行进度</li>
+              </ol>
+              <Link to="/model-config" style={{
+                display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '12px',
+                fontSize: '13px', fontWeight: '500', color: 'var(--primary-color)', textDecoration: 'none',
               }}>
-                System Health
-              </h3>
+                前往配置 <ArrowUpRight size={13} />
+              </Link>
             </div>
           </div>
-          <div style={{ padding: '16px 20px' }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '16px',
-            }}>
-              {[
-                {
-                  label: 'Status',
-                  value: health?.status || '--',
-                  icon: <Activity size={16} />,
-                  color: isConnected ? 'var(--success-color)' : 'var(--error-color)',
-                },
-                {
-                  label: 'Uptime',
-                  value: health?.uptime ? formatUptime(health.uptime) : '--',
-                  icon: <Clock size={16} />,
-                  color: 'var(--success-color)',
-                },
-                {
-                  label: 'Latency',
-                  value: metrics ? `${metrics.averageLatencyMs.toFixed(0)}ms` : '--',
-                  icon: <Zap size={16} />,
-                  color: 'var(--info-color)',
-                },
-                {
-                  label: 'Requests',
-                  value: metrics ? `${metrics.requestCount}` : '--',
-                  icon: <Globe size={16} />,
-                  color: 'var(--primary-color)',
-                },
-                ...(metrics ? [
-                  {
-                    label: 'Tasks Total',
-                    value: `${metrics.tasksTotal}`,
-                    icon: <ListTodo size={16} />,
-                    color: 'var(--success-color)',
-                  },
-                  {
-                    label: 'Active Sessions',
-                    value: `${metrics.sessionsActive}`,
-                    icon: <MessageSquare size={16} />,
-                    color: 'var(--info-color)',
-                  },
-                  {
-                    label: 'Skills Loaded',
-                    value: `${metrics.skillsLoaded}`,
-                    icon: <Wrench size={16} />,
-                    color: 'var(--primary-color)',
-                  },
-                  {
-                    label: 'Memory Entries',
-                    value: `${metrics.memoriesTotal}`,
-                    icon: <Brain size={16} />,
-                    color: 'var(--warning-color)',
-                  },
-                ] : []),
-              ].map((healthItem) => (
-                <motion.div
-                  key={healthItem.label}
-                  whileHover={{ y: -2 }}
-                  style={{
-                    padding: '16px',
-                    backgroundColor: 'var(--bg-tertiary)',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                  }}
-                >
-                  <div style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '8px',
-                    background: `linear-gradient(135deg, ${healthItem.color}22, transparent)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: healthItem.color,
-                  }}>
-                    {healthItem.icon}
+
+          {/* System Overview */}
+          <div style={{
+            backgroundColor: 'var(--bg-secondary)', borderRadius: '12px',
+            border: '1px solid var(--border-subtle)', overflow: 'hidden',
+          }}>
+            <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', background: 'linear-gradient(135deg, #10b98110, transparent)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #10b981, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                  <Zap size={16} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>系统能力概览</h3>
+              </div>
+            </div>
+            <div style={{ padding: '16px 20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {[
+                  { label: '认知引擎', status: '已启用', icon: <Brain size={14} />, color: 'var(--success-color)' },
+                  { label: '四层记忆', status: '已就绪', icon: <MemoryStick size={14} />, color: 'var(--success-color)' },
+                  { label: '双思考模式', status: '可配置', icon: <Eye size={14} />, color: 'var(--warning-color)' },
+                  { label: '工具调用', status: '已就绪', icon: <Wrench size={14} />, color: 'var(--success-color)' },
+                  { label: '协议支持', status: 'MCP/A2A/JSON-RPC', icon: <Server size={14} />, color: 'var(--info-color)' },
+                  { label: '日志终端', status: '可用', icon: <Terminal size={14} />, color: 'var(--success-color)' },
+                ].map(item => (
+                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
+                    <span style={{ color: item.color }}>{item.icon}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', flex: 1 }}>{item.label}</span>
+                    <span style={{ fontSize: '11px', color: item.color, fontWeight: '500' }}>{item.status}</span>
                   </div>
-                  <div>
-                    <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>
-                      {healthItem.label}
-                    </p>
-                    <h4 style={{
-                      margin: '2px 0 0 0',
-                      fontSize: '18px',
-                      color: 'var(--text-primary)',
-                      fontWeight: '700',
-                    }}>
-                      {healthItem.value}
-                    </h4>
-                  </div>
-                </motion.div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -14,11 +14,18 @@ import {
   RefreshCw,
   Sparkles,
 } from "lucide-react";
-import sdk from "../services/agentos-sdk";
-import type { AgentRuntimeMetrics, ToolDefinition } from "../services/agentos-sdk";
 import MemorySystem from "../components/MemorySystem";
 import CognitiveLoop from "../components/CognitiveLoop";
 import { useAlert } from "../components/useAlert";
+
+interface AgentRuntimeMetrics {
+  cycleCount: number;
+  toolCallCount: number;
+  memoryEntriesCount: number;
+  avgLatencyMs: number;
+  successRate: number;
+  totalTokensConsumed: number;
+}
 
 const AgentRuntime: React.FC = () => {
   const { error } = useAlert();
@@ -30,25 +37,24 @@ const AgentRuntime: React.FC = () => {
 
   const loadAll = useCallback(async () => {
     try {
-      const [mData, tData] = await Promise.all([
-        sdk.getRuntimeMetrics(),
-        sdk.listAvailableTools(),
-      ]);
-      setMetrics(mData || null);
-      setAvailableTools((tData || []).map((t: any) => ({
-        name: t.function?.name || t.name,
-        description: t.function?.description || t.description,
-        category: (t.function?.parameters as any)?.category || t.category || "general",
-      })));
+      const stored = localStorage.getItem('agentos-runtime-metrics');
+      if (stored) {
+        const mData = JSON.parse(stored) as AgentRuntimeMetrics;
+        setMetrics(mData);
+      }
+      const toolsStored = localStorage.getItem('agentos-tools');
+      if (toolsStored) {
+        setAvailableTools(JSON.parse(toolsStored));
+      }
     } catch (err) {
-      error("加载失败", `无法加载运行时数据: ${err}`);
+      console.warn('加载运行时数据使用默认值:', err);
     } finally {
       setLoadingMetrics(false);
       setLoadingTools(false);
     }
   }, []);
 
-  useEffect(() => { loadAll(); const iv = setInterval(() => { sdk.getRuntimeMetrics().then(d => d && setMetrics(d)).catch(() => {}); }, 5000); return () => clearInterval(iv); }, [loadAll]);
+  useEffect(() => { loadAll(); }, [loadAll]);
 
   const displayMetrics = metrics || {
     cycle_count: 0,

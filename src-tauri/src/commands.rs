@@ -523,38 +523,6 @@ pub struct VersionInfo {
     pub tauri_version: String,
 }
 
-#[tauri::command]
-pub async fn download_and_install_update(
-    app: tauri::AppHandle,
-    _state: State<'_, AppState>,
-) -> Result<(), String> {
-    use tauri_plugin_updater::UpdaterExt;
-
-    let updater = app.updater().map_err(|e| e.to_string())?;
-
-    let update = updater.check().await.map_err(|e| e.to_string())?
-        .ok_or("No update available")?;
-
-    log::info!("Downloading update {}...", update.version);
-
-    let mut downloaded = 0u64;
-    let total: Option<u64> = None;
-
-    update.download_and_install(
-        |chunk_length, _content_length| {
-            downloaded += chunk_length as u64;
-            log::info!("Downloaded {} bytes", downloaded);
-        },
-        || {
-            log::info!("Download complete, installing...");
-        },
-    ).await.map_err(|e| e.to_string())?;
-
-    log::info!("Update installed successfully");
-
-    Ok(())
-}
-
 // ==================== LLM / AI Chat Commands ====================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

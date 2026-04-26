@@ -4,12 +4,14 @@ mod backend_client;
 mod protocol_commands;
 
 use tauri::Manager;
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .invoke_handler(tauri::generate_handler![
             commands::get_system_info,
             commands::execute_cli_command,
@@ -30,7 +32,6 @@ pub fn run() {
             commands::open_browser,
             commands::check_for_updates,
             commands::get_version_info,
-            commands::download_and_install_update,
             // LLM / AI Chat
             commands::llm_chat,
             commands::test_llm_connection,
@@ -89,44 +90,58 @@ pub fn run() {
             protocol_commands::get_protocol_capabilities,
         ])
         .setup(|app| {
-            log::info!("AgentOS Desktop Client starting...");
+            log::info!("Airymax AgentOS Desktop Client starting...");
 
-            #[cfg(debug_assertions)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-            }
+            let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
+            let hide = MenuItem::with_id(app, "hide", "隐藏到托盘", true, None::<&str>)?;
+            let sep1 = PredefinedMenuItem::separator(app)?;
+            let quit = PredefinedMenuItem::quit(app, Some("退出"))?;
 
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                if let Err(e) = check_update_on_startup(handle).await {
-                    log::warn!("Failed to check for updates on startup: {}", e);
-                }
-            });
+            let tray_menu = Menu::with_items(app, &[&show, &hide, &sep1, &quit])?;
+
+            let _tray = TrayIconBuilder::new()
+                .icon(app.default_window_icon().unwrap().clone())
+                .tooltip("Airymax AgentOS")
+                .menu(&tray_menu)
+                .show_menu_on_left_click(false)
+                .on_menu_event(|app, event| {
+                    match event.id.as_ref() {
+                        "show" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        "hide" => {
+                            if let Some(window) = app.get_webview_window("main") {
+                                let _ = window.hide();
+                            }
+                        }
+                        "quit" => {
+                            app.exit(0);
+                        }
+                        _ => {}
+                    }
+                })
+                .on_tray_icon_event(|tray, event| {
+                    if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
+                        let app = tray.app_handle();
+                        if let Some(window) = app.get_webview_window("main") {
+                            if window.is_visible().unwrap_or(true) {
+                                let _ = window.hide();
+                            } else {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                    }
+                })
+                .build(app)?;
+
+            log::info!("Airymax AgentOS ready - System tray active");
 
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running AgentOS Desktop");
-}
-
-async fn check_update_on_startup(app: tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
-    use tauri_plugin_updater::UpdaterExt;
-    
-    let updater = app.updater()?;
-    
-    match updater.check().await? {
-        Some(update) => {
-            log::info!(
-                "Update available: {} -> {}",
-                update.current_version,
-                update.version
-            );
-        }
-        None => {
-            log::info!("No updates available");
-        }
-    }
-    
-    Ok(())
+        .expect("error while running Airymax AgentOS");
 }
