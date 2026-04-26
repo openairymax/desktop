@@ -216,7 +216,7 @@ const Settings: React.FC = () => {
               <SettingsIcon size={32} />
             </div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>Airymax AgentOS</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>版本 0.2.0 · Tauri 桌面客户端</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>版本 0.0.4 · Tauri 桌面客户端</p>
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', textAlign: 'left' }}>
               {[
                 ['框架', 'Tauri v2 + React 18'],

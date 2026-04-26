@@ -118,7 +118,7 @@ coder        编码助手          idle    deepseek-chat`;
         setTerminalInput('');
         return;
       case 'version':
-        output = 'Airymax AgentOS v0.2.0 (Tauri Desktop)';
+        output = 'Airymax AgentOS v0.0.3 (Tauri Desktop)';
         break;
       default:
         output = `命令未找到: ${cmd}. 输入 help 查看可用命令。`;

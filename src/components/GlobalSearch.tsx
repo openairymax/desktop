@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search, X, ArrowRight, Command, Zap,
   LayoutDashboard, Bot, ListTodo, MessageSquare, Brain,
-  Wrench, BarChart3, Terminal, Settings as SettingsIcon, Server, Eye
+  Wrench, BarChart3, Terminal, Settings as SettingsIcon, Server, Eye,
+  Shield, Database, Grid, Activity, Layers, Sparkles
 } from 'lucide-react';
 
 interface SearchResult {
@@ -17,15 +18,20 @@ interface SearchResult {
 
 const SEARCH_ITEMS: SearchResult[] = [
   { label: '仪表盘', path: '/', icon: <LayoutDashboard size={16} />, category: '核心', shortcut: 'Ctrl+1' },
-  { label: '智能体管理', path: '/agents', icon: <Bot size={16} />, category: '核心', shortcut: 'Ctrl+2' },
-  { label: '任务管理', path: '/tasks', icon: <ListTodo size={16} />, category: '核心', shortcut: 'Ctrl+3' },
-  { label: 'AI 助手', path: '/ai-chat', icon: <MessageSquare size={16} />, category: '核心', shortcut: 'Ctrl+4' },
-  { label: '模型配置', path: '/model-config', icon: <Brain size={16} />, category: 'AI能力', shortcut: 'Ctrl+5' },
-  { label: '认知循环', path: '/cognitive-loop', icon: <Eye size={16} />, category: 'AI能力', shortcut: 'Ctrl+6' },
-  { label: '记忆系统', path: '/memory-evolution', icon: <Brain size={16} />, category: 'AI能力', shortcut: 'Ctrl+7' },
-  { label: '工具与技能', path: '/tools', icon: <Wrench size={16} />, category: 'AI能力', shortcut: 'Ctrl+8' },
-  { label: '服务网关', path: '/services', icon: <Server size={16} />, category: '系统工具' },
-  { label: '系统监控', path: '/system-monitor', icon: <BarChart3 size={16} />, category: '系统工具', shortcut: 'Ctrl+9' },
+  { label: '智能体', path: '/agents', icon: <Bot size={16} />, category: '核心', shortcut: 'Ctrl+2' },
+  { label: '任务', path: '/tasks', icon: <ListTodo size={16} />, category: '核心', shortcut: 'Ctrl+3' },
+  { label: '会话', path: '/sessions', icon: <Layers size={16} />, category: '核心', shortcut: 'Ctrl+4' },
+  { label: 'AI 助手', path: '/ai-chat', icon: <MessageSquare size={16} />, category: '核心', shortcut: 'Ctrl+5' },
+  { label: '技能', path: '/skills', icon: <Wrench size={16} />, category: '核心', shortcut: 'Ctrl+6' },
+  { label: '工具', path: '/tools', icon: <Grid size={16} />, category: '核心', shortcut: 'Ctrl+7' },
+  { label: '模型配置', path: '/model-config', icon: <Brain size={16} />, category: 'AI能力', shortcut: 'Ctrl+8' },
+  { label: '认知循环', path: '/cognitive-loop', icon: <Eye size={16} />, category: 'AI能力' },
+  { label: '记忆系统', path: '/memory-evolution', icon: <Database size={16} />, category: 'AI能力' },
+  { label: '应用市场', path: '/open-lab', icon: <Sparkles size={16} />, category: 'AI能力' },
+  { label: '服务网关', path: '/services', icon: <Server size={16} />, category: '系统工具', shortcut: 'Ctrl+9' },
+  { label: '安全中心', path: '/security', icon: <Shield size={16} />, category: '系统工具' },
+  { label: '系统监控', path: '/system-monitor', icon: <BarChart3 size={16} />, category: '系统工具' },
+  { label: '遥测', path: '/telemetry', icon: <Activity size={16} />, category: '系统工具' },
   { label: '日志终端', path: '/logs-terminal', icon: <Terminal size={16} />, category: '系统工具' },
   { label: '系统设置', path: '/settings', icon: <SettingsIcon size={16} />, category: '系统工具', shortcut: 'Ctrl+0' },
 ];
