@@ -8,7 +8,7 @@ import {
   LayoutDashboard, Server, Bot, ListTodo, Settings as SettingsIcon,
   FileText, Terminal, Cpu, Brain, Wrench, MessageSquare, Globe,
   Menu, X, ChevronLeft, ChevronRight, Sun, Moon, Bell, Sparkles, Eye, BarChart3,
-  Search, Minus, Square, Maximize2, Command,
+  Search, Minus, Square, Maximize2, Command, Shield, Database, Grid, Activity, Layers
 } from 'lucide-react';
 
 declare global {
@@ -30,13 +30,18 @@ const NAV_ITEMS: NavItem[] = [
   { key: 'dashboard', path: '/', icon: <LayoutDashboard size={18} />, label: '仪表盘', category: 'core' },
   { key: 'agents', path: '/agents', icon: <Bot size={18} />, label: '智能体', category: 'core' },
   { key: 'tasks', path: '/tasks', icon: <ListTodo size={18} />, label: '任务', category: 'core' },
+  { key: 'sessions', path: '/sessions', icon: <Layers size={18} />, label: '会话', category: 'core' },
   { key: 'ai-chat', path: '/ai-chat', icon: <MessageSquare size={18} />, label: 'AI 助手', category: 'core' },
+  { key: 'skills', path: '/skills', icon: <Wrench size={18} />, label: '技能', category: 'core' },
+  { key: 'tools', path: '/tools', icon: <Grid size={18} />, label: '工具', category: 'core' },
   { key: 'model-config', path: '/model-config', icon: <Brain size={18} />, label: '模型配置', category: 'ai' },
   { key: 'cognitive-loop', path: '/cognitive-loop', icon: <Eye size={18} />, label: '认知循环', category: 'ai' },
-  { key: 'memory', path: '/memory-evolution', icon: <Brain size={18} />, label: '记忆系统', category: 'ai' },
-  { key: 'tools', path: '/tools', icon: <Wrench size={18} />, label: '工具与技能', category: 'ai' },
+  { key: 'memory', path: '/memory-evolution', icon: <Database size={18} />, label: '记忆系统', category: 'ai' },
+  { key: 'open-lab', path: '/open-lab', icon: <Sparkles size={18} />, label: '应用市场', category: 'ai' },
   { key: 'services', path: '/services', icon: <Server size={18} />, label: '服务网关', category: 'system' },
+  { key: 'security', path: '/security', icon: <Shield size={18} />, label: '安全中心', category: 'system' },
   { key: 'system-monitor', path: '/system-monitor', icon: <BarChart3 size={18} />, label: '系统监控', category: 'system' },
+  { key: 'telemetry', path: '/telemetry', icon: <Activity size={18} />, label: '遥测', category: 'system' },
   { key: 'logs-terminal', path: '/logs-terminal', icon: <Terminal size={18} />, label: '日志终端', category: 'system' },
   { key: 'settings', path: '/settings', icon: <SettingsIcon size={18} />, label: '系统设置', category: 'system' },
 ];
@@ -458,7 +463,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 borderRadius: '50%',
                 backgroundColor: 'var(--success-color)',
               }} />
-              <span>Airymax AgentOS v0.2.0</span>
+              <span>Airymax AgentOS v0.0.4</span>
             </div>
             <span>Ready</span>
           </div>
