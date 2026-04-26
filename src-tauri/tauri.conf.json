@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicehash/tauri/dev/tooling/cli/schema.json",
-  "productName": "AgentOS Desktop",
+  "productName": "Airymax AgentOS",
   "version": "0.2.0",
-  "identifier": "com.spharx.agentos.desktop",
+  "identifier": "com.airmax.agentos",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "AgentOS Desktop",
+        "title": "Airymax AgentOS",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
@@ -21,11 +21,19 @@
         "fullscreen": false,
         "center": true,
         "decorations": true,
-        "transparent": false
+        "transparent": false,
+        "alwaysOnTop": false,
+        "skipTaskbar": false
       }
     ],
     "security": {
       "csp": null
+    },
+    "trayIcon": {
+      "iconPath": "icons/icon_32x32.png",
+      "iconAsTemplate": true,
+      "menuOnLeftClick": false,
+      "title": "Airymax AgentOS"
     }
   },
   "bundle": {
