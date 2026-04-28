@@ -1,8 +1,8 @@
 [package]
-name = "agentos-desktop"
-version = "0.1.0"
-description = "AgentOS Desktop Client - Official GUI for AgentOS"
-authors = ["Spharx AgentOS Team"]
+name = "airymax-agentos"
+version = "0.0.4"
+description = "Airymax AgentOS - Industrial-grade AI Agent Operating System Desktop Client"
+authors = ["Airymax Team"]
 license = "MIT"
 repository = "https://github.com/SpharxTeam/AgentOS"
 edition = "2021"
@@ -17,8 +17,8 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-shell = "2"
-tauri-plugin-updater = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-global-shortcut = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

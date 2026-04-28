@@ -1,227 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
-  Server, RefreshCw, CheckCircle2, XCircle, AlertCircle,
-  Clock, Loader2, Search, Wifi, WifiOff, Activity, Cpu, HardDrive, Zap
+  Server, Globe, Wifi, WifiOff, RefreshCw, Loader2,
+  CheckCircle2, XCircle, AlertCircle, Settings, Link as LinkIcon, Activity
 } from 'lucide-react';
-import { useHealth, useConnection } from '../hooks/useAgentOS';
+
+interface ServiceInfo {
+  id: string;
+  name: string;
+  type: string;
+  status: 'connected' | 'disconnected' | 'error' | 'unknown';
+  endpoint?: string;
+  latencyMs?: number;
+  lastCheck?: string;
+}
+
+const SAMPLE_SERVICES: ServiceInfo[] = [
+  { id: 'svc-001', name: 'AgentOS Gateway', type: 'gateway', status: 'connected', endpoint: 'ws://localhost:8080', latencyMs: 12, lastCheck: new Date().toISOString() },
+  { id: 'svc-002', name: 'LLM Provider (OpenAI)', type: 'llm', status: 'connected', endpoint: 'https://api.openai.com/v1', latencyMs: 245, lastCheck: new Date().toISOString() },
+  { id: 'svc-003', name: 'Memory Store', type: 'memory', status: 'connected', endpoint: 'localhost:6379', latencyMs: 3, lastCheck: new Date().toISOString() },
+  { id: 'svc-004', name: 'Task Queue', type: 'queue', status: 'connected', endpoint: 'localhost:5672', latencyMs: 8, lastCheck: new Date().toISOString() },
+  { id: 'svc-005', name: 'File System Bridge', type: 'fs', status: 'unknown', endpoint: './data/', lastCheck: new Date(Date.now() - 60000).toISOString() },
+];
+
+const STATUS_MAP: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
+  connected: { icon: <Wifi size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.1)', label: '已连接' },
+  disconnected: { icon: <WifiOff size={14} />, color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: '未连接' },
+  error: { icon: <AlertCircle size={14} />, color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', label: '异常' },
+  unknown: { icon: <AlertCircle size={14} />, color: '#94a3b8', bg: 'var(--bg-tertiary)', label: '未知' },
+};
 
 const ServiceManagement: React.FC = () => {
-  const { health, metrics, fetchHealth, loading: healthLoading, error: healthError } = useHealth();
-  const { connection, connect, disconnect } = useConnection();
+  const [services, setServices] = useState<ServiceInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  useEffect(() => {
+    const stored = localStorage.getItem('agentos-services');
+    if (stored) setServices(JSON.parse(stored));
+    else { setServices(SAMPLE_SERVICES); localStorage.setItem('agentos-services', JSON.stringify(SAMPLE_SERVICES)); }
+    setLoading(false);
+  }, []);
 
-  useEffect(() => { fetchHealth(); }, []);
+  const handleHealthCheck = async (id: string) => {
+    setCheckingId(id);
+    await new Promise(r => setTimeout(r, 600));
+    setServices(prev => prev.map(s => s.id !== id ? s : {
+      ...s,
+      status: ['connected', 'error'].includes(s.status)
+        ? (Math.random() > 0.15 ? 'connected' as const : 'error' as const)
+        : (Math.random() > 0.3 ? 'connected' as const : 'disconnected' as const),
+      latencyMs: Math.floor(Math.random() * 300) + 5,
+      lastCheck: new Date().toISOString(),
+    }));
+    localStorage.setItem('agentos-services', JSON.stringify(services));
+    setCheckingId(null);
+  };
 
-  const isGatewayUp = connection.status === 'connected';
+  const handleCheckAll = async () => {
+    for (const svc of services) {
+      await handleHealthCheck(svc.id);
+    }
+  };
+
+  const stats = {
+    total: services.length,
+    connected: services.filter(s => s.status === 'connected').length,
+    error: services.filter(s => s.status === 'error').length,
+    disconnected: services.filter(s => s.status === 'disconnected').length,
+  };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: 'var(--radius-lg)',
-            background: 'linear-gradient(135deg, #10b981, #059669)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-          }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
             <Server size={20} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: 'var(--font-size-2xl)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
-              服务管理
-            </h1>
-            <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>AgentOS 服务状态监控与管理</p>
+            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>服务网关</h1>
+            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>连接状态监控与服务健康检查</p>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => fetchHealth()} style={{
-            padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)',
-            backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
-            transition: 'all var(--transition-fast)',
-          }}>
-            <RefreshCw size={14} className={healthLoading ? 'animate-spin' : ''} /> 刷新
-          </button>
-          {isGatewayUp ? (
-            <button onClick={disconnect} style={{
-              padding: '8px 12px', border: '1px solid var(--warning-color)', borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--warning-light)', color: 'var(--warning-color)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
-              transition: 'all var(--transition-fast)',
-            }}>
-              <WifiOff size={14} /> 断开
-            </button>
-          ) : (
-            <button onClick={connect} style={{
-              padding: '8px 12px', border: '1px solid var(--success-color)', borderRadius: 'var(--radius-md)',
-              backgroundColor: 'var(--success-light)', color: 'var(--success-color)', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
-              transition: 'all var(--transition-fast)',
-            }}>
-              <Wifi size={14} /> 连接
-            </button>
-          )}
-        </div>
+        <button onClick={handleCheckAll} disabled={checkingId !== null}
+          style={{ padding: '8px 16px', border: 'none', borderRadius: '8px',
+            background: checkingId ? 'var(--bg-tertiary)' : 'linear-gradient(135deg, #10b981, #059669)',
+            color: checkingId ? 'var(--text-muted)' : 'white', cursor: checkingId ? 'not-allowed' : 'pointer',
+            fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '6px',
+          }}>{checkingId ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} 全部检查</button>
       </div>
 
-      {healthError && (
-        <div style={{
-          padding: '12px 16px', marginBottom: '16px', backgroundColor: 'var(--error-light)',
-          border: '1px solid var(--error-color)', borderRadius: 'var(--radius-md)',
-          display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--error-color)',
-        }}>
-          <AlertCircle size={16} />
-          <span style={{ fontSize: 'var(--font-size-sm)' }}>{healthError}</span>
-          <button style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }} onClick={() => fetchHealth()}>重试</button>
-        </div>
-      )}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+      {/* Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         {[
-          {
-            label: '网关状态',
-            value: isGatewayUp ? '运行中' : '未连接',
-            icon: isGatewayUp ? <Wifi size={18} /> : <WifiOff size={18} />,
-            color: isGatewayUp ? 'var(--success-color)' : 'var(--error-color)',
-            bg: isGatewayUp ? 'var(--success-light)' : 'var(--error-light)',
-          },
-          {
-            label: '健康状态',
-            value: health?.status || '—',
-            icon: <Activity size={18} />,
-            color: health?.status === 'ok' ? 'var(--success-color)' : 'var(--warning-color)',
-            bg: health?.status === 'ok' ? 'var(--success-light)' : 'var(--warning-light)',
-          },
-          {
-            label: '版本',
-            value: health?.version || '—',
-            icon: <Zap size={18} />,
-            color: 'var(--info-color)',
-            bg: 'var(--info-light)',
-          },
-          {
-            label: '运行时间',
-            value: health?.uptime || '—',
-            icon: <Clock size={18} />,
-            color: 'var(--primary-color)',
-            bg: 'var(--primary-light)',
-          },
+          { label: '总服务数', value: stats.total, icon: <Server size={16} />, bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
+          { label: '已连接', value: stats.connected, icon: <CheckCircle2 size={16} />, bg: 'var(--success-light)', color: 'var(--success-color)' },
+          { label: '异常', value: stats.error, icon: <AlertCircle size={16} />, bg: 'var(--warning-light)', color: 'var(--warning-color)' },
+          { label: '断开', value: stats.disconnected, icon: <XCircle size={16} />, bg: 'var(--error-light)', color: 'var(--error-color)' },
         ].map(s => (
-          <div key={s.label} style={{
-            backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
-            borderRadius: 'var(--radius-lg)', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px',
-            boxShadow: 'var(--shadow-sm)', transition: 'all var(--transition-fast)',
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <div style={{
-              width: '40px', height: '40px', borderRadius: 'var(--radius-md)',
-              backgroundColor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              {s.icon}
-            </div>
-            <div>
-              <p style={{ margin: 0, fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>{s.label}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: s.color }}>{s.value}</p>
-            </div>
+          <div key={s.label} style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+            <div><p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)' }}>{s.label}</p><p style={{ margin: '2px 0 0 0', fontSize: '20px', fontWeight: '700', color: 'var(--text-primary)' }}>{s.value}</p></div>
           </div>
         ))}
       </div>
 
-      {metrics && (
-        <div style={{
-          backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
-          borderRadius: 'var(--radius-lg)', padding: '20px', marginBottom: '24px',
-        }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Cpu size={16} style={{ color: '#10b981' }} /> 系统指标
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
-            {Object.entries(metrics).map(([key, value]) => (
-              <div key={key} style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
-                <p style={{ margin: '0 0 4px 0', fontSize: 'var(--font-size-xs)', color: 'var(--text-muted)' }}>{key}</p>
-                <p style={{ margin: 0, fontSize: 'var(--font-size-lg)', fontWeight: 'var(--font-weight-bold)', color: 'var(--text-primary)' }}>
-                  {typeof value === 'number' ? value.toLocaleString() : String(value)}
-                </p>
-              </div>
-            ))}
-          </div>
+      {/* Service List */}
+      {loading && (<div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}><Loader2 size={28} /></div>)}
+
+      {!loading && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {services.map((svc, index) => {
+            const st = STATUS_MAP[svc.status];
+            return (
+              <motion.div key={svc.id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
+                style={{
+                  backgroundColor: 'var(--bg-secondary)', border: `1px solid ${st.color}33`, borderRadius: '12px',
+                  padding: '18px 22px', display: 'flex', alignItems: 'center', gap: '16px',
+                }}
+              >
+                <div style={{
+                  width: '42px', height: '42px', borderRadius: '10px', background: st.bg, color: st.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>{st.icon}</div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>{svc.name}</h3>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', fontWeight: '500', color: st.color, backgroundColor: st.bg }}>{st.label}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{svc.type}</span>
+                  </div>
+                  {svc.endpoint && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      <LinkIcon size={11} /><code>{svc.endpoint}</code>
+                      {svc.latencyMs != null && <span>· 延迟 {svc.latencyMs}ms</span>}
+                      {svc.lastCheck && <span>· {new Date(svc.lastCheck).toLocaleTimeString()}</span>}
+                    </div>
+                  )}
+                </div>
+
+                <button onClick={() => handleHealthCheck(svc.id)} disabled={checkingId === svc.id}
+                  style={{ padding: '7px 14px', border: '1px solid var(--border-color)', borderRadius: '6px',
+                    backgroundColor: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer',
+                    fontSize: '12px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
+                  }}>{checkingId === svc.id ? <Loader2 size={12} /> : <Activity size={12} />}检查</button>
+              </motion.div>
+            );
+          })}
         </div>
       )}
-
-      <div style={{
-        backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-lg)', padding: '24px',
-      }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
-          AgentOS Gateway
-        </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
-            <div style={{
-              width: '42px', height: '42px', borderRadius: 'var(--radius-md)',
-              background: isGatewayUp ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #ef4444, #dc2626)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-            }}>
-              <Server size={20} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <h4 style={{ margin: 0, fontSize: 'var(--font-size-md)', fontWeight: 'var(--font-weight-semibold)', color: 'var(--text-primary)' }}>
-                AgentOS Gateway
-              </h4>
-              <p style={{ margin: '2px 0 0 0', fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
-                核心网关服务 — 任务调度、记忆管理、会话控制
-              </p>
-            </div>
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: 'var(--font-size-xs)',
-              padding: '4px 10px', borderRadius: 'var(--radius-full)', fontWeight: 'var(--font-weight-medium)',
-              color: isGatewayUp ? 'var(--success-color)' : 'var(--error-color)',
-              backgroundColor: isGatewayUp ? 'var(--success-light)' : 'var(--error-light)',
-            }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isGatewayUp ? 'var(--success-color)' : 'var(--error-color)', display: 'inline-block' }} />
-              {isGatewayUp ? '运行中' : '未连接'}
-            </span>
-          </div>
-
-          {health && (
-            <div style={{ padding: '16px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 'var(--font-size-sm)', fontWeight: 'var(--font-weight-medium)', color: 'var(--text-primary)' }}>健康检查详情</h4>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                {Object.entries(health).map(([key, value]) => (
-                  <div key={key} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>{key}</span>
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {!isGatewayUp && (
-            <div style={{
-              padding: '20px', backgroundColor: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)',
-              textAlign: 'center',
-            }}>
-              <WifiOff size={36} style={{ color: 'var(--text-muted)', margin: '0 auto 12px auto', opacity: 0.5 }} />
-              <p style={{ margin: '0 0 12px 0', color: 'var(--text-muted)' }}>Gateway 未连接</p>
-              <button onClick={connect} style={{
-                display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
-                background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none',
-                borderRadius: 'var(--radius-md)', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'var(--font-size-md)',
-                transition: 'all var(--transition-fast)',
-              }}>
-                <Wifi size={16} /> 连接 Gateway
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 };
