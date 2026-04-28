@@ -38,3 +38,6 @@ coverage/
 # Misc
 .cache/
 .temp/
+
+# Internal Documentation (not needed in git)
+src/design-system/

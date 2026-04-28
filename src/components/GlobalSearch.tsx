@@ -1,206 +1,187 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Search,
-  X,
-  LayoutDashboard,
-  Server,
-  Users,
-  ClipboardList,
-  Brain,
-  Settings as SettingsIcon,
-  FileText,
-  Terminal,
-  ArrowRight,
-  Command,
-  Activity,
-  Database,
-  Settings2,
-  Wifi,
-  MessageCircle,
-  Sparkles,
-  Cpu,
-} from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../i18n';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search, X, ArrowRight, Command, Zap,
+  LayoutDashboard, Bot, ListTodo, MessageSquare, Brain,
+  Wrench, BarChart3, Terminal, Settings as SettingsIcon, Server, Eye,
+  Shield, Database, Grid, Activity, Layers, Sparkles
+} from 'lucide-react';
 
 interface SearchResult {
-  id: string;
-  type: 'page' | 'action' | 'setting';
-  title: string;
-  subtitle?: string;
-  icon: React.ElementType;
-  path?: string;
-  action?: () => void;
-  keywords: string[];
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  category: string;
+  shortcut?: string;
 }
 
-const GlobalSearch: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
+const SEARCH_ITEMS: SearchResult[] = [
+  { label: '仪表盘', path: '/', icon: <LayoutDashboard size={16} />, category: '核心', shortcut: 'Ctrl+1' },
+  { label: '智能体', path: '/agents', icon: <Bot size={16} />, category: '核心', shortcut: 'Ctrl+2' },
+  { label: '任务', path: '/tasks', icon: <ListTodo size={16} />, category: '核心', shortcut: 'Ctrl+3' },
+  { label: '会话', path: '/sessions', icon: <Layers size={16} />, category: '核心', shortcut: 'Ctrl+4' },
+  { label: 'AI 助手', path: '/ai-chat', icon: <MessageSquare size={16} />, category: '核心', shortcut: 'Ctrl+5' },
+  { label: '技能', path: '/skills', icon: <Wrench size={16} />, category: '核心', shortcut: 'Ctrl+6' },
+  { label: '工具', path: '/tools', icon: <Grid size={16} />, category: '核心', shortcut: 'Ctrl+7' },
+  { label: '模型配置', path: '/model-config', icon: <Brain size={16} />, category: 'AI能力', shortcut: 'Ctrl+8' },
+  { label: '认知循环', path: '/cognitive-loop', icon: <Eye size={16} />, category: 'AI能力' },
+  { label: '记忆系统', path: '/memory-evolution', icon: <Database size={16} />, category: 'AI能力' },
+  { label: '应用市场', path: '/open-lab', icon: <Sparkles size={16} />, category: 'AI能力' },
+  { label: '服务网关', path: '/services', icon: <Server size={16} />, category: '系统工具', shortcut: 'Ctrl+9' },
+  { label: '安全中心', path: '/security', icon: <Shield size={16} />, category: '系统工具' },
+  { label: '系统监控', path: '/system-monitor', icon: <BarChart3 size={16} />, category: '系统工具' },
+  { label: '遥测', path: '/telemetry', icon: <Activity size={16} />, category: '系统工具' },
+  { label: '日志终端', path: '/logs-terminal', icon: <Terminal size={16} />, category: '系统工具' },
+  { label: '系统设置', path: '/settings', icon: <SettingsIcon size={16} />, category: '系统工具', shortcut: 'Ctrl+0' },
+];
+
+interface GlobalSearchProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { t } = useI18n();
-
-  const searchItems: SearchResult[] = useMemo(() => [
-    { id: 'dash', type: 'page', title: t.nav.dashboard, subtitle: '系统概览与监控', icon: LayoutDashboard, path: '/', keywords: ['dashboard', 'overview', 'home', 'main', '系统', '概览'] },
-    { id: 'agen', type: 'page', title: t.nav.agents, subtitle: 'AI智能体管理', icon: Users, path: '/agents', keywords: ['agents', 'ai', 'bots', 'assistants', '智能体', '机器人'] },
-    { id: 'task', type: 'page', title: t.nav.tasks, subtitle: '任务编排与追踪', icon: ClipboardList, path: '/tasks', keywords: ['tasks', 'jobs', 'queue', '任务', '编排'] },
-    { id: 'serv', type: 'page', title: t.nav.services, subtitle: '服务管理与监控', icon: Server, path: '/services', keywords: ['services', 'docker', 'containers', '服务', '容器'] },
-    { id: 'ai-chat', type: 'page', title: t.nav.aiChat, subtitle: 'AI智能助手', icon: MessageCircle, path: '/ai-chat', keywords: ['ai', 'chat', 'assistant', '助手', '对话'] },
-    { id: 'llmc', type: 'page', title: t.nav.llmConfig, subtitle: 'AI模型配置', icon: Sparkles, path: '/llm-config', keywords: ['ai', 'llm', 'model', 'openai', 'claude', 'api', '模型', '配置'] },
-    { id: 'agent-runtime', type: 'page', title: t.nav.agentRuntime, subtitle: '运行时管理', icon: Cpu, path: '/agent-runtime', keywords: ['runtime', 'agent', '运行时', '管理'] },
-    { id: 'memory-evolution', type: 'page', title: t.nav.memoryEvolution, subtitle: '记忆系统管理', icon: Database, path: '/memory-evolution', keywords: ['memory', 'evolution', '记忆', '系统'] },
-    { id: 'system-monitor', type: 'page', title: t.nav.systemMonitor, subtitle: '系统资源监控', icon: Activity, path: '/system-monitor', keywords: ['system', 'monitor', 'resource', '系统', '监控', '资源'] },
-    { id: 'logs', type: 'page', title: t.nav.logs, subtitle: '系统日志查看', icon: FileText, path: '/logs', keywords: ['logs', 'errors', 'debugging', '日志', '错误', '调试'] },
-    { id: 'terminal', type: 'page', title: t.nav.terminal, subtitle: '终端命令执行', icon: Terminal, path: '/terminal', keywords: ['terminal', 'shell', 'command', 'bash', '终端', '命令'] },
-    { id: 'tools', type: 'page', title: t.nav.tools, subtitle: '工具管理', icon: Settings2, path: '/tools', keywords: ['tools', '管理', '工具'] },
-    { id: 'protocols', type: 'page', title: '协议测试', subtitle: '协议 测试', icon: Wifi, path: '/protocols', keywords: ['protocols', 'test', '协议', '测试'] },
-    { id: 'config', type: 'page', title: t.nav.config, subtitle: '配置文件编辑', icon: SettingsIcon, path: '/config', keywords: ['config', 'settings', 'yaml', 'env', '配置', '文件'] },
-    { id: 'settings', type: 'page', title: t.nav.settings, subtitle: '应用偏好设置', icon: SettingsIcon, path: '/settings', keywords: ['settings', 'preferences', 'theme', 'language', '设置', '偏好', '主题', '语言'] },
-  ], [t]);
-
-  const filteredResults = useMemo(() => {
-    if (!query.trim()) return searchItems;
-    const q = query.toLowerCase();
-    return searchItems.filter(item =>
-      item.title.toLowerCase().includes(q) ||
-      item.subtitle?.toLowerCase().includes(q) ||
-      item.keywords.some(k => k.includes(q))
-    );
-  }, [query, searchItems]);
+  const [filtered, setFiltered] = useState<SearchResult[]>(SEARCH_ITEMS);
 
   useEffect(() => {
-    setSelectedIndex(0);
-  }, [filteredResults]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsOpen(prev => !prev);
-      }
-      if (e.key === 'Escape') setIsOpen(false);
-      if (isOpen) {
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setSelectedIndex(i => Math.min(i + 1, filteredResults.length - 1));
-        }
-        if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setSelectedIndex(i => Math.max(i - 1, 0));
-        }
-        if (e.key === 'Enter' && filteredResults[selectedIndex]) {
-          e.preventDefault();
-          handleSelect(filteredResults[selectedIndex]);
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filteredResults]);
-
-  useEffect(() => {
-    if (isOpen && inputRef.current) inputRef.current.focus();
-  }, [isOpen]);
-
-  const handleSelect = (result: SearchResult) => {
-    if (result.path) {
-      navigate(result.path);
+    if (open) {
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
-    if (result.action) result.action();
-    setIsOpen(false);
     setQuery('');
+    setSelectedIndex(0);
+    setFiltered(SEARCH_ITEMS);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(prev => Math.min(prev + 1, filtered.length - 1)); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(prev => Math.max(prev - 1, 0)); return; }
+      if (e.key === 'Enter') { e.preventDefault(); navigateTo(filtered[selectedIndex]); return; }
+    };
+
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, selectedIndex, filtered?.length]);
+
+  const navigateTo = (item: SearchResult | undefined) => {
+    if (!item) return;
+    navigate(item.path);
+    onClose();
   };
 
-  return (
-    <>
-      {/* Trigger Button */}
-      <button
-        className="icon-btn global-search-trigger"
-        onClick={() => setIsOpen(true)}
-        title="Search (Ctrl+K)"
-      >
-        <Search size={17} />
-        <kbd className="search-kbd">⌘K</kbd>
-      </button>
+  const categories = [...new Set(filtered.map(i => i.category))];
 
-      {/* Search Modal */}
-      {isOpen && (
-        <div className="modal-overlay" onClick={() => setIsOpen(false)}>
-          <div
-            className="global-search-modal"
-            onClick={(e) => e.stopPropagation()}
+  return (
+    <AnimatePresence>
+      {open && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 2000,
+              backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)',
+            }}
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: -10 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)',
+              width: '560px', maxWidth: '90vw', zIndex: 2001,
+              backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
+              borderRadius: '14px', boxShadow: '0 25px 60px rgba(0,0,0,0.4)', overflow: 'hidden',
+            }}
           >
-            {/* Search Input */}
-            <div className="global-search-input-wrapper">
-              <Search size={18} style={{ color: "var(--text-muted)" }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <Search size={18} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
               <input
                 ref={inputRef}
                 type="text"
-                className="global-search-input"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search pages, settings, actions..."
-                autoFocus
+                onChange={e => { setQuery(e.target.value); setSelectedIndex(0); const q = e.target.value.trim(); setFiltered(q ? SEARCH_ITEMS.filter(item => item.label.toLowerCase().includes(q.toLowerCase()) || item.category.toLowerCase().includes(q.toLowerCase())) : SEARCH_ITEMS); }}
+                placeholder="搜索页面、功能、设置..."
+                style={{
+                  flex: 1, border: 'none', background: 'transparent',
+                  color: 'var(--text-primary)', fontSize: '15px', fontFamily: 'inherit',
+                  outline: 'none',
+                }}
               />
-              {query && (
-                <button onClick={() => setQuery('')} className="icon-btn">
-                  <X size={16} />
-                </button>
-              )}
+              <kbd style={{
+                padding: '2px 6px', borderRadius: '4px', fontSize: '11px',
+                border: '1px solid var(--border-color)', color: 'var(--text-muted)',
+                fontFamily: 'monospace', flexShrink: 0,
+              }}>ESC</kbd>
             </div>
 
-            {/* Results */}
-            <div className="global-search-results">
-              {filteredResults.length === 0 ? (
-                <div className="global-search-empty">
-                  <p>No results found for "{query}"</p>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    Try different keywords or check spelling
-                  </p>
+            <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '8px' }}>
+              {filtered.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                  <Search size={28} style={{ marginBottom: '8px', opacity: 0.5 }} />
+                  <p>未找到匹配结果</p>
                 </div>
-              ) : (
-                <div className="global-search-section-label">Pages</div>
               )}
-              {filteredResults.map((result, idx) => (
-                <button
-                  key={result.id}
-                  className={`global-search-result-item ${idx === selectedIndex ? 'selected' : ''}`}
-                  onClick={() => handleSelect(result)}
-                  onMouseEnter={() => setSelectedIndex(idx)}
-                >
-                  <div className="global-search-result-icon" style={{
-                    background: idx === selectedIndex ? 'var(--primary-color)' : 'var(--bg-tertiary)',
-                    color: idx === selectedIndex ? '#fff' : 'var(--text-secondary)',
-                  }}>
-                    <result.icon size={16} />
-                  </div>
 
-                  <div className="global-search-result-content">
-                    <span>{result.title}</span>
-                    <span className="global-search-result-subtitle">{result.subtitle}</span>
-                  </div>
-
-                  {idx === selectedIndex && (
-                    <ArrowRight size={14} style={{ color: 'var(--primary-color)' }} />
-                  )}
-                </button>
+              {categories.map(cat => (
+                <div key={cat}>
+                  <div style={{ padding: '6px 12px 4px', fontSize: '11px', fontWeight: '600', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat}</div>
+                  {filtered.filter(i => i.category === cat).map((item, idx) => {
+                    const globalIdx = filtered.indexOf(item);
+                    const isSelected = globalIdx === selectedIndex;
+                    return (
+                      <button
+                        key={item.path}
+                        onClick={() => navigateTo(item)}
+                        onMouseEnter={() => setSelectedIndex(globalIdx)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '10px', width: '100%',
+                          padding: '9px 12px', border: 'none', borderRadius: '8px',
+                          backgroundColor: isSelected ? 'var(--primary-light)' : 'transparent',
+                          cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px',
+                          color: isSelected ? 'var(--primary-color)' : 'var(--text-secondary)',
+                          transition: 'all 100ms ease', textAlign: 'left',
+                        }}
+                      >
+                        <span style={{ color: isSelected ? 'var(--primary-color)' : 'var(--text-muted)', flexShrink: 0 }}>{item.icon}</span>
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {item.shortcut && (
+                          <kbd style={{
+                            padding: '2px 6px', borderRadius: '4px', fontSize: '10px',
+                            border: '1px solid var(--border-subtle)', color: 'var(--text-muted)',
+                            fontFamily: 'monospace',
+                          }}>{item.shortcut}</kbd>
+                        )}
+                        <ArrowRight size={14} style={{ opacity: isSelected ? 1 : 0, transition: 'opacity 100ms' }} />
+                      </button>
+                    );
+                  })}
+                </div>
               ))}
             </div>
 
-            {/* Footer */}
-            <div className="global-search-footer">
-              <div className="global-search-shortcuts">
-                <kbd>↑↓</kbd><span>Navigate</span>
-                <kbd>↵</kbd><span>Select</span>
-                <kbd>Esc</kbd><span>Close</span>
-              </div>
+            <div style={{
+              padding: '8px 16px', borderTop: '1px solid var(--border-subtle)',
+              display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: 'var(--text-muted)',
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Command size={12} />K 打开搜索</span>
+              <span>↑↓ 导航</span>
+              <span>Enter 跳转</span>
+              <span>Esc 关闭</span>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </>
       )}
-    </>
+    </AnimatePresence>
   );
 };
 
