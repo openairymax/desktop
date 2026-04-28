@@ -1,6 +1,6 @@
 # Airymax AgentOS
 
-[![Stars](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.gitcode.com%2Fapi%2Fv5%2Frepos%2Fopenairymax%2Fdesktop&query=%24.stars_count&label=Stars&color=brightgreen&logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWdvbiBwb2ludHM9IjEyIDIgMTUuMDkgOC4yNiAyMiA5LjI3IDE3IDE0LjE0IDE4LjE4IDIxLjAyIDEyIDE3Ljc3IDUuODIgMjEuMDIgNyAxNC4xNCAyIDkuMjcgOC45MSA4LjI2IDEyIDIiLz48L3N2Zz4%3D)](https://atomgit.com/openairymax/desktop)
+[![star](https://atomgit.com/openairymax/desktop/star/badge.svg)](https://atomgit.com/openairymax/desktop)
 [![Version](https://img.shields.io/badge/version-0.0.4-blue)](https://atomgit.com/openairymax/desktop/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://atomgit.com/openairymax/desktop)
 [![License](https://img.shields.io/badge/license-MIT-green)](https://atomgit.com/openairymax/desktop)
@@ -8,6 +8,15 @@
 > 中文文档请查看 [README_zh.md](README_zh.md)
 
 基于 Tauri v2 构建的跨平台桌面应用，提供完整的 AI 智能体管理功能。
+
+## 相关仓库
+
+| 仓库 | 链接 |
+|------|------|
+| AgentOS 核心源码 | [atomgit.com/openairymax/agentos](https://atomgit.com/openairymax/agentos) |
+| 文档模块 | [atomgit.com/openairymax/docs](https://atomgit.com/openairymax/docs) |
+| Docker 部署 | [atomgit.com/openairymax/docker](https://atomgit.com/openairymax/docker) |
+| **桌面客户端（当前）** | [atomgit.com/openairymax/desktop](https://atomgit.com/openairymax/desktop) |
 
 ## 功能特性
 
