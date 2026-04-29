@@ -1,11 +1,26 @@
-# Airymax AgentOS
+<div align="center">
 
-[![star](https://atomgit.com/openairymax/desktop/star/badge.svg)](https://atomgit.com/openairymax/desktop)
-[![Version](https://img.shields.io/badge/版本-0.0.4-blue)](https://atomgit.com/openairymax/desktop/releases)
-[![Platform](https://img.shields.io/badge/平台-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://atomgit.com/openairymax/desktop)
-[![License](https://img.shields.io/badge/许可证-MIT-green)](https://atomgit.com/openairymax/desktop)
+# Airymax AgentOS 桌面客户端
 
-基于 Tauri v2 构建的跨平台桌面应用，提供完整的 AI 智能体操作系统管理功能，全面映射 AgentOS 后端核心模块能力。
+Powered by OpenAirymax
+
+> 基于 Tauri v2 构建的跨平台桌面应用，全面映射 AgentOS 后端核心模块能力
+
+中文 | [English](README.md)
+
+[![AtomGit](https://atomgit.com/openairymax/desktop/star/badge.svg)](https://atomgit.com/openairymax/desktop)
+ 
+[![Version](https://img.shields.io/badge/version-0.0.4-5a6b7e)](https://atomgit.com/openairymax/desktop/releases)
+[![License](https://img.shields.io/badge/license-MIT-4a90d9)](https://atomgit.com/openairymax/desktop)
+
+[![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?logo=tauri&logoColor=white)](https://tauri.app)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://atomgit.com/openairymax/desktop)
+
+</div>
+
+---
 
 ## 相关仓库
 
