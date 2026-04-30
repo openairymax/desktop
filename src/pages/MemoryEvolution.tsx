@@ -4,6 +4,7 @@ import {
   Brain, Database, Search, Plus, Trash2, X, Clock,
   AlertCircle, Eye, BarChart3, RefreshCw, Loader2, Layers, Zap,
 } from 'lucide-react';
+import { useMemory } from '../hooks/useAgentOS';
 
 type MemoryLayer = 'L1' | 'L2' | 'L3' | 'L4';
 
@@ -22,16 +23,12 @@ const LAYER_CONFIG: Record<MemoryLayer, { color: string; bg: string; icon: React
   L4: { color: '#10b981', bg: 'rgba(16,185,129,0.1)', icon: <Zap size={14} />, label: '核心记忆', desc: '核心身份与价值观' },
 };
 
-const SAMPLE_MEMORIES: Memory[] = [
-  { id: 'mem-001', content: '用户请求分析当前系统状态并生成报告', layer: 'L1', createdAt: new Date(Date.now() - 300000).toISOString(), score: 0.95 },
-  { id: 'mem-002', content: 'Airymax AgentOS 是一个多智能体协作平台，支持认知循环、四层记忆、工具调用等能力', layer: 'L2', createdAt: new Date(Date.now() - 3600000).toISOString(), score: 0.98 },
-  { id: 'mem-003', content: '创建智能体的标准流程：配置模型 → 定义角色 → 注册工具 → 启动运行', layer: 'L3', createdAt: new Date(Date.now() - 7200000).toISOString(), score: 0.87 },
-  { id: 'mem-004', content: '核心使命：构建自主、可扩展的 AI Agent 操作系统，赋能企业级智能化转型', layer: 'L4', createdAt: new Date(Date.now() - 86400000).toISOString(), score: 1.0 },
-  { id: 'mem-005', content: '当前活跃任务：桌面端 UI 全面重构与功能完善', layer: 'L1', createdAt: new Date(Date.now() - 60000).toISOString(), score: 0.99 },
-  { id: 'mem-006', content: '支持 OpenAI / Anthropic / DeepSeek / Ollama 四种 LLM 提供商', layer: 'L2', createdAt: new Date(Date.now() - 1800000).toISOString(), score: 0.91 },
-];
-
 const MemoryEvolution: React.FC = () => {
+  const {
+    memories: apiMemories, loading: apiLoading,
+    fetchMemories, writeMemory, deleteMemory,
+    evolveMemory, clearMemories, searchMemory, getMemoryStats,
+  } = useMemory();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,32 +39,32 @@ const MemoryEvolution: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('agentos-memories');
-    if (stored) {
-      setMemories(JSON.parse(stored));
-    } else {
-      setMemories(SAMPLE_MEMORIES);
-      localStorage.setItem('agentos-memories', JSON.stringify(SAMPLE_MEMORIES));
-    }
-    setLoading(false);
+    fetchMemories();
   }, []);
 
-  const saveMemories = (updated: Memory[]) => {
-    setMemories(updated);
-    localStorage.setItem('agentos-memories', JSON.stringify(updated));
-  };
+  useEffect(() => {
+    if (apiMemories && apiMemories.length > 0) {
+      const mapped: Memory[] = apiMemories.map((m: any) => ({
+        id: m.id || m.memory_id || '',
+        content: m.content || m.text || '',
+        layer: (m.layer || m.memory_layer || 'L1') as MemoryLayer,
+        createdAt: m.created_at || m.createdAt || new Date().toISOString(),
+        score: m.score || m.relevance || undefined,
+      }));
+      setMemories(mapped);
+    }
+    setLoading(apiLoading);
+  }, [apiMemories, apiLoading]);
 
   const handleStore = async () => {
     if (!newContent.trim()) return;
     setActionLoading('store');
-    await new Promise(r => setTimeout(r, 300));
-    const newMemory: Memory = {
-      id: `mem-${Date.now()}`,
-      content: newContent.trim(),
-      layer: newLayer,
-      createdAt: new Date().toISOString(),
-    };
-    saveMemories([newMemory, ...memories]);
+    try {
+      await writeMemory(newContent.trim(), newLayer);
+      await fetchMemories();
+    } catch (e) {
+      console.error('Failed to store memory:', e);
+    }
     setNewContent('');
     setShowStoreModal(false);
     setActionLoading(null);
@@ -75,35 +72,46 @@ const MemoryEvolution: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     setActionLoading(`delete-${id}`);
-    await new Promise(r => setTimeout(r, 200));
-    saveMemories(memories.filter(m => m.id !== id));
+    try {
+      await deleteMemory(id);
+      await fetchMemories();
+    } catch (e) {
+      console.error('Failed to delete memory:', e);
+    }
     setActionLoading(null);
   };
 
   const handleEvolve = async () => {
     setActionLoading('evolve');
-    await new Promise(r => setTimeout(r, 800));
-
-    const evolved = memories.map(m => {
-      if (m.layer === 'L1') return m;
-      const now = Date.now();
-      const ageMs = now - new Date(m.createdAt).getTime();
-      const ageDays = ageMs / 86400000;
-
-      let newLayer = m.layer;
-      if (m.layer === 'L2' && ageDays > 7 && Math.random() > 0.5) newLayer = 'L3';
-      if (m.layer === 'L3' && ageDays > 30 && Math.random() > 0.5) newLayer = 'L4';
-
-      return newLayer !== m.layer ? { ...m, layer: newLayer as MemoryLayer, score: Math.min((m.score || 0.8) + 0.05, 1) } : m;
-    });
-
-    saveMemories(evolved);
+    try {
+      await evolveMemory();
+      await fetchMemories();
+    } catch (e) {
+      console.error('Failed to evolve memory:', e);
+    }
     setActionLoading(null);
   };
 
   const handleClear = async () => {
     if (!window.confirm('确定要清除所有记忆吗？此操作不可撤销。')) return;
-    saveMemories([]);
+    try {
+      await clearMemories();
+      await fetchMemories();
+    } catch (e) {
+      console.error('Failed to clear memories:', e);
+    }
+  };
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      await fetchMemories();
+      return;
+    }
+    try {
+      await searchMemory(searchQuery.trim(), 20);
+    } catch (e) {
+      console.error('Failed to search memory:', e);
+    }
   };
 
   const filtered = memories
