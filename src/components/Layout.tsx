@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import ErrorBoundary from './ErrorBoundary';
 import GlobalSearch from './GlobalSearch';
+import ConnectionIndicator from './ConnectionIndicator';
+import NotificationCenter from './NotificationCenter';
 import { useNavigationShortcuts } from '../hooks/useKeyboardShortcuts';
 import {
   LayoutDashboard, Server, Bot, ListTodo, Settings as SettingsIcon,
@@ -365,6 +367,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             }}>⌘K</kbd>
           </button>
 
+          <NotificationCenter />
+
           {/* Window Controls (Tauri only) */}
           {window.__TAURI__ && (
             <>
@@ -456,16 +460,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <div style={{
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--success-color)',
-              }} />
-              <span>Airymax AgentOS v0.0.4</span>
-            </div>
-            <span>Ready</span>
+            <ConnectionIndicator compact showLabel />
+            <span style={{ color: 'var(--text-muted)' }}>Airymax AgentOS v0.0.5</span>
           </div>
           <div>
             <span>{new Date().toLocaleDateString()}</span>

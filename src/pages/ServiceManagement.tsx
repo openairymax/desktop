@@ -4,6 +4,7 @@ import {
   Server, Globe, Wifi, WifiOff, RefreshCw, Loader2,
   CheckCircle2, XCircle, AlertCircle, Settings, Link as LinkIcon, Activity
 } from 'lucide-react';
+import { useHealth, useConnection } from '../hooks/useAgentOS';
 
 interface ServiceInfo {
   id: string;
@@ -15,14 +16,6 @@ interface ServiceInfo {
   lastCheck?: string;
 }
 
-const SAMPLE_SERVICES: ServiceInfo[] = [
-  { id: 'svc-001', name: 'AgentOS Gateway', type: 'gateway', status: 'connected', endpoint: 'ws://localhost:8080', latencyMs: 12, lastCheck: new Date().toISOString() },
-  { id: 'svc-002', name: 'LLM Provider (OpenAI)', type: 'llm', status: 'connected', endpoint: 'https://api.openai.com/v1', latencyMs: 245, lastCheck: new Date().toISOString() },
-  { id: 'svc-003', name: 'Memory Store', type: 'memory', status: 'connected', endpoint: 'localhost:6379', latencyMs: 3, lastCheck: new Date().toISOString() },
-  { id: 'svc-004', name: 'Task Queue', type: 'queue', status: 'connected', endpoint: 'localhost:5672', latencyMs: 8, lastCheck: new Date().toISOString() },
-  { id: 'svc-005', name: 'File System Bridge', type: 'fs', status: 'unknown', endpoint: './data/', lastCheck: new Date(Date.now() - 60000).toISOString() },
-];
-
 const STATUS_MAP: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
   connected: { icon: <Wifi size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.1)', label: '已连接' },
   disconnected: { icon: <WifiOff size={14} />, color: '#ef4444', bg: 'rgba(239,68,68,0.1)', label: '未连接' },
@@ -31,35 +24,79 @@ const STATUS_MAP: Record<string, { icon: React.ReactNode; color: string; bg: str
 };
 
 const ServiceManagement: React.FC = () => {
+  const { health, fetchHealth } = useHealth();
+  const { connection, connect } = useConnection();
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingId, setCheckingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('agentos-services');
-    if (stored) setServices(JSON.parse(stored));
-    else { setServices(SAMPLE_SERVICES); localStorage.setItem('agentos-services', JSON.stringify(SAMPLE_SERVICES)); }
-    setLoading(false);
+    fetchHealth();
   }, []);
+
+  useEffect(() => {
+    const gatewayStatus: ServiceInfo['status'] =
+      connection.status === 'connected' ? 'connected' :
+      connection.status === 'error' ? 'error' :
+      connection.status === 'connecting' ? 'unknown' : 'disconnected';
+
+    const svcList: ServiceInfo[] = [
+      {
+        id: 'svc-gateway',
+        name: 'AgentOS Gateway',
+        type: 'gateway',
+        status: gatewayStatus,
+        endpoint: localStorage.getItem('agentos-endpoint') || 'http://localhost:18789',
+        latencyMs: health?.latency_ms,
+        lastCheck: health?.checked_at || new Date().toISOString(),
+      },
+      {
+        id: 'svc-llm',
+        name: 'LLM Provider',
+        type: 'llm',
+        status: health?.checks?.llm === 'ok' ? 'connected' :
+                 health?.checks?.llm === 'error' ? 'error' : 'unknown',
+        endpoint: health?.checks?.llm_endpoint || 'https://api.openai.com/v1',
+        lastCheck: health?.checked_at,
+      },
+      {
+        id: 'svc-memory',
+        name: 'Memory Store',
+        type: 'memory',
+        status: health?.checks?.memory === 'ok' ? 'connected' :
+                 health?.checks?.memory === 'error' ? 'error' : 'unknown',
+        endpoint: health?.checks?.memory_endpoint || 'localhost:6379',
+        lastCheck: health?.checked_at,
+      },
+      {
+        id: 'svc-queue',
+        name: 'Task Queue',
+        type: 'queue',
+        status: health?.checks?.queue === 'ok' ? 'connected' :
+                 health?.checks?.queue === 'error' ? 'error' : 'unknown',
+        endpoint: health?.checks?.queue_endpoint || 'localhost:5672',
+        lastCheck: health?.checked_at,
+      },
+    ];
+    setServices(svcList);
+    setLoading(false);
+  }, [health, connection]);
 
   const handleHealthCheck = async (id: string) => {
     setCheckingId(id);
-    await new Promise(r => setTimeout(r, 600));
-    setServices(prev => prev.map(s => s.id !== id ? s : {
-      ...s,
-      status: ['connected', 'error'].includes(s.status)
-        ? (Math.random() > 0.15 ? 'connected' as const : 'error' as const)
-        : (Math.random() > 0.3 ? 'connected' as const : 'disconnected' as const),
-      latencyMs: Math.floor(Math.random() * 300) + 5,
-      lastCheck: new Date().toISOString(),
-    }));
-    localStorage.setItem('agentos-services', JSON.stringify(services));
+    try {
+      await fetchHealth();
+    } catch (e) {
+      console.error('Health check failed:', e);
+    }
     setCheckingId(null);
   };
 
   const handleCheckAll = async () => {
-    for (const svc of services) {
-      await handleHealthCheck(svc.id);
+    try {
+      await fetchHealth();
+    } catch (e) {
+      console.error('Health check all failed:', e);
     }
   };
 

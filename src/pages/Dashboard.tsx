@@ -7,6 +7,7 @@ import {
   CheckCircle2, PlayCircle, Zap, ArrowUpRight, Sparkles,
   Settings, Server, BarChart3, FileText, Eye,
 } from 'lucide-react';
+import { useHealth, useConnection } from '../hooks/useAgentOS';
 
 interface SystemStat {
   title: string;
@@ -35,6 +36,8 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const Dashboard: React.FC = () => {
+  const { health, metrics, fetchHealth, fetchMetrics } = useHealth();
+  const { connection } = useConnection();
   const [systemStats, setSystemStats] = useState<SystemStat[]>([]);
   const [greeting, setGreeting] = useState('');
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -59,30 +62,66 @@ const Dashboard: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    fetchHealth();
+    fetchMetrics();
+  }, []);
+
+  useEffect(() => {
     const updateStats = () => {
-      if ('memory' in performance) {
-        const mem = (performance as any).memory;
-        const usedMB = Math.round(mem.usedJSHeapSize / 1024 / 1024);
-        const totalMB = Math.round(mem.jsHeapSizeLimit / 1024 / 1024);
-        const memPct = Math.round((mem.usedJSHeapSize / mem.jsHeapSizeLimit) * 100);
-        setSystemStats([
-          { title: '内存使用', value: `${usedMB} MB`, sub: `共 ${totalMB} MB`, icon: <MemoryStick size={20} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
-          { title: '运行时间', value: formatUptime(uptime), sub: '自启动以来', icon: <Clock size={20} />, color: '#6366f1', progress: Math.min(uptime / 60, 100) },
-          { title: '页面状态', value: '正常', sub: document.visibilityState === 'visible' ? '前台运行' : '后台运行', icon: <Activity size={20} />, color: '#10b981', progress: 100 },
-          { title: '平台信息', value: navigator.platform?.substring(0, 12) || '--', sub: `${navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器'}`, icon: <Cpu size={20} />, color: '#8b5cf6', progress: 50 },
-        ]);
-      } else {
-        setSystemStats([
-          { title: '运行时间', value: formatUptime(uptime), sub: '自启动以来', icon: <Clock size={20} />, color: '#6366f1', progress: Math.min(uptime / 60, 100) },
-          { title: '页面状态', value: '正常', sub: document.visibilityState === 'visible' ? '前台运行' : '后台运行', icon: <Activity size={20} />, color: '#10b981', progress: 100 },
-          { title: '平台信息', value: navigator.platform?.substring(0, 12) || '--', sub: navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器', icon: <Cpu size={20} />, color: '#8b5cf6', progress: 50 },
-        ]);
-      }
+      const connStatus = connection.status === 'connected' ? '已连接' :
+                          connection.status === 'connecting' ? '连接中' :
+                          connection.status === 'error' ? '连接错误' : '未连接';
+      const connColor = connection.status === 'connected' ? '#10b981' :
+                         connection.status === 'connecting' ? '#f59e0b' :
+                         connection.status === 'error' ? '#ef4444' : '#9ca3af';
+
+      const memUsed = metrics?.memory_used_mb ?? 0;
+      const memTotal = metrics?.memory_total_mb ?? 0;
+      const memPct = memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0;
+      const cpuPct = metrics?.cpu_percent ?? 0;
+      const activeTasks = metrics?.active_tasks ?? 0;
+      const totalAgents = metrics?.total_agents ?? 0;
+
+      const stats: SystemStat[] = [
+        {
+          title: '网关状态',
+          value: connStatus,
+          sub: health?.version ? `v${health.version}` : 'AgentOS Gateway',
+          icon: <Server size={20} />,
+          color: connColor,
+          progress: connection.status === 'connected' ? 100 : 0,
+        },
+        {
+          title: '内存使用',
+          value: memTotal > 0 ? `${memUsed} MB` : `${Math.round((performance as any)?.memory?.usedJSHeapSize / 1024 / 1024 || 0)} MB`,
+          sub: memTotal > 0 ? `共 ${memTotal} MB` : '浏览器堆',
+          icon: <MemoryStick size={20} />,
+          color: memPct > 80 ? '#f59e0b' : '#10b981',
+          progress: memPct || Math.round(((performance as any)?.memory?.usedJSHeapSize / (performance as any)?.memory?.jsHeapSizeLimit || 0) * 100),
+        },
+        {
+          title: '活跃任务',
+          value: `${activeTasks}`,
+          sub: totalAgents > 0 ? `${totalAgents} 个智能体` : '运行中',
+          icon: <Activity size={20} />,
+          color: activeTasks > 0 ? '#6366f1' : '#10b981',
+          progress: Math.min(activeTasks * 10, 100),
+        },
+        {
+          title: 'CPU 占用',
+          value: cpuPct > 0 ? `${cpuPct}%` : '--',
+          sub: cpuPct > 0 ? (cpuPct > 80 ? '负载较高' : '负载正常') : '无数据',
+          icon: <Cpu size={20} />,
+          color: cpuPct > 80 ? '#ef4444' : '#8b5cf6',
+          progress: cpuPct || 0,
+        },
+      ];
+      setSystemStats(stats);
     };
     updateStats();
     const iv = setInterval(updateStats, 5000);
     return () => clearInterval(iv);
-  }, [uptime]);
+  }, [uptime, health, metrics, connection]);
 
   const formatUptime = (sec: number): string => {
     const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
@@ -237,12 +276,12 @@ const Dashboard: React.FC = () => {
             <div style={{ padding: '16px 20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 {[
-                  { label: '认知引擎', status: '已启用', icon: <Brain size={14} />, color: 'var(--success-color)' },
-                  { label: '四层记忆', status: '已就绪', icon: <MemoryStick size={14} />, color: 'var(--success-color)' },
-                  { label: '双思考模式', status: '可配置', icon: <Eye size={14} />, color: 'var(--warning-color)' },
-                  { label: '工具调用', status: '已就绪', icon: <Wrench size={14} />, color: 'var(--success-color)' },
-                  { label: '协议支持', status: 'MCP/A2A/JSON-RPC', icon: <Server size={14} />, color: 'var(--info-color)' },
-                  { label: '日志终端', status: '可用', icon: <Terminal size={14} />, color: 'var(--success-color)' },
+                  { label: '认知引擎', status: connection.status === 'connected' ? '已启用' : '离线', icon: <Brain size={14} />, color: connection.status === 'connected' ? 'var(--success-color)' : 'var(--text-muted)' },
+                  { label: '四层记忆', status: connection.status === 'connected' ? '已就绪' : '离线', icon: <MemoryStick size={14} />, color: connection.status === 'connected' ? 'var(--success-color)' : 'var(--text-muted)' },
+                  { label: '双思考模式', status: connection.status === 'connected' ? '可配置' : '离线', icon: <Eye size={14} />, color: connection.status === 'connected' ? 'var(--warning-color)' : 'var(--text-muted)' },
+                  { label: '工具调用', status: connection.status === 'connected' ? '已就绪' : '离线', icon: <Wrench size={14} />, color: connection.status === 'connected' ? 'var(--success-color)' : 'var(--text-muted)' },
+                  { label: '协议支持', status: connection.status === 'connected' ? 'MCP/A2A/JSON-RPC' : '离线', icon: <Server size={14} />, color: connection.status === 'connected' ? 'var(--info-color)' : 'var(--text-muted)' },
+                  { label: '日志终端', status: connection.status === 'connected' ? '可用' : '离线', icon: <Terminal size={14} />, color: connection.status === 'connected' ? 'var(--success-color)' : 'var(--text-muted)' },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
                     <span style={{ color: item.color }}>{item.icon}</span>
