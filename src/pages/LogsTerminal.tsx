@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  FileText, Terminal as TerminalIcon, Search, Filter,
-  Trash2, Download, RefreshCw, AlertCircle, CheckCircle2,
-  Info, Clock, ChevronDown, Play, Square, RotateCcw,
+  FileText, Terminal as TerminalIcon, Search,
+  Trash2, RefreshCw, AlertCircle, CheckCircle2,
+  Info, Play, Square,
   Maximize2, Minimize2
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+import { useAgentOS, useHealth, useAgents, useTasks } from '../hooks/useAgentOS';
 
 type TabKey = 'logs' | 'terminal';
 
@@ -25,18 +26,14 @@ const LEVEL_CONFIG = {
   system: { color: 'var(--primary-color)', bg: 'var(--primary-light)', label: 'SYS', icon: <CheckCircle2 size={11} /> },
 };
 
-const SAMPLE_LOGS: LogEntry[] = [
-  { id: 1, timestamp: new Date().toISOString(), level: 'system', source: 'System', message: 'Airymax AgentOS v0.2.0 启动完成' },
-  { id: 2, timestamp: new Date(Date.now() - 5000).toISOString(), level: 'info', source: 'Gateway', message: '网关连接已建立 (ws://localhost:8080)' },
-  { id: 3, timestamp: new Date(Date.now() - 4000).toISOString(), level: 'info', source: 'Memory', message: '记忆系统初始化完成，共 4 层记忆结构就绪' },
-  { id: 4, timestamp: new Date(Date.now() - 3000).toISOString(), level: 'info', source: 'LLM', message: 'OpenAI 提供商连接测试通过 (gpt-4o)' },
-  { id: 5, timestamp: new Date(Date.now() - 2000).toISOString(), level: 'warn', source: 'Agent', message: '智能体 agent-main 等待任务分配中...' },
-  { id: 6, timestamp: new Date(Date.now() - 1000).toISOString(), level: 'debug', source: 'CognitiveLoop', message: '认知循环引擎启动，双思考模式已启用' },
-];
-
 const LogsTerminal: React.FC = () => {
+  const { client, connection } = useAgentOS();
+  const { health, metrics, fetchHealth, fetchMetrics } = useHealth();
+  const { agents, fetchAgents } = useAgents();
+  const { tasks, fetchTasks } = useTasks();
+
   const [activeTab, setActiveTab] = useState<TabKey>('logs');
-  const [logs, setLogs] = useState<LogEntry[]>(SAMPLE_LOGS);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filterLevel, setFilterLevel] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [autoScroll, setAutoScroll] = useState(true);
@@ -46,6 +43,26 @@ const LogsTerminal: React.FC = () => {
   const [running, setRunning] = useState(false);
   const logContainerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const logIdRef = useRef(0);
+
+  const addLog = useCallback((level: LogEntry['level'], source: string, message: string) => {
+    logIdRef.current += 1;
+    setLogs(prev => [...prev.slice(-499), {
+      id: logIdRef.current,
+      timestamp: new Date().toISOString(),
+      level, source, message,
+    }]);
+  }, []);
+
+  useEffect(() => {
+    if (connection.status === 'connected') {
+      addLog('system', 'System', '已连接到 AgentOS 后端');
+    } else if (connection.status === 'disconnected') {
+      addLog('warn', 'System', '与 AgentOS 后端断开连接');
+    } else if (connection.status === 'error') {
+      addLog('error', 'System', `连接错误: ${connection.error || '未知'}`);
+    }
+  }, [connection.status, connection.error, addLog]);
 
   useEffect(() => {
     if (autoScroll && logContainerRef.current) {
@@ -53,17 +70,18 @@ const LogsTerminal: React.FC = () => {
     }
   }, [logs, autoScroll]);
 
-  const addLog = (level: LogEntry['level'], source: string, message: string) => {
-    setLogs(prev => [...prev.slice(-499), {
-      id: Date.now(),
-      timestamp: new Date().toISOString(),
-      level, source, message,
-    }]);
-  };
-
-  const handleRefresh = () => {
-    addLog('system', 'System', `日志刷新 - 共 ${logs.length} 条记录`);
-  };
+  const handleRefresh = useCallback(async () => {
+    if (connection.status === 'connected') {
+      try {
+        await Promise.all([fetchHealth(), fetchMetrics()]);
+        addLog('info', 'System', `日志刷新完成 - 后端状态: ${health?.status || 'unknown'}`);
+      } catch (err) {
+        addLog('error', 'System', `刷新失败: ${err instanceof Error ? err.message : 'unknown'}`);
+      }
+    } else {
+      addLog('warn', 'System', '未连接后端，无法刷新');
+    }
+  }, [connection.status, fetchHealth, fetchMetrics, health, addLog]);
 
   const handleClear = () => {
     setLogs([]);
@@ -76,58 +94,102 @@ const LogsTerminal: React.FC = () => {
     return true;
   });
 
-  const handleTerminalSubmit = (e: React.FormEvent) => {
+  const handleTerminalSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!terminalInput.trim()) return;
 
     const cmd = terminalInput.trim();
     const time = new Date().toLocaleTimeString();
-
     let output = '';
-    switch (cmd.split(' ')[0]) {
-      case 'help':
-        output = `可用命令:
+
+    try {
+      switch (cmd.split(' ')[0]) {
+        case 'help':
+          output = `可用命令:
   help          显示帮助
   status        查看系统状态
   agents        列出智能体
   tasks         列出任务
+  health        健康检查
+  metrics       查看指标
   clear         清屏
   version       版本信息`;
-        break;
-      case 'status':
-        output = `系统状态:
-  运行时间: ${Math.floor(performance.now() / 1000)}s
-  内存使用: ${((performance as any).memory?.usedJSHeapSize / 1024 / 1024 || 45).toFixed(1)} MB
-  智能体数: 3 (2 运行中)
-  待处理任务: 7`;
-        break;
-      case 'agents':
-        output = `ID           名称              状态     模型
-agent-main   主控智能体        running  gpt-4o
-researcher   研究助手          idle    claude-sonnet
-coder        编码助手          idle    deepseek-chat`;
-        break;
-      case 'tasks':
-        output = `ID    状态      类型          智能体
-#001  running   code_review   coder
-#002  pending   research      researcher
-#003  done      analysis      agent-main`;
-        break;
-      case 'clear':
-        setTerminalHistory([]);
-        setTerminalInput('');
-        return;
-      case 'version':
-        output = 'Airymax AgentOS v0.0.3 (Tauri Desktop)';
-        break;
-      default:
-        output = `命令未找到: ${cmd}. 输入 help 查看可用命令。`;
+          break;
+        case 'status': {
+          if (connection.status === 'connected') {
+            const h = health;
+            output = `系统状态:
+  后端连接: 已连接 (${connection.status})
+  运行时间: ${h?.uptime || 'N/A'}
+  版本: ${h?.version || 'N/A'}
+  智能体数: ${agents.length}
+  任务数: ${tasks.length}`;
+          } else {
+            output = `系统状态:
+  后端连接: 未连接 (${connection.status})
+  请先确保 AgentOS 后端正在运行`;
+          }
+          break;
+        }
+        case 'agents': {
+          if (connection.status === 'connected') {
+            await fetchAgents();
+            output = agents.length > 0
+              ? agents.map(a => `${a.id.padEnd(14)}${(a.name || 'N/A').padEnd(18)}${a.status}`).join('\n')
+              : '当前无活跃智能体';
+          } else {
+            output = '未连接后端，无法获取智能体列表';
+          }
+          break;
+        }
+        case 'tasks': {
+          if (connection.status === 'connected') {
+            await fetchTasks();
+            output = tasks.length > 0
+              ? tasks.map(t => `${t.id.padEnd(8)}${t.status.padEnd(12)}${t.description?.slice(0, 30) || 'N/A'}`).join('\n')
+              : '当前无任务';
+          } else {
+            output = '未连接后端，无法获取任务列表';
+          }
+          break;
+        }
+        case 'health': {
+          if (connection.status === 'connected') {
+            await fetchHealth();
+            const h = health;
+            output = h ? `健康状态: ${h.status}\n版本: ${h.version || 'N/A'}\n运行时间: ${h.uptime || 'N/A'}` : '无法获取健康状态';
+          } else {
+            output = '后端不可达';
+          }
+          break;
+        }
+        case 'metrics': {
+          if (connection.status === 'connected') {
+            await fetchMetrics();
+            output = metrics ? JSON.stringify(metrics, null, 2) : '无法获取指标';
+          } else {
+            output = '后端不可达';
+          }
+          break;
+        }
+        case 'clear':
+          setTerminalHistory([]);
+          setTerminalInput('');
+          return;
+        case 'version':
+          output = 'Airymax AgentOS v0.0.5 (Tauri Desktop)';
+          break;
+        default:
+          output = `命令未找到: ${cmd}. 输入 help 查看可用命令。`;
+      }
+    } catch (err) {
+      output = `执行错误: ${err instanceof Error ? err.message : 'unknown'}`;
     }
 
     setTerminalHistory(prev => [...prev, { input: cmd, output, time }]);
     addLog('debug', 'Terminal', `$ ${cmd}`);
     setTerminalInput('');
-  };
+  }, [terminalInput, connection, health, metrics, agents, tasks, fetchAgents, fetchTasks, fetchHealth, fetchMetrics, addLog]);
 
   const toggleRun = () => {
     setRunning(!running);
@@ -139,7 +201,11 @@ coder        编码助手          idle    deepseek-chat`;
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div>
           <h1 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', margin: 0 }}>日志与终端</h1>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>查看运行日志和执行命令</p>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+            查看运行日志和执行命令
+            {connection.status === 'connected' && <span style={{ color: 'var(--success)', marginLeft: '8px' }}>● 已连接</span>}
+            {connection.status !== 'connected' && <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>○ 未连接</span>}
+          </p>
         </div>
         <button onClick={() => setIsFullscreen(!isFullscreen)} style={{
           padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border-color)',
@@ -151,7 +217,6 @@ coder        编码助手          idle    deepseek-chat`;
         </button>
       </div>
 
-      {/* Tabs */}
       <div style={{
         display: 'flex', gap: '4px', backgroundColor: 'var(--bg-secondary)',
         padding: '4px', borderRadius: '10px', marginBottom: '16px', width: 'fit-content',
@@ -175,10 +240,8 @@ coder        编码助手          idle    deepseek-chat`;
         ))}
       </div>
 
-      {/* Logs Panel */}
       {activeTab === 'logs' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-          {/* Toolbar */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
               <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -227,7 +290,6 @@ coder        编码助手          idle    deepseek-chat`;
             </label>
           </div>
 
-          {/* Log entries */}
           <div ref={logContainerRef} style={{
             flex: 1, overflowY: 'auto', backgroundColor: 'var(--bg-secondary)',
             borderRadius: '10px', border: '1px solid var(--border-subtle)', padding: '12px',
@@ -237,6 +299,7 @@ coder        编码助手          idle    deepseek-chat`;
               <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                 <FileText size={28} style={{ marginBottom: '8px' }} />
                 <p>暂无日志记录</p>
+                <p style={{ fontSize: '11px' }}>连接后端后，系统事件将自动记录</p>
               </div>
             ) : (
               filteredLogs.map(log => {
@@ -275,7 +338,6 @@ coder        编码助手          idle    deepseek-chat`;
         </motion.div>
       )}
 
-      {/* Terminal Panel */}
       {activeTab === 'terminal' && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
           <div style={{
@@ -286,8 +348,9 @@ coder        编码助手          idle    deepseek-chat`;
           }} ref={terminalRef}>
             <div style={{ color: '#58a6ff', marginBottom: '8px' }}>
               ══════════════════════════════════════════════<br/>
-              &nbsp;&nbsp;Airymax AgentOS Terminal v0.2.0<br/>
+              &nbsp;&nbsp;Airymax AgentOS Terminal v0.0.5<br/>
               &nbsp;&nbsp;输入 help 获取可用命令<br/>
+              &nbsp;&nbsp;后端状态: {connection.status === 'connected' ? '已连接' : '未连接'}<br/>
               ══════════════════════════════════════════════
             </div>
             {terminalHistory.map((item, idx) => (
