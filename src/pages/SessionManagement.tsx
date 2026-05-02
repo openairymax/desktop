@@ -36,19 +36,14 @@ function toDisplaySession(s: Session): DisplaySession {
   }
 }
 
-const AGENTS = [
+const DEFAULT_AGENTS = [
   { id: 'auto', name: '自动选择' },
-  { id: 'main', name: '主智能体' },
-  { id: 'researcher', name: '研究助手' },
-  { id: 'coder', name: '代码工程师' },
-  { id: 'security', name: '安全专家' },
-  { id: 'pm', name: '产品经理' },
-  { id: 'tester', name: '测试工程师' },
 ]
 
 export default function SessionManagement() {
   const { sessions: apiSessions, loading, error, fetchSessions, createSession, closeSession } = useSessions()
   const { connection } = useAgentOS()
+  const { agents, fetchAgents } = useAgents()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -58,6 +53,7 @@ export default function SessionManagement() {
   useEffect(() => {
     if (connection.status === 'connected') {
       fetchSessions()
+      fetchAgents()
     }
   }, [connection.status, fetchSessions])
 
@@ -229,7 +225,7 @@ export default function SessionManagement() {
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>分配智能体</label>
                   <select className="input" value={newSession.agent} onChange={e => setNewSession({ ...newSession, agent: e.target.value })}>
-                    {AGENTS.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    {[...DEFAULT_AGENTS, ...agents.map(a => ({ id: a.agent_id || a.id, name: a.name || a.agent_id || a.id }))].map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
                 <div>
