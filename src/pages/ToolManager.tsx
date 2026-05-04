@@ -5,6 +5,7 @@ import {
   Loader2, RefreshCw, Code2, Database, Globe, FileText,
   Settings, Zap, Eye, X, Copy, Terminal
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 interface Tool {
   id: string;
@@ -59,10 +60,26 @@ const ToolManager: React.FC = () => {
   const [executeParams, setExecuteParams] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('agentos-tools');
-    if (stored) { setTools(JSON.parse(stored)); }
-    else { setTools(SAMPLE_TOOLS); localStorage.setItem('agentos-tools', JSON.stringify(SAMPLE_TOOLS)); }
-    setLoading(false);
+    const loadTools = async () => {
+      try {
+        const result = await invoke<Tool[]>('list_tools');
+        if (Array.isArray(result) && result.length > 0) {
+          setTools(result);
+        } else {
+          const stored = localStorage.getItem('agentos-tools');
+          if (stored) { setTools(JSON.parse(stored)); }
+          else { setTools(SAMPLE_TOOLS); localStorage.setItem('agentos-tools', JSON.stringify(SAMPLE_TOOLS)); }
+        }
+      } catch (error) {
+        console.warn('Backend tools unavailable, using local storage:', error);
+        const stored = localStorage.getItem('agentos-tools');
+        if (stored) { setTools(JSON.parse(stored)); }
+        else { setTools(SAMPLE_TOOLS); localStorage.setItem('agentos-tools', JSON.stringify(SAMPLE_TOOLS)); }
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTools();
   }, []);
 
   const saveTools = (updated: Tool[]) => {
@@ -112,9 +129,21 @@ const ToolManager: React.FC = () => {
   const handleExecute = async () => {
     if (!selectedTool) return;
     setActionLoading('exec');
-    await new Promise(r => setTimeout(r, 800));
-    saveTools(tools.map(t => t.id === selectedTool.id ? { ...t, status: 'active' as const } : t));
-    setExecuteParams(''); setShowExecuteModal(false); setActionLoading(null);
+    try {
+      const result = await invoke<any>('call_tool', {
+        name: selectedTool.name,
+        arguments: executeParams || '{}',
+      });
+      console.log('Tool execution result:', result);
+      saveTools(tools.map(t => t.id === selectedTool.id ? { ...t, status: 'active' as const } : t));
+      setExecuteParams('');
+      setShowExecuteModal(false);
+      setActionLoading(null);
+    } catch (error) {
+      console.error('Tool execution failed:', error);
+      alert(`工具执行失败: ${error instanceof Error ? error.message : String(error)}`);
+      setActionLoading(null);
+    }
   };
 
   return (

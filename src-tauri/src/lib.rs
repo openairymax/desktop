@@ -1,6 +1,7 @@
 mod cli;
 mod commands;
 mod backend_client;
+mod llm_client;
 mod protocol_commands;
 
 use tauri::Manager;
