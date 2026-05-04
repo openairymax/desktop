@@ -2,9 +2,9 @@ name: TypeScript & Build Check
 
 on:
   push:
-    branches: [main, master, 'feature/**']
+    branches: [main]
   pull_request:
-    branches: [main, master]
+    branches: [main]
 
 env:
   NODE_VERSION: '20'

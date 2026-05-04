@@ -4,6 +4,7 @@ import {
   AlertCircle, Clock, X, Zap, RefreshCw, Loader2, ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAgents } from '../hooks/useAgentOS';
 
 interface Agent {
   id: string;
@@ -22,37 +23,8 @@ const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; 
   error: { color: 'var(--error-color)', bg: 'var(--error-light)', label: '错误', dot: 'bg-red-500' },
 };
 
-const DEFAULT_AGENTS: Agent[] = [
-  {
-    id: 'agent-main-001',
-    name: '主控智能体',
-    status: 'running',
-    description: '负责协调任务和智能体间通信的核心智能体',
-    model: 'gpt-4o',
-    createdAt: new Date().toISOString(),
-    metadata: { type: 'coordinator', tools: ['web_search', 'file_ops', 'code_gen'] },
-  },
-  {
-    id: 'agent-research-002',
-    name: '研究助手',
-    status: 'idle',
-    description: '擅长信息检索、文献综述和数据分析',
-    model: 'claude-sonnet-4',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    metadata: { type: 'research', tools: ['web_search', 'pdf_parse'] },
-  },
-  {
-    id: 'agent-coder-003',
-    name: '编码助手',
-    status: 'idle',
-    description: '代码生成、审查和重构的专业智能体',
-    model: 'deepseek-chat',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    metadata: { type: 'coding', tools: ['code_gen', 'code_review', 'debug'] },
-  },
-];
-
 const AgentManagement: React.FC = () => {
+  const { agents: apiAgents, loading: apiLoading, fetchAgents, spawnAgent, terminateAgent, invokeAgent } = useAgents();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,15 +40,24 @@ const AgentManagement: React.FC = () => {
   const [invokeInput, setInvokeInput] = useState('');
 
   useEffect(() => {
-    const stored = localStorage.getItem('agentos-agents');
-    if (stored) {
-      setAgents(JSON.parse(stored));
-    } else {
-      setAgents(DEFAULT_AGENTS);
-      localStorage.setItem('agentos-agents', JSON.stringify(DEFAULT_AGENTS));
-    }
-    setLoading(false);
+    fetchAgents();
   }, []);
+
+  useEffect(() => {
+    if (apiAgents && apiAgents.length > 0) {
+      const mapped: Agent[] = apiAgents.map((a: any) => ({
+        id: a.id || a.agent_id || '',
+        name: a.name || a.agent_id || 'Unknown',
+        status: a.status === 'active' ? 'running' : a.status === 'idle' ? 'idle' : a.status === 'stopped' ? 'stopped' : 'error',
+        description: a.description || a.spec || undefined,
+        model: a.model || undefined,
+        createdAt: a.created_at || a.createdAt || new Date().toISOString(),
+        metadata: a.metadata || a.capabilities || undefined,
+      }));
+      setAgents(mapped);
+    }
+    setLoading(apiLoading);
+  }, [apiAgents, apiLoading]);
 
   const saveAgents = (updated: Agent[]) => {
     setAgents(updated);
@@ -100,16 +81,12 @@ const AgentManagement: React.FC = () => {
   const handleSpawn = async () => {
     if (!newName.trim()) return;
     setActionLoading('spawn');
-    await new Promise(r => setTimeout(r, 400));
-    const newAgent: Agent = {
-      id: `agent-${Date.now()}`,
-      name: newName.trim(),
-      status: 'idle',
-      description: newDescription || undefined,
-      model: newModel,
-      createdAt: new Date().toISOString(),
-    };
-    saveAgents([...agents, newAgent]);
+    try {
+      await spawnAgent(newName.trim(), { description: newDescription, model: newModel });
+      await fetchAgents();
+    } catch (e) {
+      console.error('Failed to spawn agent:', e);
+    }
     setNewName('');
     setNewDescription('');
     setNewModel('gpt-4o');
@@ -119,22 +96,34 @@ const AgentManagement: React.FC = () => {
 
   const handleTerminate = async (agentId: string) => {
     setActionLoading(`terminate-${agentId}`);
-    await new Promise(r => setTimeout(r, 300));
-    saveAgents(agents.map(a => a.id === agentId ? { ...a, status: 'stopped' as const } : a));
+    try {
+      await terminateAgent(agentId);
+      await fetchAgents();
+    } catch (e) {
+      console.error('Failed to terminate agent:', e);
+    }
     setActionLoading(null);
   };
 
   const handleStart = async (agentId: string) => {
     setActionLoading(`start-${agentId}`);
-    await new Promise(r => setTimeout(r, 400));
-    saveAgents(agents.map(a => a.id === agentId ? { ...a, status: 'running' as const } : a));
+    try {
+      await invokeAgent(agentId, { action: 'start' });
+      await fetchAgents();
+    } catch (e) {
+      console.error('Failed to start agent:', e);
+    }
     setActionLoading(null);
   };
 
   const handleDelete = async (agentId: string) => {
     setActionLoading(`delete-${agentId}`);
-    await new Promise(r => setTimeout(r, 300));
-    saveAgents(agents.filter(a => a.id !== agentId));
+    try {
+      await terminateAgent(agentId);
+      await fetchAgents();
+    } catch (e) {
+      console.error('Failed to delete agent:', e);
+    }
     setActionLoading(null);
   };
 
@@ -147,7 +136,12 @@ const AgentManagement: React.FC = () => {
   const handleInvoke = async () => {
     if (!selectedAgent || !invokeInput.trim()) return;
     setActionLoading('invoke');
-    await new Promise(r => setTimeout(r, 600));
+    try {
+      await invokeAgent(selectedAgent.id, { input: invokeInput.trim() });
+      await fetchAgents();
+    } catch (e) {
+      console.error('Failed to invoke agent:', e);
+    }
     setInvokeInput('');
     setShowInvokeModal(false);
     setActionLoading(null);

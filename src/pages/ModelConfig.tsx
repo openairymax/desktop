@@ -6,6 +6,7 @@ import {
   AlertTriangle, Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAgentOS } from '../hooks/useAgentOS';
 
 interface LLMProviderConfig {
   id: string;
@@ -51,6 +52,7 @@ const PROVIDER_TEMPLATES = {
 type TabKey = 'providers' | 'system' | 'env';
 
 const ModelConfig: React.FC = () => {
+  const { client } = useAgentOS();
   const [activeTab, setActiveTab] = useState<TabKey>('providers');
   const [providers, setProviders] = useState<LLMProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,19 +80,32 @@ const ModelConfig: React.FC = () => {
     loadAllData();
   }, []);
 
-  const loadAllData = () => {
+  const loadAllData = async () => {
     setLoading(true);
     try {
-      const stored = localStorage.getItem('agentos-config');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed.providers?.length > 0) setProviders(parsed.providers);
-        if (parsed.systemParams) setSystemParams(prev => ({ ...prev, ...(parsed.systemParams as object) }));
-        if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
-      }
-      const llmStored = localStorage.getItem('agentos-llm-providers');
-      if (llmStored && providers.length === 0) {
-        setProviders(JSON.parse(llmStored));
+      if (client) {
+        try {
+          const configResp = await (client as any).request({ path: '/api/v1/config', method: 'GET' });
+          if (configResp?.providers) setProviders(configResp.providers);
+          if (configResp?.systemParams) setSystemParams(prev => ({ ...prev, ...configResp.systemParams }));
+          if (configResp?.envVars) setEnvVars(configResp.envVars);
+        } catch {
+          const stored = localStorage.getItem('agentos-config');
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.providers?.length > 0) setProviders(parsed.providers);
+            if (parsed.systemParams) setSystemParams(prev => ({ ...prev, ...(parsed.systemParams as object) }));
+            if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
+          }
+        }
+      } else {
+        const stored = localStorage.getItem('agentos-config');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed.providers?.length > 0) setProviders(parsed.providers);
+          if (parsed.systemParams) setSystemParams(prev => ({ ...prev, ...(parsed.systemParams as object) }));
+          if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
+        }
       }
     } catch (e) {
       console.error('Failed to load config:', e);
@@ -99,15 +114,26 @@ const ModelConfig: React.FC = () => {
     }
   };
 
-  const saveAll = () => {
+  const saveAll = async () => {
     localStorage.setItem('agentos-config', JSON.stringify({ providers, systemParams, envVars }));
     localStorage.setItem('agentos-llm-providers', JSON.stringify(providers));
+    if (client) {
+      try {
+        await (client as any).request({
+          path: '/api/v1/config',
+          method: 'PUT',
+          body: { providers, systemParams, envVars },
+        });
+      } catch {
+        console.warn('Backend config save failed, saved locally only');
+      }
+    }
   };
 
-  const handleAddProvider = () => {
+  const handleAddProvider = async () => {
     if (!newApiKey.trim()) return;
     setSaving(true);
-    setTimeout(() => {
+    try {
       const tpl = PROVIDER_TEMPLATES[newProviderType as keyof typeof PROVIDER_TEMPLATES];
       const newProv: LLMProviderConfig = {
         id: `${newProviderType}-${Date.now()}`,
@@ -119,33 +145,67 @@ const ModelConfig: React.FC = () => {
         configured: true,
       };
       setProviders(prev => [...prev, newProv]);
-      saveAll();
-      setShowAddModal(false);
-      setNewApiKey('');
-      setNewBaseUrl('');
-      setSaving(false);
-    }, 300);
+      await saveAll();
+    } catch (e) {
+      console.error('Failed to add provider:', e);
+    }
+    setShowAddModal(false);
+    setNewApiKey('');
+    setNewBaseUrl('');
+    setSaving(false);
   };
 
-  const handleDeleteProvider = (id: string) => {
+  const handleDeleteProvider = async (id: string) => {
     setProviders(prev => prev.filter(p => p.id !== id));
-    saveAll();
+    await saveAll();
   };
 
-  const handleTestConnection = (id: string) => {
+  const handleTestConnection = async (id: string) => {
     setTestingId(id);
-    setTimeout(() => {
+    try {
       const p = providers.find(x => x.id === id);
+      if (!p) {
+        setTestResults({ ...testResults, [id]: { success: false, message: '未找到提供商配置' } });
+        setTestingId(null);
+        return;
+      }
+
+      if (client) {
+        const start = Date.now();
+        try {
+          const healthResult = await client.health();
+          const latency = Date.now() - start;
+          setTestResults({
+            ...testResults,
+            [id]: {
+              success: healthResult.status !== 'unreachable',
+              message: healthResult.status !== 'unreachable' ? '连接成功' : '连接失败',
+              latency,
+            },
+          });
+        } catch {
+          setTestResults({
+            ...testResults,
+            [id]: { success: false, message: '连接失败' },
+          });
+        }
+      } else {
+        setTestResults({
+          ...testResults,
+          [id]: { success: !!p?.configured, message: p?.configured ? '本地配置有效（无后端验证）' : '未配置' },
+        });
+      }
+    } catch (e) {
       setTestResults({
         ...testResults,
-        [id]: { success: !!p?.configured, message: p?.configured ? '连接成功' : '未配置', latency: Math.floor(Math.random() * 200) + 50 },
+        [id]: { success: false, message: '测试异常' },
       });
-      setTestingId(null);
-    }, 800);
+    }
+    setTestingId(null);
   };
 
-  const handleSaveSystem = () => {
-    saveAll();
+  const handleSaveSystem = async () => {
+    await saveAll();
   };
 
   const addEnvVar = () => {
