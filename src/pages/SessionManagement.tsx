@@ -1,11 +1,14 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   MessageCircle, Plus, Trash2, Clock, Users, Activity,
-  Search, Filter, Play, Archive, Eye, X
+  Search, Archive, Eye, X, RefreshCw, AlertCircle
 } from 'lucide-react'
+import { useSessions, useAgentOS } from '../hooks/useAgentOS'
+import type { Session } from '../services/agentos.service'
+import { SessionStatus } from '../services/agentos.service'
 
-interface Session {
+interface DisplaySession {
   id: string
   name: string
   agent: string
@@ -17,88 +20,80 @@ interface Session {
   description: string
 }
 
-const SESSIONS: Session[] = [
-  { id: 's1', name: '项目架构讨论', agent: '主智能体', status: 'active', messages: 42, tokens: 12800, createdAt: '2024-01-20 09:00', updatedAt: '2024-01-20 14:30', description: '讨论微服务架构和协议设计' },
-  { id: 's2', name: '代码审查会话', agent: '代码工程师', status: 'completed', messages: 28, tokens: 8400, createdAt: '2024-01-20 10:00', updatedAt: '2024-01-20 11:15', description: '审查 AgentOS 核心模块代码' },
-  { id: 's3', name: '市场调研分析', agent: '研究助手', status: 'active', messages: 15, tokens: 5600, createdAt: '2024-01-20 11:00', updatedAt: '2024-01-20 14:20', description: 'AI Agent 市场竞品分析' },
-  { id: 's4', name: '安全审计', agent: '安全专家', status: 'completed', messages: 67, tokens: 21500, createdAt: '2024-01-19 14:00', updatedAt: '2024-01-19 17:45', description: '全面安全漏洞扫描和修复建议' },
-  { id: 's5', name: '文档生成', agent: '文档助手', status: 'archived', messages: 33, tokens: 9800, createdAt: '2024-01-18 09:30', updatedAt: '2024-01-18 15:00', description: '生成 API 文档和使用指南' },
-]
+function toDisplaySession(s: Session): DisplaySession {
+  return {
+    id: s.id,
+    name: (s.context?.name as string) || (s.metadata?.name as string) || `会话 ${s.id.slice(0, 8)}`,
+    agent: (s.context?.agent as string) || (s.metadata?.agent as string) || s.userId || '默认',
+    status: s.status === SessionStatus.ACTIVE ? 'active' :
+            s.status === SessionStatus.EXPIRED ? 'archived' :
+            s.status === SessionStatus.INACTIVE ? 'completed' : 'error',
+    messages: (s.context?.messages as number) || (s.metadata?.messages as number) || 0,
+    tokens: (s.context?.tokens as number) || (s.metadata?.tokens as number) || 0,
+    createdAt: s.createdAt || '',
+    updatedAt: s.lastActivity || '',
+    description: (s.context?.description as string) || (s.metadata?.description as string) || '',
+  }
+}
 
-const AGENTS = [
+const DEFAULT_AGENTS = [
   { id: 'auto', name: '自动选择' },
-  { id: 'main', name: '主智能体' },
-  { id: 'researcher', name: '研究助手' },
-  { id: 'coder', name: '代码工程师' },
-  { id: 'security', name: '安全专家' },
-  { id: 'pm', name: '产品经理' },
-  { id: 'tester', name: '测试工程师' },
 ]
 
 export default function SessionManagement() {
-  const [sessions, setSessions] = useState<Session[]>(SESSIONS)
+  const { sessions: apiSessions, loading, error, fetchSessions, createSession, closeSession } = useSessions()
+  const { connection } = useAgentOS()
+  const { agents, fetchAgents } = useAgents()
   const [searchQuery, setSearchQuery] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [selectedSession, setSelectedSession] = useState<Session | null>(null)
+  const [selectedSession, setSelectedSession] = useState<DisplaySession | null>(null)
   const [newSession, setNewSession] = useState({ name: '', agent: 'auto', description: '' })
 
   useEffect(() => {
-    const stored = localStorage.getItem('agentos-sessions')
-    if (stored) {
-      try { setSessions(JSON.parse(stored)) } catch {}
-    } else {
-      localStorage.setItem('agentos-sessions', JSON.stringify(SESSIONS))
+    if (connection.status === 'connected') {
+      fetchSessions()
+      fetchAgents()
     }
-  }, [])
+  }, [connection.status, fetchSessions])
 
-  const saveSessions = (updated: Session[]) => {
-    setSessions(updated)
-    localStorage.setItem('agentos-sessions', JSON.stringify(updated))
-  }
+  const displaySessions: DisplaySession[] = apiSessions.map(toDisplaySession)
 
-  const filtered = sessions.filter(s => {
+  const filtered = displaySessions.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchFilter = filterStatus === 'all' || s.status === filterStatus
     return matchSearch && matchFilter
   })
 
-  const handleCreate = () => {
+  const handleCreate = useCallback(async () => {
     if (!newSession.name.trim()) return
-    const session: Session = {
-      id: `s-${Date.now()}`,
-      name: newSession.name,
-      agent: AGENTS.find(a => a.id === newSession.agent)?.name || '主智能体',
-      status: 'active',
-      messages: 0,
-      tokens: 0,
-      createdAt: new Date().toLocaleString('zh-CN'),
-      updatedAt: new Date().toLocaleString('zh-CN'),
-      description: newSession.description || '新会话',
-    }
-    saveSessions([session, ...sessions])
+    try {
+      await createSession(newSession.agent === 'auto' ? 'default' : newSession.agent)
+    } catch {}
     setShowCreateModal(false)
     setNewSession({ name: '', agent: 'auto', description: '' })
-  }
+  }, [newSession, createSession])
 
-  const archiveSession = (id: string) => {
-    saveSessions(sessions.map(s =>
-      s.id === id ? { ...s, status: 'archived' as const } : s
-    ))
-  }
+  const archiveSession = useCallback(async (id: string) => {
+    try {
+      await closeSession(id)
+    } catch {}
+  }, [closeSession])
 
-  const deleteSession = (id: string) => {
+  const deleteSession = useCallback(async (id: string) => {
     if (confirm('确定要删除此会话吗？')) {
-      saveSessions(sessions.filter(s => s.id !== id))
+      try {
+        await closeSession(id)
+      } catch {}
     }
-  }
+  }, [closeSession])
 
   const stats = {
-    total: sessions.length,
-    active: sessions.filter(s => s.status === 'active').length,
-    completed: sessions.filter(s => s.status === 'completed').length,
-    archived: sessions.filter(s => s.status === 'archived').length,
+    total: displaySessions.length,
+    active: displaySessions.filter(s => s.status === 'active').length,
+    completed: displaySessions.filter(s => s.status === 'completed').length,
+    archived: displaySessions.filter(s => s.status === 'archived').length,
   }
 
   return (
@@ -110,10 +105,21 @@ export default function SessionManagement() {
           <StatCard label="已完成" value={stats.completed} color="var(--info)" />
           <StatCard label="已归档" value={stats.archived} color="var(--text-muted)" />
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
-          <Plus size={16} /> 新建会话
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => fetchSessions()} disabled={loading}>
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
+            <Plus size={16} /> 新建会话
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div style={{ padding: '10px 14px', marginBottom: '12px', background: 'var(--bg-error)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--error)' }}>
+          <AlertCircle size={14} /> {error}
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
         <div style={{ position: 'relative', flex: 1 }}>
@@ -136,65 +142,72 @@ export default function SessionManagement() {
         </select>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        <AnimatePresence>
-          {filtered.map((session, i) => (
-            <motion.div
-              key={session.id}
-              className="card"
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: i * 0.04 }}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '16px 18px' }}
-            >
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '10px',
-                background: session.status === 'active' ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--bg-tertiary)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}>
-                <MessageCircle size={18} style={{ color: session.status === 'active' ? 'white' : 'var(--text-muted)' }} />
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{session.name}</h3>
-                  <span className={`badge ${
-                    session.status === 'active' ? 'badge-success' :
-                    session.status === 'completed' ? 'badge-info' :
-                    session.status === 'archived' ? 'badge-default' : 'badge-error'
-                  }`} style={{ fontSize: '11px' }}>
-                    {session.status === 'active' ? '进行中' : session.status === 'completed' ? '已完成' : session.status === 'archived' ? '已归档' : '错误'}
-                  </span>
+      {loading && displaySessions.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+          <RefreshCw size={32} className="spin" style={{ marginBottom: '12px', opacity: 0.4 }} />
+          <div style={{ fontSize: '14px' }}>加载会话数据...</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <AnimatePresence>
+            {filtered.map((session, i) => (
+              <motion.div
+                key={session.id}
+                className="card"
+                initial={{ opacity: 0, x: -12 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ delay: i * 0.04 }}
+                style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', padding: '16px 18px' }}
+              >
+                <div style={{
+                  width: '40px', height: '40px', borderRadius: '10px',
+                  background: session.status === 'active' ? 'linear-gradient(135deg, var(--accent-primary), var(--accent-secondary))' : 'var(--bg-tertiary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                  <MessageCircle size={18} style={{ color: session.status === 'active' ? 'white' : 'var(--text-muted)' }} />
                 </div>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{session.description}</p>
-                <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                  <span><Users size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.agent}</span>
-                  <span><MessageCircle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.messages} 条消息</span>
-                  <span><Clock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.updatedAt}</span>
-                  <span><Activity size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{(session.tokens / 1000).toFixed(1)}K tokens</span>
-                </div>
-              </div>
 
-              <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                <button className="btn btn-sm btn-secondary" onClick={() => setSelectedSession(session)}>
-                  <Eye size={13} />
-                </button>
-                {session.status === 'active' && (
-                  <button className="btn btn-sm btn-secondary" onClick={() => archiveSession(session.id)}>
-                    <Archive size={13} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{session.name}</h3>
+                    <span className={`badge ${
+                      session.status === 'active' ? 'badge-success' :
+                      session.status === 'completed' ? 'badge-info' :
+                      session.status === 'archived' ? 'badge-default' : 'badge-error'
+                    }`} style={{ fontSize: '11px' }}>
+                      {session.status === 'active' ? '进行中' : session.status === 'completed' ? '已完成' : session.status === 'archived' ? '已归档' : '错误'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{session.description}</p>
+                  <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <span><Users size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.agent}</span>
+                    <span><MessageCircle size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.messages} 条消息</span>
+                    <span><Clock size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{session.updatedAt}</span>
+                    <span><Activity size={12} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '3px' }} />{(session.tokens / 1000).toFixed(1)}K tokens</span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  <button className="btn btn-sm btn-secondary" onClick={() => setSelectedSession(session)}>
+                    <Eye size={13} />
                   </button>
-                )}
-                <button className="btn btn-sm btn-danger" onClick={() => deleteSession(session.id)}>
-                  <Trash2 size={13} />
-                </button>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+                  {session.status === 'active' && (
+                    <button className="btn btn-sm btn-secondary" onClick={() => archiveSession(session.id)}>
+                      <Archive size={13} />
+                    </button>
+                  )}
+                  <button className="btn btn-sm btn-danger" onClick={() => deleteSession(session.id)}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      )}
 
-      {filtered.length === 0 && <EmptyState message="未找到会话" subMessage="尝试其他搜索条件或创建新会话" />}
+      {filtered.length === 0 && !loading && <EmptyState message="未找到会话" subMessage={connection.status === 'connected' ? '尝试其他搜索条件或创建新会话' : '请先连接到 AgentOS 后端'} />}
 
       <AnimatePresence>
         {showCreateModal && (
@@ -212,7 +225,7 @@ export default function SessionManagement() {
                 <div>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-secondary)' }}>分配智能体</label>
                   <select className="input" value={newSession.agent} onChange={e => setNewSession({ ...newSession, agent: e.target.value })}>
-                    {AGENTS.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    {[...DEFAULT_AGENTS, ...agents.map(a => ({ id: a.agent_id || a.id, name: a.name || a.agent_id || a.id }))].map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
                 <div>
@@ -221,7 +234,7 @@ export default function SessionManagement() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                   <button className="btn btn-secondary" onClick={() => setShowCreateModal(false)}>取消</button>
-                  <button className="btn btn-primary" onClick={handleCreate}>创建</button>
+                  <button className="btn btn-primary" onClick={handleCreate} disabled={connection.status !== 'connected'}>创建</button>
                 </div>
               </div>
             </motion.div>

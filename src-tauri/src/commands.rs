@@ -2,15 +2,18 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 use std::sync::Mutex;
 use crate::cli::{self, CliConfig, CliCommandResult};
+use crate::backend_client::{BackendClient, BackendConfig};
 
 pub struct AppState {
     pub config: Mutex<CliConfig>,
+    pub backend: BackendClient,
 }
 
 impl Default for AppState {
     fn default() -> Self {
         Self {
             config: Mutex::new(CliConfig::default()),
+            backend: BackendClient::new(BackendConfig::default()),
         }
     }
 }
@@ -309,54 +312,37 @@ pub async fn write_config_file(
 }
 
 #[tauri::command]
-pub async fn list_agents(_state: State<'_, AppState>) -> Result<Vec<AgentInfo>, String> {
-    Ok(vec![
-        AgentInfo {
-            id: "agent-001".to_string(),
-            name: "Research Assistant".to_string(),
-            r#type: Some("research".to_string()),
-            status: "idle".to_string(),
-            taskCount: Some(0),
-            lastActive: Some(chrono::Utc::now().to_rfc3339()),
-            description: Some("Web search, document analysis, information aggregation".to_string()),
-            capabilities: Some(vec!["search".to_string(), "analyze".to_string(), "summarize".to_string()]),
-            config: None,
-            createdAt: Some(chrono::Utc::now().to_rfc3339()),
-        },
-        AgentInfo {
-            id: "agent-002".to_string(),
-            name: "Code Reviewer".to_string(),
-            r#type: Some("coding".to_string()),
-            status: "running".to_string(),
-            taskCount: Some(3),
-            lastActive: Some(chrono::Utc::now().to_rfc3339()),
-            description: Some("Code generation, debugging, refactoring, review".to_string()),
-            capabilities: Some(vec!["generate".to_string(), "debug".to_string(), "review".to_string()]),
-            config: None,
-            createdAt: Some(chrono::Utc::now().to_rfc3339()),
-        },
-        AgentInfo {
-            id: "agent-003".to_string(),
-            name: "Data Analyst".to_string(),
-            r#type: Some("analysis".to_string()),
-            status: "idle".to_string(),
-            taskCount: Some(1),
-            lastActive: None,
-            description: Some("Data analysis, visualization, reporting".to_string()),
-            capabilities: Some(vec!["analyze".to_string(), "visualize".to_string()]),
-            config: None,
-            createdAt: Some(chrono::Utc::now().to_rfc3339()),
-        },
-    ])
+pub async fn list_agents(state: State<'_, AppState>) -> Result<Vec<AgentInfo>, String> {
+    match state.backend.list_agents().await {
+        Ok(agents) => {
+            let result: Vec<AgentInfo> = agents.into_iter().map(|a| AgentInfo {
+                id: a.id,
+                name: a.name,
+                r#type: a.agent_type,
+                status: a.status,
+                taskCount: a.task_count,
+                lastActive: a.last_active,
+                description: a.description,
+                capabilities: a.capabilities,
+                config: a.config,
+                createdAt: a.created_at,
+            }).collect();
+            Ok(result)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for list_agents: {}, returning empty", e);
+            Ok(vec![])
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn get_agent_details(
     agent_id: String,
-    _state: State<'_, AppState>,
+    state: State<'_, AppState>,
 ) -> Result<AgentInfo, String> {
-    list_agents(_state).await?
-        .into_iter()
+    let agents = list_agents(state).await?;
+    agents.into_iter()
         .find(|a| a.id == agent_id)
         .ok_or_else(|| format!("Agent not found: {}", agent_id))
 }
@@ -366,56 +352,77 @@ pub async fn submit_task(
     agent_id: String,
     task_description: String,
     priority: Option<String>,
-    _state: State<'_, AppState>,
+    state: State<'_, AppState>,
 ) -> Result<TaskInfo, String> {
-    let task_id = uuid::Uuid::new_v4().to_string();
+    use crate::backend_client::TaskSubmission;
 
-    log::info!(
-        "Submitting task '{}' to agent '{}'",
-        task_description,
-        agent_id
-    );
+    let submission = TaskSubmission {
+        agent_id: agent_id.clone(),
+        description: task_description.clone(),
+        priority: priority.clone(),
+        parameters: None,
+    };
 
-    Ok(TaskInfo {
-        id: task_id,
-        agentId: Some(agent_id),
-        name: Some(task_description),
-        type_: priority,
-        status: "pending".to_string(),
-        progress: 0.0,
-        createdAt: chrono::Utc::now().to_rfc3339(),
-        updatedAt: None,
-        result: None,
-        error: None,
-    })
+    match state.backend.submit_task(&submission).await {
+        Ok(task) => Ok(TaskInfo {
+            id: task.id,
+            agentId: task.agent_id,
+            name: task.name,
+            type_: task.type_,
+            status: task.status,
+            progress: task.progress,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at,
+            result: task.result,
+            error: task.error,
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for submit_task: {}", e);
+            Err(format!("Failed to submit task: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn get_task_status(
     task_id: String,
-    _state: State<'_, AppState>,
+    state: State<'_, AppState>,
 ) -> Result<TaskInfo, String> {
-    Ok(TaskInfo {
-        id: task_id,
-        agentId: Some("agent-001".to_string()),
-        name: None,
-        type_: None,
-        status: "completed".to_string(),
-        progress: 100.0,
-        createdAt: chrono::Utc::now().to_rfc3339(),
-        updatedAt: Some(chrono::Utc::now().to_rfc3339()),
-        result: None,
-        error: None,
-    })
+    match state.backend.get_task(&task_id).await {
+        Ok(task) => Ok(TaskInfo {
+            id: task.id,
+            agentId: task.agent_id,
+            name: task.name,
+            type_: task.type_,
+            status: task.status,
+            progress: task.progress,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at,
+            result: task.result,
+            error: task.error,
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for get_task_status: {}", e);
+            Err(format!("Failed to get task status: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn cancel_task(
     task_id: String,
-    _state: State<'_, AppState>,
+    state: State<'_, AppState>,
 ) -> Result<(), String> {
-    log::info!("Cancelling task: {}", task_id);
-    Ok(())
+    match state.backend.cancel_task(&task_id).await {
+        Ok(()) => {
+            log::info!("Task cancelled: {}", task_id);
+            Ok(())
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for cancel_task: {}", e);
+            Err(format!("Failed to cancel task: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
@@ -805,21 +812,44 @@ pub async fn memory_store(
     content: String,
     source: Option<String>,
     metadata: Option<serde_json::Value>,
+    state: State<'_, AppState>,
 ) -> Result<MemoryEntry, String> {
-    let entry = MemoryEntry {
-        id: format!("mem-{}", uuid::Uuid::new_v4()),
-        memory_type: memory_type.clone(),
-        content: content.clone(),
-        source,
-        metadata,
-        tokens: ((content.len() as f32) / 4.0).ceil() as u32,
-        created_at: chrono::Utc::now().to_rfc3339(),
-    };
+    let body = serde_json::json!({
+        "type": memory_type,
+        "content": content,
+        "source": source,
+        "metadata": metadata
+    });
 
-    log::info!("Memory stored: type={}, content_len={}", memory_type, content.len());
-
-    unsafe { MEMORY_STORE.push(entry.clone()); }
-    Ok(entry)
+    match state.backend.send_jsonrpc("memory.store", body).await {
+        Ok(result) => {
+            let entry = MemoryEntry {
+                id: result.get("id").and_then(|v| v.as_str()).unwrap_or("mem-unknown").to_string(),
+                memory_type: memory_type.clone(),
+                content: content.clone(),
+                source,
+                metadata,
+                tokens: ((content.len() as f32) / 4.0).ceil() as u32,
+                created_at: chrono::Utc::now().to_rfc3339(),
+            };
+            log::info!("Memory stored via backend: type={}, id={}", memory_type, entry.id);
+            Ok(entry)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for memory_store: {}, using local fallback", e);
+            let entry = MemoryEntry {
+                id: format!("mem-{}", uuid::Uuid::new_v4()),
+                memory_type: memory_type.clone(),
+                content: content.clone(),
+                source,
+                metadata,
+                tokens: ((content.len() as f32) / 4.0).ceil() as u32,
+                created_at: chrono::Utc::now().to_rfc3339(),
+            };
+            unsafe { MEMORY_STORE.push(entry.clone()); }
+            Ok(entry)
+        }
+    }
 }
 
 #[tauri::command]
@@ -828,99 +858,177 @@ pub async fn memory_search(
     limit: Option<u32>,
     type_filter: Option<String>,
     _min_relevance: Option<f64>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<MemoryEntry>, String> {
-    let limit = limit.unwrap_or(10) as usize;
-    let results: Vec<MemoryEntry>;
+    let body = serde_json::json!({
+        "query": query,
+        "limit": limit.unwrap_or(10),
+        "type_filter": type_filter
+    });
 
-    unsafe {
-        results = MEMORY_STORE.iter()
-            .filter(|m| {
-                if let Some(ref t) = type_filter {
-                    if m.memory_type != *t { return false; }
-                }
-                if !query.is_empty() && !m.content.to_lowercase().contains(&query.to_lowercase()) {
-                    return false;
-                }
-                true
-            })
-            .take(limit)
-            .cloned()
-            .collect();
+    match state.backend.send_jsonrpc("memory.search", body).await {
+        Ok(result) => {
+            let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
+                items.iter().filter_map(|item| {
+                    Some(MemoryEntry {
+                        id: item.get("id")?.as_str()?.to_string(),
+                        memory_type: item.get("type")?.as_str()?.to_string(),
+                        content: item.get("content")?.as_str()?.to_string(),
+                        source: item.get("source").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        metadata: item.get("metadata").cloned(),
+                        tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                        created_at: item.get("created_at")?.as_str()?.to_string(),
+                    })
+                }).collect()
+            } else {
+                vec![]
+            };
+            Ok(entries)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for memory_search: {}, using local fallback", e);
+            let limit = limit.unwrap_or(10) as usize;
+            let results: Vec<MemoryEntry>;
+            unsafe {
+                results = MEMORY_STORE.iter()
+                    .filter(|m| {
+                        if let Some(ref t) = type_filter {
+                            if m.memory_type != *t { return false; }
+                        }
+                        if !query.is_empty() && !m.content.to_lowercase().contains(&query.to_lowercase()) {
+                            return false;
+                        }
+                        true
+                    })
+                    .take(limit)
+                    .cloned()
+                    .collect();
+            }
+            Ok(results)
+        }
     }
-
-    Ok(results)
 }
 
 #[tauri::command]
 pub async fn memory_list(
     type_filter: Option<String>,
     limit: Option<u32>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<MemoryEntry>, String> {
-    let limit = limit.unwrap_or(50) as usize;
-    let results: Vec<MemoryEntry>;
+    let body = serde_json::json!({
+        "type_filter": type_filter,
+        "limit": limit.unwrap_or(50)
+    });
 
-    unsafe {
-        results = if let Some(ref t) = type_filter {
-            MEMORY_STORE.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
-        } else {
-            MEMORY_STORE.iter().take(limit).cloned().collect()
-        };
-    }
-
-    Ok(results)
-}
-
-#[tauri::command]
-pub async fn memory_delete(memory_id: String) -> Result<(), String> {
-    unsafe {
-        MEMORY_STORE.retain(|m| m.id != memory_id);
-    }
-    log::info!("Memory deleted: {}", memory_id);
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn memory_clear(type_filter: Option<String>) -> Result<u64, String> {
-    let count_before: usize;
-    let count_after: usize;
-
-    unsafe {
-        count_before = MEMORY_STORE.len();
-        if let Some(ref t) = type_filter {
-            MEMORY_STORE.retain(|m| m.memory_type != *t);
-        } else {
-            MEMORY_STORE.clear();
+    match state.backend.send_jsonrpc("memory.list", body).await {
+        Ok(result) => {
+            let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
+                items.iter().filter_map(|item| {
+                    Some(MemoryEntry {
+                        id: item.get("id")?.as_str()?.to_string(),
+                        memory_type: item.get("type")?.as_str()?.to_string(),
+                        content: item.get("content")?.as_str()?.to_string(),
+                        source: item.get("source").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                        metadata: item.get("metadata").cloned(),
+                        tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                        created_at: item.get("created_at")?.as_str()?.to_string(),
+                    })
+                }).collect()
+            } else {
+                vec![]
+            };
+            Ok(entries)
         }
-        count_after = MEMORY_STORE.len();
+        Err(e) => {
+            log::warn!("Backend unavailable for memory_list: {}, using local fallback", e);
+            let limit = limit.unwrap_or(50) as usize;
+            let results: Vec<MemoryEntry>;
+            unsafe {
+                results = if let Some(ref t) = type_filter {
+                    MEMORY_STORE.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
+                } else {
+                    MEMORY_STORE.iter().take(limit).cloned().collect()
+                };
+            }
+            Ok(results)
+        }
     }
-
-    let deleted = (count_before - count_after) as u64;
-    log::info!("Memory cleared: {} entries removed", deleted);
-    Ok(deleted)
 }
 
 #[tauri::command]
-pub async fn context_window_stats() -> Result<serde_json::Value, String> {
-    let total_entries: usize;
-    unsafe { total_entries = MEMORY_STORE.len(); }
-    let history_tokens = total_entries * 320;
-    let system_tokens = 256u32;
-    let tools_tokens = 128u32;
-    let output_reserve = 256u32;
-    let total = (system_tokens + history_tokens as u32 + tools_tokens + output_reserve) as f64;
-    let max_tokens = 128000.0;
+pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let body = serde_json::json!({"id": memory_id});
 
-    Ok(serde_json::json!({
-        "totalTokens": total.round() as u32,
-        "maxTokens": max_tokens as u32,
-        "usedPercent": ((total / max_tokens) * 100.0 * 100.0).round() / 100.0,
-        "breakdown": {
-            "system": system_tokens,
-            "history": history_tokens,
-            "tools": tools_tokens,
-            "output": output_reserve
+    match state.backend.send_jsonrpc("memory.delete", body).await {
+        Ok(_) => {
+            log::info!("Memory deleted via backend: {}", memory_id);
+            Ok(())
         }
-    }))
+        Err(e) => {
+            log::warn!("Backend unavailable for memory_delete: {}, using local fallback", e);
+            unsafe { MEMORY_STORE.retain(|m| m.id != memory_id); }
+            Ok(())
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn memory_clear(type_filter: Option<String>, state: State<'_, AppState>) -> Result<u64, String> {
+    let body = serde_json::json!({"type_filter": type_filter});
+
+    match state.backend.send_jsonrpc("memory.clear", body).await {
+        Ok(result) => {
+            let deleted = result.get("deleted").and_then(|v| v.as_u64()).unwrap_or(0);
+            log::info!("Memory cleared via backend: {} entries removed", deleted);
+            Ok(deleted)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for memory_clear: {}, using local fallback", e);
+            let count_before: usize;
+            let count_after: usize;
+            unsafe {
+                count_before = MEMORY_STORE.len();
+                if let Some(ref t) = type_filter {
+                    MEMORY_STORE.retain(|m| m.memory_type != *t);
+                } else {
+                    MEMORY_STORE.clear();
+                }
+                count_after = MEMORY_STORE.len();
+            }
+            let deleted = (count_before - count_after) as u64;
+            Ok(deleted)
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    match state.backend.send_jsonrpc("memory.context_stats", serde_json::json!({})).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            log::warn!("Backend unavailable for context_window_stats: {}, using local fallback", e);
+            let total_entries: usize;
+            unsafe { total_entries = MEMORY_STORE.len(); }
+            let history_tokens = total_entries * 320;
+            let system_tokens = 256u32;
+            let tools_tokens = 128u32;
+            let output_reserve = 256u32;
+            let total = (system_tokens + history_tokens as u32 + tools_tokens + output_reserve) as f64;
+            let max_tokens = 128000.0;
+
+            Ok(serde_json::json!({
+                "totalTokens": total.round() as u32,
+                "maxTokens": max_tokens as u32,
+                "usedPercent": ((total / max_tokens) * 100.0 * 100.0).round() / 100.0,
+                "breakdown": {
+                    "system": system_tokens,
+                    "history": history_tokens,
+                    "tools": tools_tokens,
+                    "output": output_reserve
+                }
+            }))
+        }
+    }
 }
 
 // ==================== Cognitive Loop / Tool Commands ====================
@@ -1047,45 +1155,28 @@ pub async fn runtime_metrics() -> Result<serde_json::Value, String> {
 // ==================== Extended Task Commands ====================
 
 #[tauri::command]
-pub async fn list_tasks() -> Result<Vec<TaskInfo>, String> {
-    Ok(vec![
-        TaskInfo {
-            id: "task-001".to_string(),
-            agentId: Some("agent-001".to_string()),
-            name: Some("代码审查 PR #142".to_string()),
-            type_: Some("coding".to_string()),
-            status: "completed".to_string(),
-            progress: 100.0,
-            createdAt: chrono::Utc::now().to_rfc3339(),
-            updatedAt: Some(chrono::Utc::now().to_rfc3339()),
-            result: Some(serde_json::json!({"issues_found": 3, "suggestions": 5})),
-            error: None,
-        },
-        TaskInfo {
-            id: "task-002".to_string(),
-            agentId: Some("agent-002".to_string()),
-            name: Some("数据分析报告 Q1".to_string()),
-            type_: Some("analysis".to_string()),
-            status: "running".to_string(),
-            progress: 67.0,
-            createdAt: chrono::Utc::now().to_rfc3339(),
-            updatedAt: None,
-            result: None,
-            error: None,
-        },
-        TaskInfo {
-            id: "task-003".to_string(),
-            agentId: Some("agent-003".to_string()),
-            name: Some("竞品调研".to_string()),
-            type_: Some("research".to_string()),
-            status: "failed".to_string(),
-            progress: 23.0,
-            createdAt: chrono::Utc::now().to_rfc3339(),
-            updatedAt: Some(chrono::Utc::now().to_rfc3339()),
-            result: None,
-            error: Some("API rate limit exceeded".to_string()),
-        },
-    ])
+pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, String> {
+    match state.backend.list_tasks().await {
+        Ok(tasks) => {
+            let result: Vec<TaskInfo> = tasks.into_iter().map(|t| TaskInfo {
+                id: t.id,
+                agentId: t.agent_id,
+                name: t.name,
+                type_: t.type_,
+                status: t.status,
+                progress: t.progress,
+                createdAt: t.created_at,
+                updatedAt: t.updated_at,
+                result: t.result,
+                error: t.error,
+            }).collect();
+            Ok(result)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for list_tasks: {}, returning empty", e);
+            Ok(vec![])
+        }
+    }
 }
 
 #[tauri::command]
@@ -1118,104 +1209,179 @@ pub async fn register_agent(
     agent_name: String,
     agent_type: String,
     description: Option<String>,
+    state: State<'_, AppState>,
 ) -> Result<AgentInfo, String> {
-    let agent = AgentInfo {
-        id: format!("agent-{}", uuid::Uuid::new_v4()),
-        name: agent_name,
-        r#type: Some(agent_type),
-        status: "idle".to_string(),
-        taskCount: Some(0),
-        lastActive: None,
-        description,
-        capabilities: None,
-        config: None,
-        createdAt: Some(chrono::Utc::now().to_rfc3339()),
+    use crate::backend_client::AgentRegistration;
+
+    let registration = AgentRegistration {
+        name: agent_name.clone(),
+        agent_type: agent_type.clone(),
+        description: description.clone(),
+        model: None,
+        system_prompt: None,
+        tools: None,
     };
 
-    log::info!("Agent registered: {} ({})", agent.name, agent.r#type.as_deref().unwrap_or("unknown"));
-    Ok(agent)
+    match state.backend.register_agent(&registration).await {
+        Ok(agent) => Ok(AgentInfo {
+            id: agent.id,
+            name: agent.name,
+            r#type: agent.agent_type,
+            status: agent.status,
+            taskCount: agent.task_count,
+            lastActive: agent.last_active,
+            description: agent.description,
+            capabilities: agent.capabilities,
+            config: agent.config,
+            createdAt: agent.created_at,
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for register_agent: {}", e);
+            Err(format!("Failed to register agent: {}", e))
+        }
+    }
 }
 
 // ==================== Settings Commands ====================
 
 #[tauri::command]
-pub async fn save_settings(settings: serde_json::Value, _state: State<'_, AppState>) -> Result<(), String> {
-    log::info!("Saving settings: {:?}", settings);
+pub async fn save_settings(settings: serde_json::Value, state: State<'_, AppState>) -> Result<(), String> {
+    if let Some(obj) = settings.as_object() {
+        for (key, value) in obj {
+            let val_str = match value {
+                serde_json::Value::String(s) => s.clone(),
+                other => other.to_string(),
+            };
+            match state.backend.set_config(key, &val_str).await {
+                Ok(_) => {}
+                Err(e) => {
+                    log::warn!("Failed to save setting '{}': {}", key, e);
+                }
+            }
+        }
+    }
+    log::info!("Settings saved");
     Ok(())
 }
 
 #[tauri::command]
-pub async fn load_settings(_state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    Ok(serde_json::json!({
-        "language": "zh",
-        "theme": "light",
-        "serviceMode": "dev"
-    }))
+pub async fn load_settings(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let mut settings = serde_json::Map::new();
+
+    for key in &["language", "theme", "serviceMode", "gatewayUrl"] {
+        match state.backend.get_config(key).await {
+            Ok(entry) => {
+                settings.insert(entry.key.clone(), serde_json::Value::String(entry.value));
+            }
+            Err(_) => {}
+        }
+    }
+
+    if settings.is_empty() {
+        settings.insert("language".to_string(), serde_json::Value::String("zh".to_string()));
+        settings.insert("theme".to_string(), serde_json::Value::String("light".to_string()));
+        settings.insert("serviceMode".to_string(), serde_json::Value::String("dev".to_string()));
+    }
+
+    Ok(serde_json::Value::Object(settings))
 }
 
 // ==================== Agent Lifecycle Commands ====================
 
 #[tauri::command]
-pub async fn start_agent(agent_id: String, _state: State<'_, AppState>) -> Result<AgentInfo, String> {
-    log::info!("Starting agent: {}", agent_id);
-    Ok(AgentInfo {
-        id: agent_id.clone(),
-        name: format!("Agent-{}", &agent_id[8..16.min(agent_id.len())]),
-        r#type: Some("running".to_string()),
-        status: "running".to_string(),
-        taskCount: Some(0),
-        lastActive: Some(chrono::Utc::now().to_rfc3339()),
-        description: None,
-        capabilities: None,
-        config: None,
-        createdAt: None,
-    })
-}
+pub async fn start_agent(agent_id: String, state: State<'_, AppState>) -> Result<AgentInfo, String> {
+    let body = serde_json::json!({"agent_id": agent_id});
 
-#[tauri::command]
-pub async fn stop_agent(agent_id: String, _state: State<'_, AppState>) -> Result<AgentInfo, String> {
-    log::info!("Stopping agent: {}", agent_id);
-    Ok(AgentInfo {
-        id: agent_id.clone(),
-        name: format!("Agent-{}", &agent_id[8..16.min(agent_id.len())]),
-        r#type: Some("stopped".to_string()),
-        status: "stopped".to_string(),
-        taskCount: Some(0),
-        lastActive: Some(chrono::Utc::now().to_rfc3339()),
-        description: None,
-        capabilities: None,
-        config: None,
-        createdAt: None,
-    })
-}
-
-#[tauri::command]
-pub async fn get_agent_config(agent_id: String, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    Ok(serde_json::json!({
-        "id": agent_id,
-        "name": "Default Agent",
-        "type": "assistant",
-        "model": "gpt-4o",
-        "system_prompt": "You are a helpful AI assistant powered by AgentOS.",
-        "tools": ["search", "code", "file"],
-        "auto_start": false,
-        "max_concurrent_tasks": 5,
-        "memory_config": { "max_entries": 1000, "retention_days": 30 }
-    }))
-}
-
-#[tauri::command]
-pub async fn update_agent_config(agent_id: String, config: serde_json::Value, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    log::info!("Updating config for agent {}: {:?}", agent_id, config);
-    let mut result = serde_json::json!({"id": agent_id});
-    if let Some(obj) = result.as_object_mut() {
-        if let Some(cfg) = config.as_object() {
-            for (k, v) in cfg {
-                obj.insert(k.clone(), v.clone());
-            }
+    match state.backend.send_jsonrpc("agent.start", body).await {
+        Ok(result) => Ok(AgentInfo {
+            id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&agent_id).to_string(),
+            name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
+            r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            status: result.get("status").and_then(|v| v.as_str()).unwrap_or("running").to_string(),
+            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
+            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
+                arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
+            }),
+            config: result.get("config").cloned(),
+            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for start_agent: {}", e);
+            Err(format!("Failed to start agent: {}", e))
         }
     }
-    Ok(result)
+}
+
+#[tauri::command]
+pub async fn stop_agent(agent_id: String, state: State<'_, AppState>) -> Result<AgentInfo, String> {
+    let body = serde_json::json!({"agent_id": agent_id});
+
+    match state.backend.send_jsonrpc("agent.stop", body).await {
+        Ok(result) => Ok(AgentInfo {
+            id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&agent_id).to_string(),
+            name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
+            r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            status: result.get("status").and_then(|v| v.as_str()).unwrap_or("stopped").to_string(),
+            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
+            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
+                arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
+            }),
+            config: result.get("config").cloned(),
+            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for stop_agent: {}", e);
+            Err(format!("Failed to stop agent: {}", e))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn get_agent_config(agent_id: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let body = serde_json::json!({"agent_id": agent_id});
+
+    match state.backend.send_jsonrpc("agent.get_config", body).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            log::warn!("Backend unavailable for get_agent_config: {}", e);
+            Ok(serde_json::json!({
+                "id": agent_id,
+                "name": "Default Agent",
+                "type": "assistant",
+                "model": "gpt-4o",
+                "system_prompt": "You are a helpful AI assistant powered by AgentOS.",
+                "tools": ["search", "code", "file"],
+                "auto_start": false,
+                "max_concurrent_tasks": 5,
+                "memory_config": { "max_entries": 1000, "retention_days": 30 }
+            }))
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn update_agent_config(agent_id: String, config: serde_json::Value, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    let body = serde_json::json!({"agent_id": agent_id, "config": config});
+
+    match state.backend.send_jsonrpc("agent.update_config", body).await {
+        Ok(result) => Ok(result),
+        Err(e) => {
+            log::warn!("Backend unavailable for update_agent_config: {}", e);
+            let mut result = serde_json::json!({"id": agent_id});
+            if let Some(obj) = result.as_object_mut() {
+                if let Some(cfg) = config.as_object() {
+                    for (k, v) in cfg {
+                        obj.insert(k.clone(), v.clone());
+                    }
+                }
+            }
+            Ok(result)
+        }
+    }
 }
 
 // ==================== File System Commands ====================
