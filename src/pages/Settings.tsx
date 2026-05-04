@@ -5,6 +5,7 @@ import {
   Bell, Save, RefreshCw, Loader2, Trash2, Download, Upload,
   CheckCircle2, AlertTriangle
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 type TabKey = 'appearance' | 'gateway' | 'data' | 'about';
 
@@ -15,7 +16,7 @@ const Settings: React.FC = () => {
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [language, setLanguage] = useState(() => localStorage.getItem('i18n-lang') || 'zh');
-  const [endpointUrl, setEndpointUrl] = useState(() => localStorage.getItem('agentos-endpoint') || 'http://localhost:8080');
+  const [endpointUrl, setEndpointUrl] = useState(() => localStorage.getItem('agentos-endpoint') || 'http://localhost:18789');
   const [autoConnect, setAutoConnect] = useState(true);
   const [notifEnabled, setNotifEnabled] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
@@ -31,7 +32,13 @@ const Settings: React.FC = () => {
     localStorage.setItem('agentos-endpoint', endpointUrl);
     document.documentElement.classList.remove('dark', 'light');
     document.documentElement.classList.add(theme);
-    await new Promise(r => setTimeout(r, 400));
+    try {
+      await invoke('save_settings', {
+        settings: { language, theme, endpointUrl, autoConnect, notifEnabled, compactMode }
+      });
+    } catch (e) {
+      console.warn('Backend save_settings failed, settings saved locally only:', e);
+    }
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -156,7 +163,7 @@ const Settings: React.FC = () => {
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>AgentOS Gateway 地址</label>
               <input type="text" value={endpointUrl} onChange={e => setEndpointUrl(e.target.value)}
-                placeholder="http://localhost:8080"
+                placeholder="http://localhost:18789"
                 style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
                   backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
               />
@@ -216,7 +223,7 @@ const Settings: React.FC = () => {
               <SettingsIcon size={32} />
             </div>
             <h2 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>Airymax AgentOS</h2>
-            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>版本 0.0.4 · Tauri 桌面客户端</p>
+            <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>版本 {__APP_VERSION__} · Tauri 桌面客户端</p>
             <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', textAlign: 'left' }}>
               {[
                 ['框架', 'Tauri v2 + React 18'],

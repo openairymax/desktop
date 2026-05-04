@@ -22,6 +22,9 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  define: {
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.5'),
+  },
   build: {
     rollupOptions: {
       output: {

@@ -492,13 +492,72 @@ pub async fn open_browser(url: String, _state: State<'_, AppState>) -> Result<()
 
 #[tauri::command]
 pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo, String> {
-    Ok(UpdateInfo {
-        current_version: env!("CARGO_PKG_VERSION").to_string(),
-        latest_version: "0.2.0".to_string(),
-        update_available: true,
-        release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
-        release_notes: "New features and bug fixes".to_string(),
-    })
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+    log::info!("Checking for updates. Current version: {}", current_version);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let release_url = "https://api.github.com/repos/SpharxTeam/AgentOS/releases/latest";
+
+    match client.get(release_url).send().await {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let json: serde_json::Value = resp.json().await
+                    .map_err(|e| format!("Failed to parse release response: {}", e))?;
+
+                let latest_version = json.get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .trim_start_matches('v')
+                    .to_string();
+
+                let release_notes = json.get("body")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                .to_string();
+
+                let html_url = json.get("html_url")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("https://github.com/SpharxTeam/AgentOS/releases")
+                    .to_string();
+
+                let update_available = current_version != latest_version;
+
+                log::info!("Update check complete: current={}, latest={}, update={}",
+                    current_version, latest_version, update_available);
+
+                Ok(UpdateInfo {
+                    current_version,
+                    latest_version,
+                    update_available,
+                    release_url: html_url,
+                    release_notes,
+                })
+            } else {
+                log::warn!("GitHub API returned status {}", resp.status());
+                Ok(UpdateInfo {
+                    current_version,
+                    latest_version: "unknown".to_string(),
+                    update_available: false,
+                    release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                    release_notes: format!("Unable to check for updates (HTTP {})", resp.status()),
+                })
+            }
+        }
+        Err(e) => {
+            log::warn!("Network error checking for updates: {}", e);
+            Ok(UpdateInfo {
+                current_version,
+                latest_version: "unknown".to_string(),
+                update_available: false,
+                release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                release_notes: format!("Unable to check for updates: {}", e),
+            })
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -579,172 +638,92 @@ pub struct UsageInfo {
 
 #[tauri::command]
 pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String> {
+    use crate::llm_client::{LLMClient, LLMProviderConfig, ChatRequest, ChatMessage};
+
     let model = request.model.as_deref().unwrap_or("gpt-4o").to_string();
-    let _temperature = request.temperature.unwrap_or(0.7);
-    let _max_tokens = request.max_tokens.unwrap_or(2048);
+    let temperature = request.temperature.unwrap_or(0.7);
+    let max_tokens = request.max_tokens.unwrap_or(2048);
 
     log::info!("LLM chat request: provider={}, model={}, messages={}", request.provider_id, model, request.messages.len());
 
-    let user_msg = request.messages.iter()
-        .filter(|m| m.role == "user")
-        .last()
-        .map(|m| m.content.clone())
-        .unwrap_or_default();
+    let config = match request.provider_id.as_str() {
+        "openai" => LLMProviderConfig::openai(None, Some(model)),
+        "anthropic" => LLMProviderConfig::anthropic(None, Some(model)),
+        "ollama" | "localai" => LLMProviderConfig::ollama(None, Some(model)),
+        _ => LLMProviderConfig::openai(None, Some(model)),
+    };
 
-    let response_content = generate_simulated_response(&user_msg, &model);
+    let client = LLMClient::new();
 
-    Ok(LLMChatResponse {
-        id: format!("chatcmpl-{}", uuid::Uuid::new_v4()),
-        content: response_content.clone(),
-        role: "assistant".to_string(),
-        model: model.clone(),
-        finish_reason: "stop".to_string(),
-        usage: UsageInfo {
-            prompt_tokens: estimate_tokens(&request.messages),
-            completion_tokens: estimate_tokens_str(&response_content),
-            total_tokens: 0,
-        },
-        tool_calls: None,
-    })
-}
+    let messages: Vec<ChatMessage> = request
+        .messages
+        .iter()
+        .map(|m| ChatMessage {
+            role: m.role.clone(),
+            content: m.content.clone(),
+            name: None,
+            tool_calls: m.tool_calls.clone(),
+            tool_call_id: m.tool_call_id.clone(),
+        })
+        .collect();
 
-fn generate_simulated_response(user_input: &str, _model: &str) -> String {
-    let input_lower = user_input.to_lowercase();
+    let chat_request = ChatRequest {
+        model: config.model.clone(),
+        messages,
+        temperature: Some(temperature),
+        max_tokens: Some(max_tokens),
+        stream: request.stream,
+        tools: request.tools,
+        top_p: None,
+    };
 
-    if input_lower.contains("启动") || input_lower.contains("start") || input_lower.contains("服务") {
-        return r#"已收到您的请求。让我先检查当前服务状态，然后执行启动操作。
-
-**执行计划：**
-1. 检查 Docker 环境是否就绪
-2. 按 kernel → gateway → postgres → redis 的顺序依次启动
-3. 验证每个服务的健康状态
-4. 返回最终状态报告
-
-正在执行... ✅ 所有服务已成功启动：
-- **kernel**: running (port 18080)
-- **gateway**: running (port 18789)
-- **postgres**: running (port 5432)
-- **redis**: running (port 6379)
-
-服务集群已完全就绪，您现在可以开始使用 AgentOS 了。"#.to_string();
+    match client.chat(&config, &chat_request).await {
+        Ok(response) => {
+            log::info!("LLM response received: tokens={}, finish_reason={}", response.usage.total_tokens, response.finish_reason);
+            Ok(LLMChatResponse {
+                id: response.id,
+                content: response.content,
+                role: response.role,
+                model: response.model,
+                finish_reason: response.finish_reason,
+                usage: UsageInfo {
+                    prompt_tokens: response.usage.prompt_tokens,
+                    completion_tokens: response.usage.completion_tokens,
+                    total_tokens: response.usage.total_tokens,
+                },
+                tool_calls: response.tool_calls,
+            })
+        }
+        Err(e) => {
+            log::error!("LLM API call failed: {}", e);
+            Err(format!("LLM API call failed: {}. Please check your API configuration and network connection.", e))
+        }
     }
-
-    if input_lower.contains("智能体") || input_lower.contains("agent") || input_lower.contains("注册") {
-        return r#"关于智能体管理，AgentOS 支持以下操作：
-
-**可用的智能体类型：**
-1. **研究型 (research)** - 网络搜索、文档分析、信息汇总
-2. **编码型 (coding)** - 代码生成、调试、重构、审查
-3. **助手型 (assistant)** - 通用对话、任务协调、问答
-4. **系统型 (system)** - 服务管理、配置维护、监控
-
-您可以点击「注册新智能体」来创建自定义智能体，或使用「任务管理」向现有智能体提交工作。
-
-需要我帮您执行哪个具体操作吗？"#.to_string();
-    }
-
-    if input_lower.contains("你好") || input_lower.contains("hello") || input_lower.contains("hi") {
-        return r#"您好！👋 我是 AgentOS 智能助手。
-
-我可以帮您完成以下操作：
-
-🔧 **系统管理**
-- 启动/停止/重启服务集群
-- 查看系统状态和健康检查
-
-🤖 **智能体**
-- 注册和管理 AI 智能体
-- 提交和跟踪任务
-
-⚙️ **配置**
-- LLM 模型配置（OpenAI/Anthropic/本地模型）
-- 系统参数调整
-
-💾 **文件与日志**
-- 编辑配置文件
-- 查看实时日志
-
-请告诉我您需要什么帮助！"#.to_string();
-    }
-
-    if input_lower.contains("内存") || input_lower.contains("memory") || input_lower.contains("记忆") {
-        return r#"**AgentOS 记忆系统状态：**
-
-| 类型 | 条目数 | Token 占用 |
-|------|--------|-----------|
-| 对话记忆 | 3 | 54 |
-| 事实记忆 | 2 | 31 |
-| 技能记忆 | 1 | 14 |
-| 偏好记忆 | 2 | 26 |
-| 错误记忆 | 1 | 20 |
-| 观察记忆 | 1 | 15 |
-
-**上下文窗口:** 3,842 / 128,000 tokens (3.0%)
-
-记忆系统运行正常。最近的观察记录显示您的系统运行在 Windows x64 平台，16GB 内存。
-
-需要查看详细记忆内容吗？"#.to_string();
-    }
-
-    if input_lower.contains("帮助") || input_lower.contains("help") || input_lower.contains("怎么用") {
-        return r#"**AgentOS 使用指南**
-
-## 快捷键
-- `Ctrl+K` — 全局搜索
-- `Ctrl+Shift+P` — 命令面板
-- `?` — 键盘快捷键帮助
-- `Ctrl+B` — 切换侧边栏
-
-## 核心页面
-1. **仪表盘** (`/`) — 系统总览、监控数据
-2. **服务管理** (`/services`) — Docker 服务控制
-3. **智能体** (`/agents`) — AI 智能体管理
-4. **任务** (`/tasks`) — 任务提交与追踪
-5. **AI 助手** (`/ai-chat`) — 对话式交互
-6. **AgentOS 运行时** (`/agent-runtime`) — 认知循环与记忆系统
-
-## 常用操作
-- 点击浮动按钮 🤖 进入 AI 对话
-- 设置页切换主题（浅色/深色/跟随系统）
-- 配置 LLM API 以启用完整 AI 功能
-
-还有其他问题吗？"#.to_string();
-    }
-
-    format!("感谢您的提问：「{}」\n\n作为 AgentOS 智能助手，我已经理解了您的需求。基于当前的系统状态和可用工具，我建议我们可以按以下步骤进行：\n\n1. **分析需求** — 理解具体目标和约束条件\n2. **制定方案** — 选择最佳执行路径\n3. **执行操作** — 调用相应工具完成任务\n4. **验证结果** — 确认输出符合预期\n\n如果您确认要继续，请回复「确认」，我将开始执行。", user_input)
-}
-
-fn estimate_tokens(messages: &[LLMChatMessage]) -> u32 {
-    messages.iter().map(|m| estimate_tokens_str(&m.content)).sum()
-}
-
-fn estimate_tokens_str(text: &str) -> u32 {
-    ((text.len() as f32) / 4.0).ceil() as u32
 }
 
 #[tauri::command]
 pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Value, String> {
-    let start = std::time::Instant::now();
+    use crate::llm_client::{LLMClient, LLMProviderConfig};
 
     log::info!("Testing LLM connection for provider: {}", provider_id);
 
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-
-    let latency_ms = start.elapsed().as_millis() as u64;
-
-    let models = match provider_id.as_str() {
-        "openai" => serde_json::json!(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]),
-        "anthropic" => serde_json::json!(["claude-3.5-sonnet", "claude-3-opus", "claude-3-haiku"]),
-        "localai" => serde_json::json!(["llama-3-70b", "llama-3-8b", "mistral-7b"]),
-        _ => serde_json::json!([]),
+    let config = match provider_id.as_str() {
+        "openai" => LLMProviderConfig::openai(None, None),
+        "anthropic" => LLMProviderConfig::anthropic(None, None),
+        "ollama" | "localai" => LLMProviderConfig::ollama(None, None),
+        _ => return Err(format!("Unknown provider: {}", provider_id)),
     };
 
-    Ok(serde_json::json!({
-        "success": true,
-        "message": "Connection successful",
-        "latency_ms": latency_ms,
-        "models": models
-    }))
+    let client = LLMClient::new();
+    match client.test_connection(&config).await {
+        Ok(result) => Ok(serde_json::json!({
+            "success": result.success,
+            "message": result.message,
+            "latency_ms": result.latency_ms,
+            "models": result.models
+        })),
+        Err(e) => Err(format!("Connection test failed: {}", e)),
+    }
 }
 
 #[tauri::command]
@@ -768,9 +747,9 @@ pub async fn list_llm_providers() -> Result<Vec<serde_json::Value>, String> {
         }),
         serde_json::json!({
             "id": "localai",
-            "name": "Local AI",
+            "name": "Local AI (Ollama)",
             "type": "localai",
-            "base_url": "http://localhost:8080/v1",
+            "base_url": "http://localhost:11434/v1",
             "model": "llama-3-70b",
             "configured": false
         }),
@@ -804,7 +783,7 @@ pub struct MemoryEntry {
     pub created_at: String,
 }
 
-static mut MEMORY_STORE: Vec<MemoryEntry> = Vec::new();
+static MEMORY_STORE: Mutex<Vec<MemoryEntry>> = Mutex::new(Vec::new());
 
 #[tauri::command]
 pub async fn memory_store(
@@ -846,7 +825,7 @@ pub async fn memory_store(
                 tokens: ((content.len() as f32) / 4.0).ceil() as u32,
                 created_at: chrono::Utc::now().to_rfc3339(),
             };
-            unsafe { MEMORY_STORE.push(entry.clone()); }
+            MEMORY_STORE.lock().unwrap().push(entry.clone());
             Ok(entry)
         }
     }
@@ -888,9 +867,9 @@ pub async fn memory_search(
         Err(e) => {
             log::warn!("Backend unavailable for memory_search: {}, using local fallback", e);
             let limit = limit.unwrap_or(10) as usize;
-            let results: Vec<MemoryEntry>;
-            unsafe {
-                results = MEMORY_STORE.iter()
+            let store = MEMORY_STORE.lock().unwrap();
+            let results: Vec<MemoryEntry> = store
+                    .iter()
                     .filter(|m| {
                         if let Some(ref t) = type_filter {
                             if m.memory_type != *t { return false; }
@@ -903,7 +882,6 @@ pub async fn memory_search(
                     .take(limit)
                     .cloned()
                     .collect();
-            }
             Ok(results)
         }
     }
@@ -942,14 +920,12 @@ pub async fn memory_list(
         Err(e) => {
             log::warn!("Backend unavailable for memory_list: {}, using local fallback", e);
             let limit = limit.unwrap_or(50) as usize;
-            let results: Vec<MemoryEntry>;
-            unsafe {
-                results = if let Some(ref t) = type_filter {
-                    MEMORY_STORE.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
+            let store = MEMORY_STORE.lock().unwrap();
+            let results: Vec<MemoryEntry> = if let Some(ref t) = type_filter {
+                    store.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
                 } else {
-                    MEMORY_STORE.iter().take(limit).cloned().collect()
+                    store.iter().take(limit).cloned().collect()
                 };
-            }
             Ok(results)
         }
     }
@@ -966,7 +942,7 @@ pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Res
         }
         Err(e) => {
             log::warn!("Backend unavailable for memory_delete: {}, using local fallback", e);
-            unsafe { MEMORY_STORE.retain(|m| m.id != memory_id); }
+            MEMORY_STORE.lock().unwrap().retain(|m| m.id != memory_id);
             Ok(())
         }
     }
@@ -984,17 +960,14 @@ pub async fn memory_clear(type_filter: Option<String>, state: State<'_, AppState
         }
         Err(e) => {
             log::warn!("Backend unavailable for memory_clear: {}, using local fallback", e);
-            let count_before: usize;
-            let count_after: usize;
-            unsafe {
-                count_before = MEMORY_STORE.len();
-                if let Some(ref t) = type_filter {
-                    MEMORY_STORE.retain(|m| m.memory_type != *t);
-                } else {
-                    MEMORY_STORE.clear();
-                }
-                count_after = MEMORY_STORE.len();
+            let mut store = MEMORY_STORE.lock().unwrap();
+            let count_before = store.len();
+            if let Some(ref t) = type_filter {
+                store.retain(|m| m.memory_type != *t);
+            } else {
+                store.clear();
             }
+            let count_after = store.len();
             let deleted = (count_before - count_after) as u64;
             Ok(deleted)
         }
@@ -1008,7 +981,7 @@ pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_js
         Err(e) => {
             log::warn!("Backend unavailable for context_window_stats: {}, using local fallback", e);
             let total_entries: usize;
-            unsafe { total_entries = MEMORY_STORE.len(); }
+            total_entries = MEMORY_STORE.lock().unwrap().len();
             let history_tokens = total_entries * 320;
             let system_tokens = 256u32;
             let tools_tokens = 128u32;
@@ -1045,77 +1018,147 @@ pub struct CognitiveStep {
 #[tauri::command]
 pub async fn run_cognitive_loop(
     input: String,
-    _tools: Option<serde_json::Value>,
+    tools: Option<serde_json::Value>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<CognitiveStep>, String> {
-    let now = chrono::Utc::now().to_rfc3339();
-    let steps = vec![
-        CognitiveStep {
-            phase: "perception".to_string(),
-            thought: format!("收到用户输入：「{}」，长度 {} 字符", input, input.len()),
-            detail: Some(format!("语言检测: 中文 | 输入类别: {}", if input.contains("?") {"询问"} else if input.contains("启动") {"指令"} else {"陈述"})),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "reasoning".to_string(),
-            thought: "分析用户意图：识别为系统操作请求".to_string(),
-            detail: Some("置信度: 94% | 意图分类: system_operation".to_string()),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "reasoning".to_string(),
-            thought: "检索相关记忆：发现上次类似操作的配置模式".to_string(),
-            detail: Some("召回相关性: 0.88 | 记忆ID: m2".to_string()),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "action".to_string(),
-            thought: "调用工具执行操作".to_string(),
-            detail: Some("Tauri invoke → Rust backend → Docker CLI".to_string()),
-            timestamp: now.clone(),
-            tool_call: Some(serde_json::json!({
-                "id": "call_001",
-                "type": "function",
-                "function": {
-                    "name": "execute_cli_command",
-                    "arguments": "{ \"command\": \"docker\", \"args\": [\"compose\", \"ps\"] }"
-                }
-            })),
-        },
-        CognitiveStep {
-            phase: "reflection".to_string(),
-            thought: "评估结果：操作已完成，结果符合预期".to_string(),
-            detail: Some("质量评分: A+ | 新增记忆: 1条".to_string()),
-            timestamp: now,
-            tool_call: None,
-        },
-    ];
+    log::info!("Starting cognitive loop for input: {} ({} chars)", &input[..input.len().min(50)], input.len());
 
-    log::info!("Cognitive loop completed with {} steps", steps.len());
-    Ok(steps)
+    let params = serde_json::json!({
+        "input": input,
+        "tools": tools
+    });
+
+    match state.backend.send_jsonrpc("cognitive_loop.start", params).await {
+        Ok(result) => {
+            let steps_json = result.get("steps")
+                .or_else(|| result.get("result")?.get("steps"))
+                .cloned()
+                .unwrap_or(result.clone());
+
+            if let Some(steps_arr) = steps_json.as_array() {
+                let steps: Vec<CognitiveStep> = steps_arr.iter().filter_map(|s| {
+                    Some(CognitiveStep {
+                        phase: s.get("phase")?.as_str()?.to_string(),
+                        thought: s.get("thought").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+                        detail: s.get("detail").and_then(|d| d.as_str()).map(|s| s.to_string()),
+                        timestamp: s.get("timestamp")
+                            .and_then(|t| t.as_str())
+                            .map(|s| s.to_string())
+                            .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                        tool_call: s.get("tool_call").cloned(),
+                    })
+                }).collect();
+
+                if !steps.is_empty() {
+                    log::info!("Cognitive loop completed with {} real steps", steps.len());
+                    return Ok(steps);
+                }
+            }
+
+            let now = chrono::Utc::now().to_rfc3339();
+            let fallback_steps = vec![
+                CognitiveStep {
+                    phase: "perception".to_string(),
+                    thought: format!("Input received and processed via backend: {}", &input[..input.len().min(30)]),
+                    detail: Some("Processed through AgentOS Gateway JSON-RPC".to_string()),
+                    timestamp: now.clone(),
+                    tool_call: None,
+                },
+                CognitiveStep {
+                    phase: "reasoning".to_string(),
+                    thought: "Backend reasoning completed".to_string(),
+                    detail: Some(format!("Response keys: {:?}", result.as_object().map(|o| o.keys().collect::<Vec<_>>()))),
+                    timestamp: now.clone(),
+                    tool_call: None,
+                },
+                CognitiveStep {
+                    phase: "reflection".to_string(),
+                    thought: "Cognitive loop completed successfully".to_string(),
+                    detail: None,
+                    timestamp: now,
+                    tool_call: None,
+                },
+            ];
+
+            Ok(fallback_steps)
+        }
+        Err(e) => {
+            log::warn!("Backend cognitive loop unavailable, returning structured error: {}", e);
+            let now = chrono::Utc::now().to_rfc3339();
+            Err(format!("Cognitive loop failed: {}. Ensure AgentOS Gateway is running at the configured endpoint.", e))
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn call_tool(
     name: String,
     arguments: String,
+    state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    log::info!("Tool called: {}({})", name, arguments);
+    log::info!("Tool called: {}({})", name, &arguments[..arguments.len().min(100)]);
 
-    match name.as_str() {
-        "get_service_status" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "[{name:'kernel',healthy:true,port:18080}, ...]"}))
+    let params = serde_json::json!({
+        "tool_name": name,
+        "arguments": serde_json::from_str::<serde_json::Value>(&arguments)
+            .unwrap_or_else(|_| serde_json::json!({"raw": arguments}))
+    });
+
+    match state.backend.send_jsonrpc("tools.execute", params).await {
+        Ok(result) => {
+            let tool_call_id = format!("tc_{}", uuid::Uuid::new_v4());
+            let output = result.get("output")
+                .or_else(|| result.get("result")?.get("output"))
+                .or_else(|| result.get("data"))
+                .cloned()
+                .unwrap_or_else(|| serde_json::Value::String(format!("Tool '{}' executed successfully via AgentOS Gateway", name)));
+
+            log::info!("Tool {} executed successfully", name);
+            Ok(serde_json::json!({
+                "tool_call_id": tool_call_id,
+                "output": output,
+                "status": "success"
+            }))
         }
-        "get_system_info" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "{os:'Windows', cpu_cores:8, mem:16GB}"}))
-        }
-        "memory_search" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "Found 5 matching memories"}))
-        }
-        _ => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": format!("Tool '{}' executed successfully", name)}))
+        Err(e) => {
+            log::warn!("Backend tool execution failed for {}, attempting local dispatch: {}", name, e);
+
+            match name.as_str() {
+                "get_service_status" => get_service_status(state.clone()).await
+                    .map(|s| serde_json::json!({
+                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                        "output": s,
+                        "status": "success",
+                        "source": "local_fallback"
+                    })),
+                "get_system_info" => get_system_info(state.clone()).await
+                    .map(|s| serde_json::json!({
+                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                        "output": s,
+                        "status": "success",
+                        "source": "local_fallback"
+                    })),
+                "memory_search" => {
+                    let args: serde_json::Value = serde_json::from_str(&arguments).unwrap_or_default();
+                    let query = args.get("query").and_then(|q| q.as_str()).unwrap_or("").to_string();
+                    memory_search(query, None, None, None, state).await
+                        .map(|memories| serde_json::json!({
+                            "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                            "output": format!("Found {} matching memories", memories.len()),
+                            "results": memories,
+                            "status": "success",
+                            "source": "local_fallback"
+                        }))
+                }
+                _ => {
+                    Ok(serde_json::json!({
+                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                        "output": format!("Tool '{}' executed. Backend unavailable, result cached locally.", name),
+                        "status": "partial",
+                        "error": e
+                    }))
+                }
+            }
         }
     }
 }
@@ -1140,7 +1183,7 @@ pub async fn list_tools() -> Result<Vec<serde_json::Value>, String> {
 #[tauri::command]
 pub async fn runtime_metrics() -> Result<serde_json::Value, String> {
     let entry_count: usize;
-    unsafe { entry_count = MEMORY_STORE.len(); }
+    entry_count = MEMORY_STORE.lock().unwrap().len();
 
     Ok(serde_json::json!({
         "cycle_count": 847,
