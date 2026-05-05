@@ -4,7 +4,7 @@ import {
   MessageCircle, Plus, Trash2, Clock, Users, Activity,
   Search, Archive, Eye, X, RefreshCw, AlertCircle
 } from 'lucide-react'
-import { useSessions, useAgentOS } from '../hooks/useAgentOS'
+import { useSessions, useAgentOS, useAgents } from '../hooks/useAgentOS'
 import type { Session } from '../services/agentos.service'
 import { SessionStatus } from '../services/agentos.service'
 
@@ -70,7 +70,9 @@ export default function SessionManagement() {
     if (!newSession.name.trim()) return
     try {
       await createSession(newSession.agent === 'auto' ? 'default' : newSession.agent)
-    } catch {}
+    } catch (e) {
+      console.error('Failed to create session:', e)
+    }
     setShowCreateModal(false)
     setNewSession({ name: '', agent: 'auto', description: '' })
   }, [newSession, createSession])
@@ -78,14 +80,18 @@ export default function SessionManagement() {
   const archiveSession = useCallback(async (id: string) => {
     try {
       await closeSession(id)
-    } catch {}
+    } catch (e) {
+      console.error('Failed to archive session:', id, e)
+    }
   }, [closeSession])
 
   const deleteSession = useCallback(async (id: string) => {
     if (confirm('确定要删除此会话吗？')) {
       try {
         await closeSession(id)
-      } catch {}
+      } catch (e) {
+        console.error('Failed to delete session:', id, e)
+      }
     }
   }, [closeSession])
 

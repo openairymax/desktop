@@ -47,8 +47,8 @@ const ServiceManagement: React.FC = () => {
         type: 'gateway',
         status: gatewayStatus,
         endpoint: localStorage.getItem('agentos-endpoint') || 'http://localhost:18789',
-        latencyMs: health?.latency_ms,
-        lastCheck: health?.checked_at || new Date().toISOString(),
+        latencyMs: health?.uptime != null ? 0 : undefined,
+        lastCheck: health?.timestamp || new Date().toISOString(),
       },
       {
         id: 'svc-llm',
@@ -56,8 +56,8 @@ const ServiceManagement: React.FC = () => {
         type: 'llm',
         status: health?.checks?.llm === 'ok' ? 'connected' :
                  health?.checks?.llm === 'error' ? 'error' : 'unknown',
-        endpoint: health?.checks?.llm_endpoint || 'https://api.openai.com/v1',
-        lastCheck: health?.checked_at,
+        endpoint: (health?.checks?.llm_endpoint as string) || 'https://api.openai.com/v1',
+        lastCheck: health?.timestamp,
       },
       {
         id: 'svc-memory',
@@ -65,8 +65,8 @@ const ServiceManagement: React.FC = () => {
         type: 'memory',
         status: health?.checks?.memory === 'ok' ? 'connected' :
                  health?.checks?.memory === 'error' ? 'error' : 'unknown',
-        endpoint: health?.checks?.memory_endpoint || 'localhost:6379',
-        lastCheck: health?.checked_at,
+        endpoint: (health?.checks?.memory_endpoint as string) || 'localhost:6379',
+        lastCheck: health?.timestamp,
       },
       {
         id: 'svc-queue',
@@ -74,8 +74,8 @@ const ServiceManagement: React.FC = () => {
         type: 'queue',
         status: health?.checks?.queue === 'ok' ? 'connected' :
                  health?.checks?.queue === 'error' ? 'error' : 'unknown',
-        endpoint: health?.checks?.queue_endpoint || 'localhost:5672',
-        lastCheck: health?.checked_at,
+        endpoint: (health?.checks?.queue_endpoint as string) || 'localhost:5672',
+        lastCheck: health?.timestamp,
       },
     ];
     setServices(svcList);

@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3, Cpu, MemoryStick, HardDrive, Activity, Clock,
-  RefreshCw, Loader2, Zap, AlertTriangle, CheckCircle2
+  RefreshCw, Loader2, Zap, AlertTriangle, CheckCircle2, Wifi, WifiOff
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+
+interface SystemData {
+  cpu: { usagePercent: number; cores: Array<{ coreId: number; usage: number }> };
+  memory: { totalGb: number; usedGb: number; freeGb: number; percent: number };
+  disk: { totalGb: number; usedGb: number; freeGb: number; percent: number };
+  network: Array<{ name: string; ipv4: string; mac: string; isUp: boolean; bytesSent: number; bytesRecv: number }>;
+  uptimeSeconds: number;
+}
 
 interface MetricCard {
   label: string;
@@ -16,49 +25,107 @@ interface MetricCard {
 
 const SystemMonitor: React.FC = () => {
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
-  const [uptime, setUptime] = useState(0);
+  const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [connected, setConnected] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  useEffect(() => {
-    updateMetrics();
-    let sec = 0;
-    const iv = setInterval(() => { sec++; setUptime(sec); }, 1000);
-    return () => clearInterval(iv);
-  }, []);
-
-  useEffect(() => {
-    if (refreshing) return;
-    const iv = setInterval(updateMetrics, 5000);
-    return () => clearInterval(iv);
-  }, [refreshing]);
-
-  const formatBytes = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
     return d > 0 ? `${d}天 ${h}时` : h > 0 ? `${h}小时 ${m}分` : `${m}分钟`;
   };
 
-  const updateMetrics = () => {
+  const formatBytes = (gb: number) => `${gb.toFixed(1)} GB`;
+
+  const fetchSystemData = useCallback(async () => {
     try {
-      const perf = performance as any;
-      const memPct = perf.memory ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100) : 45 + Math.floor(Math.random() * 20);
+      const data = await invoke<SystemData>('system_monitor');
+      setSystemData(data);
+      setConnected(true);
+      setError(null);
+
+      const cpuColor = data.cpu.usagePercent > 80 ? '#ef4444' : data.cpu.usagePercent > 60 ? '#f59e0b' : '#10b981';
+      const memColor = data.memory.percent > 80 ? '#ef4444' : data.memory.percent > 60 ? '#f59e0b' : '#10b981';
+      const diskColor = data.disk.percent > 80 ? '#ef4444' : data.disk.percent > 60 ? '#f59e0b' : '#10b981';
 
       setMetrics([
-        { label: '内存使用', value: perf.memory ? formatBytes(perf.memory.usedJSHeapSize) : '~45 MB', sub: perf.memory ? `堆上限 ${formatBytes(perf.memory.jsHeapSizeLimit)}` : '浏览器原生', icon: <MemoryStick size={18} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
-        { label: '运行时间', value: formatUptime(uptime), sub: '自启动以来', icon: <Clock size={18} />, color: '#6366f1', progress: Math.min(uptime / 60, 100) },
-        { label: '页面状态', value: document.visibilityState === 'visible' ? '前台' : '后台', sub: document.visibilityState === 'visible' ? '正常渲染' : '已最小化', icon: <Activity size={18} />, color: '#10b981', progress: 100 },
-        { label: '平台信息', value: navigator.platform?.substring(0, 14) || '--', sub: navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器', icon: <Cpu size={18} />, color: '#8b5cf6', progress: 50 },
-        { label: '语言环境', value: navigator.language || 'zh-CN', sub: `时区: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`, icon: <Zap size={18} />, color: '#06b6d4', progress: 100 },
+        {
+          label: 'CPU 使用率',
+          value: `${data.cpu.usagePercent.toFixed(1)}%`,
+          sub: `${data.cpu.cores.length} 核心`,
+          icon: <Cpu size={18} />,
+          color: cpuColor,
+          progress: data.cpu.usagePercent,
+        },
+        {
+          label: '内存使用',
+          value: `${data.memory.usedGb.toFixed(1)} / ${data.memory.totalGb.toFixed(1)} GB`,
+          sub: `可用 ${data.memory.freeGb.toFixed(1)} GB (${data.memory.percent.toFixed(1)}%)`,
+          icon: <MemoryStick size={18} />,
+          color: memColor,
+          progress: data.memory.percent,
+        },
+        {
+          label: '磁盘使用',
+          value: `${data.disk.usedGb.toFixed(0)} / ${data.disk.totalGb.toFixed(0)} GB`,
+          sub: `可用 ${data.disk.freeGb.toFixed(0)} GB (${data.disk.percent.toFixed(1)}%)`,
+          icon: <HardDrive size={18} />,
+          color: diskColor,
+          progress: data.disk.percent,
+        },
+        {
+          label: '系统运行时间',
+          value: formatUptime(data.uptimeSeconds),
+          sub: `自上次启动`,
+          icon: <Clock size={18} />,
+          color: '#6366f1',
+          progress: Math.min((data.uptimeSeconds / 86400) * 100, 100),
+        },
+        {
+          label: '网络接口',
+          value: `${data.network.filter(n => n.isUp).length} 活跃`,
+          sub: `共 ${data.network.length} 个接口`,
+          icon: data.network.some(n => n.isUp) ? <Wifi size={18} /> : <WifiOff size={18} />,
+          color: data.network.some(n => n.isUp) ? '#10b981' : '#ef4444',
+          progress: data.network.length > 0 ? (data.network.filter(n => n.isUp).length / data.network.length) * 100 : 0,
+        },
       ]);
+
+      setLastUpdate(new Date());
     } catch (e) {
-      console.warn('Metric update error:', e);
+      console.warn('Backend system_monitor unavailable, using browser fallback:', e);
+      setConnected(false);
+      setError(e instanceof Error ? e.message : String(e));
+      updateBrowserMetrics();
     }
+  }, []);
+
+  const updateBrowserMetrics = () => {
+    const perf = performance as any;
+    const memPct = perf.memory ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100) : 45;
+
+    setMetrics([
+      { label: 'JS 堆内存', value: perf.memory ? `${(perf.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB` : '--', sub: perf.memory ? `上限 ${(perf.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0)} MB` : '浏览器不支持', icon: <MemoryStick size={18} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
+      { label: '平台', value: navigator.platform?.substring(0, 14) || '--', sub: navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器', icon: <Cpu size={18} />, color: '#8b5cf6', progress: 50 },
+      { label: '语言', value: navigator.language || 'zh-CN', sub: `时区: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`, icon: <Zap size={18} />, color: '#06b6d4', progress: 100 },
+      { label: '在线状态', value: navigator.onLine ? '在线' : '离线', sub: navigator.onLine ? '网络可用' : '网络不可用', icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />, color: navigator.onLine ? '#10b981' : '#ef4444', progress: navigator.onLine ? 100 : 0 },
+    ]);
   };
+
+  useEffect(() => {
+    fetchSystemData();
+  }, [fetchSystemData]);
+
+  useEffect(() => {
+    if (refreshing) return;
+    const iv = setInterval(fetchSystemData, 5000);
+    return () => clearInterval(iv);
+  }, [refreshing, fetchSystemData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await new Promise(r => setTimeout(r, 500));
-    updateMetrics();
+    await fetchSystemData();
     setRefreshing(false);
   };
 
@@ -71,24 +138,34 @@ const SystemMonitor: React.FC = () => {
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>系统监控</h1>
-            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>实时系统资源与运行指标</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>实时系统资源与运行指标</span>
+              {connected ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981' }}><CheckCircle2 size={12} /> 后端已连接</span>
+              ) : (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#f59e0b' }}><AlertTriangle size={12} /> 浏览器模式</span>
+              )}
+              {lastUpdate && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>更新于 {lastUpdate.toLocaleTimeString()}</span>}
+            </div>
           </div>
         </div>
-        <button onClick={handleRefresh}
+        <button onClick={handleRefresh} disabled={refreshing}
           style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
-            backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
+            backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: refreshing ? 'wait' : 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
           }}>{refreshing ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} 刷新</button>
       </div>
 
-      {/* Metrics Grid */}
+      {error && !connected && (
+        <div style={{ padding: '10px 14px', marginBottom: '16px', background: 'var(--bg-error)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--error)' }}>
+          <AlertTriangle size={14} /> 后端不可用: {error} — 显示浏览器本地指标
+        </div>
+      )}
+
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         {metrics.map((m, i) => (
           <motion.div key={m.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}
-            style={{
-              backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-              borderRadius: '12px', padding: '20px',
-            }}
+            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
               <div>
@@ -96,11 +173,7 @@ const SystemMonitor: React.FC = () => {
                 <h3 style={{ fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>{m.value}</h3>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{m.sub}</span>
               </div>
-              <div style={{
-                width: '40px', height: '40px', borderRadius: '10px',
-                background: `${m.color}15`, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', color: m.color,
-              }}>{m.icon}</div>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: `${m.color}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: m.color }}>{m.icon}</div>
             </div>
             <div style={{ height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '4px', overflow: 'hidden' }}>
               <motion.div initial={{ width: 0 }} animate={{ width: `${m.progress}%` }} transition={{ duration: 1, ease: 'easeOut' }}
@@ -111,55 +184,84 @@ const SystemMonitor: React.FC = () => {
         ))}
       </div>
 
-      {/* Additional Info */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-        {/* Browser Info */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Cpu size={16} /> 运行环境
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
-            {[
-              ['用户代理', navigator.userAgent.substring(0, 80) + '...'],
-              ['平台', navigator.platform || '--'],
-              ['语言', navigator.language],
-              ['Cookie 启用', navigator.cookieEnabled ? '是' : '否'],
-              ['在线', navigator.onLine ? '是' : '否'],
-              ['屏幕分辨率', `${screen.width}x${screen.height}`],
-              ['视口大小', `${window.innerWidth}x${window.innerHeight}`],
-              ['CPU 核心数', String(navigator.hardwareConcurrency || '--')],
-            ].map(([k, v]) => (
-              <React.Fragment key={k}>
-                <span style={{ color: 'var(--text-muted)' }}>{k}</span>
-                <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{v}</span>
-              </React.Fragment>
-            ))}
+      {systemData && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Cpu size={16} /> CPU 核心详情
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
+              {systemData.cpu.cores.map((core) => (
+                <div key={core.coreId} style={{ textAlign: 'center', padding: '8px 4px', borderRadius: '8px', background: core.usage > 80 ? '#ef444415' : core.usage > 50 ? '#f59e0b15' : '#10b98115' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Core {core.coreId}</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: core.usage > 80 ? '#ef4444' : core.usage > 50 ? '#f59e0b' : '#10b981' }}>{core.usage}%</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Performance */}
-        <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Activity size={16} /> 性能数据
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
-            {[
-              ['导航开始', `${performance.timeOrigin.toFixed(2)} ms`],
-              ['当前时间戳', `${performance.now().toFixed(2)} ms`],
-              ['连接类型', (navigator as any)?.connection?.effectiveType || '--'],
-              ['下行速度', (navigator as any)?.connection?.downlink ? `${(navigator as any).connection.downlink} Mbps` : '--'],
-              ['RTT', (navigator as any)?.connection?.rtt ? `${(navigator as any).connection.rtt} ms` : '--'],
-              ['设备内存', (navigator as any)?.deviceMemory ? `${(navigator as any).deviceMemory} GB` : '--'],
-              ['最大触点数', String(navigator.maxTouchPoints)],
-            ].map(([k, v]) => (
-              <React.Fragment key={k}>
-                <span style={{ color: 'var(--text-muted)' }}>{k}</span>
-                <span style={{ color: 'var(--text-secondary)' }}>{v}</span>
-              </React.Fragment>
-            ))}
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={16} /> 网络接口
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {systemData.network.map((iface) => (
+                <div key={iface.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderRadius: '8px', background: 'var(--bg-tertiary)' }}>
+                  <div>
+                    <span style={{ fontWeight: '600', fontSize: '13px', color: 'var(--text-primary)' }}>{iface.name}</span>
+                    <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>{iface.ipv4}</span>
+                  </div>
+                  <span style={{ fontSize: '12px', color: iface.isUp ? '#10b981' : '#ef4444' }}>{iface.isUp ? 'UP' : 'DOWN'}</span>
+                </div>
+              ))}
+              {systemData.network.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>无网络接口数据</div>}
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {!systemData && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Cpu size={16} /> 运行环境
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
+              {[
+                ['平台', navigator.platform || '--'],
+                ['语言', navigator.language],
+                ['在线', navigator.onLine ? '是' : '否'],
+                ['CPU 核心数', String(navigator.hardwareConcurrency || '--')],
+                ['屏幕分辨率', `${screen.width}x${screen.height}`],
+                ['视口大小', `${window.innerWidth}x${window.innerHeight}`],
+              ].map(([k, v]) => (
+                <React.Fragment key={k}>
+                  <span style={{ color: 'var(--text-muted)' }}>{k}</span>
+                  <span style={{ color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{v}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+          <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={16} /> 性能数据
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
+              {[
+                ['导航开始', `${performance.timeOrigin.toFixed(2)} ms`],
+                ['当前时间戳', `${performance.now().toFixed(2)} ms`],
+                ['连接类型', (navigator as any)?.connection?.effectiveType || '--'],
+                ['设备内存', (navigator as any)?.deviceMemory ? `${(navigator as any).deviceMemory} GB` : '--'],
+              ].map(([k, v]) => (
+                <React.Fragment key={k}>
+                  <span style={{ color: 'var(--text-muted)' }}>{k}</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>{v}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

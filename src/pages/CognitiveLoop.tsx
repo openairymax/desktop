@@ -68,50 +68,19 @@ const CognitiveLoop: React.FC = () => {
           timestamp: step.timestamp || new Date().toISOString(),
         }));
         setSteps(backendSteps);
-        setRunning(false);
-        return;
+      } else {
+        setSteps(prev => prev.map(s => ({
+          ...s,
+          status: 'completed' as const,
+          content: s.phase === 'perception' ? s.content : s.phase === 'reasoning' ? '后端返回空结果' : s.phase === 'action' ? '无可用操作' : '认知循环完成',
+          timestamp: new Date().toISOString(),
+        })));
       }
-
-      await new Promise(r => setTimeout(r, 600));
-      setSteps(prev => prev.map((s, i) => i === 0 ? { ...s, status: 'completed' as const, timestamp: new Date().toISOString() } : i === 1 ? { ...s, status: 'running' as const } : s));
-      setSelectedStep(1);
-      await new Promise(r => setTimeout(r, 800));
-
-      setSteps(prev => prev.map((s, i) =>
-        i <= 1 ? s : i === 2 ? { ...s, status: 'running' as const } : s
-      ));
-      setSelectedStep(2);
-
-      const taskResults = [
-        '任务已生成并进入执行队列',
-        '指令已分解为子任务',
-        '执行计划已创建',
-      ];
-      await new Promise(r => setTimeout(r, 500));
-      setSteps(prev => prev.map((s, i) =>
-        i === 2 ? { ...s, content: taskResults[Math.floor(Math.random() * taskResults.length)], status: 'completed' as const, timestamp: new Date().toISOString() } : s
-      ));
-
-      await new Promise(r => setTimeout(r, 400));
-      setSteps(prev => prev.map((s, i) => i === 3 ? { ...s, status: 'running' as const } : s));
-      setSelectedStep(3);
-
-      const reflections = [
-        '结果质量良好，已记录到记忆中',
-        '评估完成，输出置信度高',
-        '反思完成，下次循环将调整参数',
-      ];
-      await new Promise(r => setTimeout(r, 600));
-      setSteps(prev => prev.map(s =>
-        s.phase === 'reflection'
-          ? { ...s, content: reflections[Math.floor(Math.random() * reflections.length)], status: 'completed' as const, timestamp: new Date().toISOString() }
-          : s
-      ));
     } catch (error) {
       console.error('Cognitive loop error:', error);
       setSteps(prev => prev.map(s => ({
         ...s,
-        status: s.status === 'running' ? 'failed' as const : s.status,
+        status: 'failed' as const,
         content: s.status === 'running' ? `错误: ${error instanceof Error ? error.message : String(error)}` : s.content,
       })));
     } finally {
