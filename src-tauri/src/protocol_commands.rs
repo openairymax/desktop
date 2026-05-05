@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use crate::backend_client::{BackendClient, ProtocolAdapter, ProtocolTestResult};
+use crate::backend_client::{BackendClient, ProtocolAdapter};
 use crate::commands::AppState;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

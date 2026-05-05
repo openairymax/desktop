@@ -36,6 +36,7 @@ impl Default for CliConfig {
 }
 
 impl CliConfig {
+    #[allow(dead_code)]
     pub fn detect_agentos_cli(&self) -> Result<String> {
         if let Some(ref path) = self.agentos_cli_path {
             if std::path::Path::new(path).exists() {
@@ -94,7 +95,7 @@ pub fn execute_command(
     program: &str,
     args: &[&str],
     working_dir: Option<&str>,
-    timeout_secs: u64,
+    _timeout_secs: u64,
 ) -> Result<CliCommandResult> {
     let start = Instant::now();
 
@@ -151,6 +152,7 @@ pub fn execute_command(
     Ok(result)
 }
 
+#[allow(dead_code)]
 pub async fn execute_command_async(
     program: &str,
     args: Vec<String>,

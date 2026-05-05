@@ -38,6 +38,7 @@ impl BackendClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn update_config(&self, config: BackendConfig) {
         let mut current = self.config.write().await;
         *current = config;
@@ -47,6 +48,7 @@ impl BackendClient {
         self.config.read().await.gateway_url.clone()
     }
 
+    #[allow(dead_code)]
     pub async fn health_check(&self) -> Result<HealthResponse, String> {
         let url = format!("{}/health", self.get_gateway_url().await);
         let resp = self.http.get(&url)
@@ -63,6 +65,7 @@ impl BackendClient {
             .map_err(|e| format!("Failed to parse health response: {}", e))
     }
 
+    #[allow(dead_code)]
     pub async fn list_services(&self) -> Result<Vec<ServiceEntry>, String> {
         let url = format!("{}/api/v1/services", self.get_gateway_url().await);
         let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
@@ -74,6 +77,7 @@ impl BackendClient {
         Ok(result.services)
     }
 
+    #[allow(dead_code)]
     pub async fn get_service(&self, name: &str) -> Result<ServiceEntry, String> {
         let url = format!("{}/api/v1/services/{}", self.get_gateway_url().await, name);
         let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
@@ -251,6 +255,7 @@ impl BackendClient {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct HealthResponse {
     pub status: String,
     pub version: String,
@@ -259,6 +264,7 @@ pub struct HealthResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct ServiceEntry {
     pub name: String,
     pub status: String,
@@ -269,6 +275,7 @@ pub struct ServiceEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct ServicesResponse {
     services: Vec<ServiceEntry>,
 }
@@ -342,6 +349,7 @@ pub struct ConfigEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ProtocolTestResult {
     pub protocol: String,
     pub endpoint: String,
