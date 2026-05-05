@@ -20,13 +20,12 @@ export async function initializeTauri(): Promise<void> {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       initSdk(invoke);
-      console.log('[Tauri] SDK initialized with native invoke');
     } catch (e) {
       console.warn('[Tauri] Failed to initialize native invoke, falling back to gateway:', e);
       setupGatewayInvoke();
     }
   } else {
-    console.log('[Browser] Running in browser mode with gateway invoke');
+    console.info('[Browser] Running in browser mode with gateway invoke');
     setupGatewayInvoke();
   }
 

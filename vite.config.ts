@@ -21,6 +21,27 @@ export default defineConfig(async () => ({
     watch: {
       ignored: ["**/src-tauri/**"],
     },
+    proxy: {
+      '/api': {
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
+        changeOrigin: true,
+      },
+      '/health': {
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
+        changeOrigin: true,
+        rewrite: (path) => '/api/v1/health',
+      },
+      '/metrics': {
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
+        changeOrigin: true,
+        rewrite: (path) => '/api/v1/metrics',
+      },
+      '/ws': {
+        target: process.env.VITE_WS_URL || 'ws://localhost:18789',
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.5'),

@@ -253,7 +253,8 @@ function extractData(resp: unknown): Record<string, unknown> {
     if (d && typeof d === 'string') {
       try {
         return JSON.parse(d);
-      } catch {
+      } catch (e) {
+        console.warn('JSON parse failed, returning raw data:', e);
         return { raw: d };
       }
     }
@@ -485,7 +486,8 @@ class TaskService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -621,7 +623,8 @@ class MemoryService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -651,7 +654,8 @@ class MemoryService {
       );
       const data = extractData(resp);
       return data as Record<string, number>;
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {};
     }
   }
@@ -809,7 +813,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -823,7 +828,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.listActive()).length;
     }
   }
@@ -837,7 +843,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'cleaned');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return 0;
     }
   }
@@ -1002,7 +1009,8 @@ class SkillService {
       const valid = data['valid'] !== false;
       const errors = (data['errors'] as string[]) || [];
       return { valid, errors };
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return { valid: true, errors: [] };
     }
   }
@@ -1016,7 +1024,8 @@ class SkillService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -1030,7 +1039,8 @@ class SkillService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.listLoaded()).length;
     }
   }
@@ -1061,7 +1071,8 @@ class SkillService {
       );
       const data = extractData(resp);
       return data as Record<string, number>;
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {};
     }
   }
@@ -1195,7 +1206,8 @@ export class AgentOSClient {
         checks: getMap(resp, 'checks'),
         timestamp: parseTime(resp['timestamp']),
       };
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {
         status: 'unreachable',
         version: '',
@@ -1225,7 +1237,8 @@ export class AgentOSClient {
         requestCount: getInt64(data, 'request_count') || getInt64(data, 'requestCount') || 0,
         averageLatencyMs: getInt64(data, 'average_latency_ms') || getInt64(data, 'averageLatencyMs') || 0,
       };
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {
         tasksTotal: 0, tasksCompleted: 0, tasksFailed: 0,
         memoriesTotal: 0, sessionsActive: 0, skillsLoaded: 0,

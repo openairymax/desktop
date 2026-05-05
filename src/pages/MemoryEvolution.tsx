@@ -139,7 +139,7 @@ const MemoryEvolution: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={async () => { setLoading(true); await fetchMemories(); setLoading(false); }} style={{
+          <button onClick={() => fetchMemories()} style={{
             padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
