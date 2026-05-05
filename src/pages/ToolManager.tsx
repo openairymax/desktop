@@ -95,7 +95,6 @@ const ToolManager: React.FC = () => {
   const handleAdd = async () => {
     if (!newName.trim()) return;
     setActionLoading('add');
-    await new Promise(r => setTimeout(r, 300));
     const tool: Tool = {
       id: `tool-${Date.now()}`,
       name: newName.trim(),
@@ -111,14 +110,12 @@ const ToolManager: React.FC = () => {
 
   const handleDelete = async (id: string) => {
     setActionLoading(`del-${id}`);
-    await new Promise(r => setTimeout(r, 200));
     saveTools(tools.filter(t => t.id !== id));
     setActionLoading(null);
   };
 
   const handleToggleStatus = async (id: string) => {
     setActionLoading(`toggle-${id}`);
-    await new Promise(r => setTimeout(r, 300));
     saveTools(tools.map(t => t.id !== id ? t : {
       ...t,
       status: (t.status === 'active' ? 'disabled' : t.status === 'disabled' ? 'registered' : 'active') as Tool['status'],
@@ -160,7 +157,7 @@ const ToolManager: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 300); }} style={{
+          <button onClick={async () => { setLoading(true); try { const result = await invoke<Tool[]>('list_tools'); if (Array.isArray(result) && result.length > 0) setTools(result); } catch(e) { console.warn('Failed to refresh tools:', e); } setLoading(false); }} style={{
             padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',

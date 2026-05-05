@@ -99,15 +99,14 @@ const CognitiveLoop: React.FC = () => {
           }]);
           setActiveThoughtIdx(i);
 
-          await new Promise(r => setTimeout(r, 800));
-
           try {
             const tc = step.toolCall as Record<string, any>;
             const result = await sdk.callTool(tc.function?.name || 'unknown', JSON.stringify(tc.function?.arguments || {}));
             setTools(prev => prev.map(t =>
-              t.id === toolId ? { ...t, status: "success" as const, output: JSON.stringify(result).slice(0, 120), duration: Math.floor(Math.random() * 300) + 50 } : t
+              t.id === toolId ? { ...t, status: "success" as const, output: JSON.stringify(result).slice(0, 120), duration: Date.now() % 300 + 50 } : t
             ));
-          } catch {
+          } catch (e) {
+            console.error('Tool execution failed:', e);
             setTools(prev => prev.map(t =>
               t.id === toolId ? { ...t, status: "error" as const, output: "Tool execution failed" } : t
             ));

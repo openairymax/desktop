@@ -75,12 +75,10 @@ const Dashboard: React.FC = () => {
                          connection.status === 'connecting' ? '#f59e0b' :
                          connection.status === 'error' ? '#ef4444' : '#9ca3af';
 
-      const memUsed = metrics?.memory_used_mb ?? 0;
-      const memTotal = metrics?.memory_total_mb ?? 0;
-      const memPct = memTotal > 0 ? Math.round((memUsed / memTotal) * 100) : 0;
-      const cpuPct = metrics?.cpu_percent ?? 0;
-      const activeTasks = metrics?.active_tasks ?? 0;
-      const totalAgents = metrics?.total_agents ?? 0;
+      const memPct = metrics?.memoryUsage ?? 0;
+      const cpuPct = metrics?.cpuUsage ?? 0;
+      const activeTasks = metrics?.tasksTotal ?? 0;
+      const totalAgents = metrics?.sessionsActive ?? 0;
 
       const stats: SystemStat[] = [
         {
@@ -93,8 +91,8 @@ const Dashboard: React.FC = () => {
         },
         {
           title: '内存使用',
-          value: memTotal > 0 ? `${memUsed} MB` : `${Math.round((performance as any)?.memory?.usedJSHeapSize / 1024 / 1024 || 0)} MB`,
-          sub: memTotal > 0 ? `共 ${memTotal} MB` : '浏览器堆',
+          value: memPct > 0 ? `${memPct}%` : `${Math.round((performance as any)?.memory?.usedJSHeapSize / 1024 / 1024 || 0)} MB`,
+          sub: memPct > 0 ? '后端内存占用' : '浏览器堆',
           icon: <MemoryStick size={20} />,
           color: memPct > 80 ? '#f59e0b' : '#10b981',
           progress: memPct || Math.round(((performance as any)?.memory?.usedJSHeapSize / (performance as any)?.memory?.jsHeapSizeLimit || 0) * 100),

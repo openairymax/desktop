@@ -108,7 +108,7 @@ const AgentManagement: React.FC = () => {
   const handleStart = async (agentId: string) => {
     setActionLoading(`start-${agentId}`);
     try {
-      await invokeAgent(agentId, { action: 'start' });
+      await invokeAgent(agentId, 'start');
       await fetchAgents();
     } catch (e) {
       console.error('Failed to start agent:', e);
@@ -137,7 +137,7 @@ const AgentManagement: React.FC = () => {
     if (!selectedAgent || !invokeInput.trim()) return;
     setActionLoading('invoke');
     try {
-      await invokeAgent(selectedAgent.id, { input: invokeInput.trim() });
+      await invokeAgent(selectedAgent.id, invokeInput.trim());
       await fetchAgents();
     } catch (e) {
       console.error('Failed to invoke agent:', e);
@@ -169,7 +169,7 @@ const AgentManagement: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setLoading(true); setTimeout(() => { setLoading(false); }, 300); }} style={{
+          <button onClick={async () => { setLoading(true); await fetchAgents(); setLoading(false); }} style={{
             padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
             display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: '13px',

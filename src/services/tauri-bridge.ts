@@ -22,12 +22,12 @@ export async function initializeTauri(): Promise<void> {
       initSdk(invoke);
       console.log('[Tauri] SDK initialized with native invoke');
     } catch (e) {
-      console.warn('[Tauri] Failed to initialize native invoke, falling back to mock:', e);
-      setupMockInvoke();
+      console.warn('[Tauri] Failed to initialize native invoke, falling back to gateway:', e);
+      setupGatewayInvoke();
     }
   } else {
-    console.log('[Browser] Running in browser mode with mock invoke');
-    setupMockInvoke();
+    console.log('[Browser] Running in browser mode with gateway invoke');
+    setupGatewayInvoke();
   }
 
   initialized = true;
@@ -37,7 +37,7 @@ export async function initializeTauri(): Promise<void> {
  * Set up HTTP-based invoke function for browser development.
  * Attempts to connect to real AgentOS Gateway via HTTP, with fallback to simulated data.
  */
-function setupMockInvoke(): void {
+function setupGatewayInvoke(): void {
   const GATEWAY_URL = localStorage.getItem('agentos-endpoint') || 'http://localhost:18789';
 
   initSdk(async <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => {

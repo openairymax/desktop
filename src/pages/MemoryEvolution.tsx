@@ -5,6 +5,7 @@ import {
   AlertCircle, Eye, BarChart3, RefreshCw, Loader2, Layers, Zap,
 } from 'lucide-react';
 import { useMemory } from '../hooks/useAgentOS';
+import { MemoryLayer as ServiceMemoryLayer } from '../services/agentos.service';
 
 type MemoryLayer = 'L1' | 'L2' | 'L3' | 'L4';
 
@@ -60,7 +61,7 @@ const MemoryEvolution: React.FC = () => {
     if (!newContent.trim()) return;
     setActionLoading('store');
     try {
-      await writeMemory(newContent.trim(), newLayer);
+      await writeMemory(newContent.trim(), newLayer as ServiceMemoryLayer);
       await fetchMemories();
     } catch (e) {
       console.error('Failed to store memory:', e);
@@ -138,7 +139,7 @@ const MemoryEvolution: React.FC = () => {
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => { setLoading(true); setTimeout(() => setLoading(false), 300); }} style={{
+          <button onClick={async () => { setLoading(true); await fetchMemories(); setLoading(false); }} style={{
             padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
