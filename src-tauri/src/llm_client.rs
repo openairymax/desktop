@@ -52,6 +52,7 @@ impl LLMProviderConfig {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_json(value: &serde_json::Value) -> Option<Self> {
         let provider_type = value.get("type")
             .or_else(|| value.get("provider_type"))
@@ -159,6 +160,7 @@ impl LLMClient {
         let body = serde_json::to_value(request)
             .map_err(|e| format!("Failed to serialize request: {}", e))?;
 
+        #[allow(unused_mut)]
         let mut req_builder = self
             .http
             .post(&url)
@@ -213,6 +215,7 @@ impl LLMClient {
             "stream": false
         });
 
+        #[allow(unused_mut)]
         let mut req_builder = self
             .http
             .post(&url)

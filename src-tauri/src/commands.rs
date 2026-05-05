@@ -19,28 +19,31 @@ impl Default for AppState {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
     pub os: String,
-    pub osVersion: String,
+    pub os_version: String,
     pub architecture: String,
-    pub cpuCores: usize,
-    pub totalMemoryGb: f64,
-    pub freeMemoryGb: f64,
+    pub cpu_cores: usize,
+    pub total_memory_gb: f64,
+    pub free_memory_gb: f64,
     pub hostname: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ServiceStatus {
     pub name: String,
     pub status: String,
     pub healthy: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub uptimeSeconds: Option<u64>,
+    pub uptime_seconds: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AgentInfo {
     pub id: String,
     pub name: String,
@@ -48,9 +51,9 @@ pub struct AgentInfo {
     pub r#type: Option<String>,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub taskCount: Option<u32>,
+    pub task_count: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastActive: Option<String>,
+    pub last_active: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,24 +61,24 @@ pub struct AgentInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub createdAt: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskInfo {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agentId: Option<String>,
+    pub agent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "type")]
     pub type_: Option<String>,
     pub status: String,
     pub progress: f32,
-    pub createdAt: String,
+    pub created_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updatedAt: Option<String>,
+    pub updated_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -100,11 +103,11 @@ pub async fn get_system_info(state: State<'_, AppState>) -> Result<SystemInfo, S
 
     Ok(SystemInfo {
         os,
-        osVersion: os_version,
+        os_version: os_version,
         architecture,
-        cpuCores: cpu_cores,
-        totalMemoryGb: total_memory_gb,
-        freeMemoryGb: free_memory_gb,
+        cpu_cores: cpu_cores,
+        total_memory_gb: total_memory_gb,
+        free_memory_gb: free_memory_gb,
         hostname,
     })
 }
@@ -175,7 +178,7 @@ pub async fn get_service_status(state: State<'_, AppState>) -> Result<Vec<Servic
             name,
             status,
             healthy,
-            uptimeSeconds: None,
+            uptime_seconds: None,
             port,
         });
     }
@@ -320,12 +323,12 @@ pub async fn list_agents(state: State<'_, AppState>) -> Result<Vec<AgentInfo>, S
                 name: a.name,
                 r#type: a.agent_type,
                 status: a.status,
-                taskCount: a.task_count,
-                lastActive: a.last_active,
+                task_count: a.task_count,
+                last_active: a.last_active,
                 description: a.description,
                 capabilities: a.capabilities,
                 config: a.config,
-                createdAt: a.created_at,
+                created_at: a.created_at,
             }).collect();
             Ok(result)
         }
@@ -366,13 +369,13 @@ pub async fn submit_task(
     match state.backend.submit_task(&submission).await {
         Ok(task) => Ok(TaskInfo {
             id: task.id,
-            agentId: task.agent_id,
+            agent_id: task.agent_id,
             name: task.name,
             type_: task.type_,
             status: task.status,
             progress: task.progress,
-            createdAt: task.created_at,
-            updatedAt: task.updated_at,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
             result: task.result,
             error: task.error,
         }),
@@ -391,13 +394,13 @@ pub async fn get_task_status(
     match state.backend.get_task(&task_id).await {
         Ok(task) => Ok(TaskInfo {
             id: task.id,
-            agentId: task.agent_id,
+            agent_id: task.agent_id,
             name: task.name,
             type_: task.type_,
             status: task.status,
             progress: task.progress,
-            createdAt: task.created_at,
-            updatedAt: task.updated_at,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
             result: task.result,
             error: task.error,
         }),
@@ -482,6 +485,7 @@ pub async fn open_terminal(
         return Err("Unsupported operating system".to_string());
     }
 
+    #[allow(unreachable_code)]
     Ok(())
 }
 
@@ -561,6 +565,7 @@ pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateInfo {
     pub current_version: String,
     pub latest_version: String,
@@ -581,6 +586,7 @@ pub async fn get_version_info(_state: State<'_, AppState>) -> Result<VersionInfo
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VersionInfo {
     pub app_version: String,
     pub build_time: String,
@@ -592,6 +598,7 @@ pub struct VersionInfo {
 // ==================== LLM / AI Chat Commands ====================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatMessage {
     pub role: String,
     pub content: String,
@@ -602,6 +609,7 @@ pub struct LLMChatMessage {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatRequest {
     pub provider_id: String,
     pub messages: Vec<LLMChatMessage>,
@@ -618,6 +626,7 @@ pub struct LLMChatRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatResponse {
     pub id: String,
     pub content: String,
@@ -630,6 +639,7 @@ pub struct LLMChatResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UsageInfo {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -801,6 +811,7 @@ pub async fn delete_llm_provider(provider_id: String, state: State<'_, AppState>
 // ==================== Memory System Commands ====================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MemoryEntry {
     pub id: String,
     #[serde(rename = "type")]
@@ -809,7 +820,6 @@ pub struct MemoryEntry {
     pub source: Option<String>,
     pub metadata: Option<serde_json::Value>,
     pub tokens: u32,
-    #[serde(rename = "createdAt")]
     pub created_at: String,
 }
 
@@ -1037,6 +1047,7 @@ pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_js
 // ==================== Cognitive Loop / Tool Commands ====================
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CognitiveStep {
     phase: String,
     thought: String,
@@ -1114,7 +1125,6 @@ pub async fn run_cognitive_loop(
         }
         Err(e) => {
             log::warn!("Backend cognitive loop unavailable, returning structured error: {}", e);
-            let now = chrono::Utc::now().to_rfc3339();
             Err(format!("Cognitive loop failed: {}. Ensure AgentOS Gateway is running at the configured endpoint.", e))
         }
     }
@@ -1211,18 +1221,30 @@ pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Va
 }
 
 #[tauri::command]
-pub async fn runtime_metrics() -> Result<serde_json::Value, String> {
+pub async fn runtime_metrics(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     let entry_count: usize;
     entry_count = MEMORY_STORE.lock().unwrap().len();
 
-    Ok(serde_json::json!({
-        "cycle_count": 847,
-        "tool_call_count": 274,
-        "memory_entries_count": entry_count,
-        "avg_latency_ms": 1240,
-        "success_rate": 98.5,
-        "total_tokens_consumed": 42300
-    }))
+    match state.backend.get_metrics().await {
+        Ok(metrics) => {
+            let mut result = metrics;
+            if result.get("memory_entries_count").is_none() {
+                result.as_object_mut().map(|o| o.insert("memory_entries_count".to_string(), serde_json::Value::Number(entry_count.into())));
+            }
+            Ok(result)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for runtime_metrics: {}, using local data", e);
+            Ok(serde_json::json!({
+                "cycle_count": 0,
+                "tool_call_count": 0,
+                "memory_entries_count": entry_count,
+                "avg_latency_ms": 0,
+                "success_rate": 0.0,
+                "total_tokens_consumed": 0
+            }))
+        }
+    }
 }
 
 // ==================== Extended Task Commands ====================
@@ -1233,13 +1255,13 @@ pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, Str
         Ok(tasks) => {
             let result: Vec<TaskInfo> = tasks.into_iter().map(|t| TaskInfo {
                 id: t.id,
-                agentId: t.agent_id,
+                agent_id: t.agent_id,
                 name: t.name,
                 type_: t.type_,
                 status: t.status,
                 progress: t.progress,
-                createdAt: t.created_at,
-                updatedAt: t.updated_at,
+                created_at: t.created_at,
+                updated_at: t.updated_at,
                 result: t.result,
                 error: t.error,
             }).collect();
@@ -1273,13 +1295,13 @@ pub async fn restart_task(task_id: String, state: State<'_, AppState>) -> Result
     match state.backend.send_jsonrpc("task.restart", body).await {
         Ok(result) => Ok(TaskInfo {
             id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&task_id).to_string(),
-            agentId: result.get("agent_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            agent_id: result.get("agent_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
             name: result.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
             type_: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
             status: result.get("status").and_then(|v| v.as_str()).unwrap_or("pending").to_string(),
             progress: result.get("progress").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
-            createdAt: result.get("created_at").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
-            updatedAt: result.get("updated_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            created_at: result.get("created_at").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            updated_at: result.get("updated_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
             result: result.get("result").cloned(),
             error: result.get("error").and_then(|v| v.as_str()).map(|s| s.to_string()),
         }),
@@ -1316,12 +1338,12 @@ pub async fn register_agent(
             name: agent.name,
             r#type: agent.agent_type,
             status: agent.status,
-            taskCount: agent.task_count,
-            lastActive: agent.last_active,
+            task_count: agent.task_count,
+            last_active: agent.last_active,
             description: agent.description,
             capabilities: agent.capabilities,
             config: agent.config,
-            createdAt: agent.created_at,
+            created_at: agent.created_at,
         }),
         Err(e) => {
             log::warn!("Backend unavailable for register_agent: {}", e);
@@ -1386,14 +1408,14 @@ pub async fn start_agent(agent_id: String, state: State<'_, AppState>) -> Result
             name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
             r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
             status: result.get("status").and_then(|v| v.as_str()).unwrap_or("running").to_string(),
-            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
-            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            task_count: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
+            last_active: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
             description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
             capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
                 arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
             }),
             config: result.get("config").cloned(),
-            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            created_at: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
         }),
         Err(e) => {
             log::warn!("Backend unavailable for start_agent: {}", e);
@@ -1412,14 +1434,14 @@ pub async fn stop_agent(agent_id: String, state: State<'_, AppState>) -> Result<
             name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
             r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
             status: result.get("status").and_then(|v| v.as_str()).unwrap_or("stopped").to_string(),
-            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
-            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            task_count: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
+            last_active: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
             description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
             capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
                 arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
             }),
             config: result.get("config").cloned(),
-            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            created_at: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
         }),
         Err(e) => {
             log::warn!("Backend unavailable for stop_agent: {}", e);
@@ -1475,6 +1497,8 @@ pub async fn update_agent_config(agent_id: String, config: serde_json::Value, st
 // ==================== File System Commands ====================
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct FileInfo {
     pub name: String,
     pub path: String,
