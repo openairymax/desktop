@@ -124,8 +124,8 @@ const ModelConfig: React.FC = () => {
           method: 'PUT',
           body: { providers, systemParams, envVars },
         });
-      } catch {
-        console.warn('Backend config save failed, saved locally only');
+      } catch (e) {
+        console.warn('Backend config save failed, saved locally only:', e);
       }
     }
   };
@@ -183,7 +183,8 @@ const ModelConfig: React.FC = () => {
               latency,
             },
           });
-        } catch {
+        } catch (e) {
+          console.warn('Connection test failed for provider:', id, e);
           setTestResults({
             ...testResults,
             [id]: { success: false, message: '连接失败' },

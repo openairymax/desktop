@@ -70,9 +70,7 @@ export default function SessionManagement() {
     if (!newSession.name.trim()) return
     try {
       await createSession(newSession.agent === 'auto' ? 'default' : newSession.agent)
-    } catch (e) {
-      console.error('Failed to create session:', e)
-    }
+    } catch (e) { console.warn('Failed to create session:', e) }
     setShowCreateModal(false)
     setNewSession({ name: '', agent: 'auto', description: '' })
   }, [newSession, createSession])
@@ -80,18 +78,14 @@ export default function SessionManagement() {
   const archiveSession = useCallback(async (id: string) => {
     try {
       await closeSession(id)
-    } catch (e) {
-      console.error('Failed to archive session:', id, e)
-    }
+    } catch (e) { console.warn('Failed to archive session:', e) }
   }, [closeSession])
 
   const deleteSession = useCallback(async (id: string) => {
     if (confirm('确定要删除此会话吗？')) {
       try {
         await closeSession(id)
-      } catch (e) {
-        console.error('Failed to delete session:', id, e)
-      }
+      } catch (e) { console.warn('Failed to delete session:', e) }
     }
   }, [closeSession])
 

@@ -117,7 +117,7 @@ const CognitiveLoop: React.FC = () => {
         const progressSteps = Math.ceil(phaseDuration / 150);
         for (let s = 0; s < progressSteps; s++) {
           setPhaseProgress(((s + 1) / progressSteps) * 100);
-          await new Promise(r => setTimeout(r, 150));
+          await new Promise(r => requestAnimationFrame(r));
         }
       }
 
@@ -152,7 +152,7 @@ const CognitiveLoop: React.FC = () => {
       const steps = Math.ceil(duration / 200);
 
       for (let s = 0; s < steps; s++) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => requestAnimationFrame(r));
         setPhaseProgress(((s + 1) / steps) * 100);
         if (i === 1 && s === Math.floor(steps * 0.5)) setActiveThoughtIdx(2);
         if (i === 1 && s === Math.floor(steps * 0.85)) setActiveThoughtIdx(3);

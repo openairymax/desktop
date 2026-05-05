@@ -236,9 +236,8 @@ export async function autoInit(): Promise<void> {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       invokeFn = invoke;
-    } catch {
-      // Running in a non-Tauri environment
-      console.warn('AgentOS SDK: Tauri not detected, browser mode available');
+    } catch (e) {
+      console.warn('AgentOS SDK: Tauri not detected, browser mode available:', e);
     }
   }
 }

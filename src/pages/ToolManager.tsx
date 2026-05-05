@@ -28,15 +28,6 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: React.ReactNode; co
   system: { label: '系统工具', icon: <Terminal size={14} />, color: '#8b5cf6' },
 };
 
-const SAMPLE_TOOLS: Tool[] = [
-  { id: 'tool-001', name: 'web_search', description: '在互联网上搜索信息，返回相关结果列表', category: 'web', status: 'active', parameters: { query: '', max_results: 10 }, createdAt: new Date().toISOString() },
-  { id: 'tool-002', name: 'code_execute', description: '执行代码片段并返回结果输出', category: 'code', status: 'active', parameters: { language: 'python', code: '' }, createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'tool-003', name: 'file_read', description: '读取文件内容并返回文本', category: 'file', status: 'active', parameters: { path: '' }, createdAt: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'tool-004', name: 'data_query', description: '查询结构化数据并返回结果集', category: 'data', status: 'registered', parameters: { query: '' }, createdAt: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'tool-005', name: 'system_info', description: '获取系统运行状态和资源使用情况', category: 'system', status: 'active', parameters: {}, createdAt: new Date(Date.now() - 172800000).toISOString() },
-  { id: 'tool-006', name: 'text_analyze', description: '分析文本内容并提取关键信息', category: 'general', status: 'active', parameters: { text: '' }, createdAt: new Date(Date.now() - 259200000).toISOString() },
-];
-
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   active: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '活跃' },
   registered: { color: 'var(--info-color)', bg: 'var(--info-light)', label: '已注册' },
@@ -68,13 +59,11 @@ const ToolManager: React.FC = () => {
         } else {
           const stored = localStorage.getItem('agentos-tools');
           if (stored) { setTools(JSON.parse(stored)); }
-          else { setTools(SAMPLE_TOOLS); localStorage.setItem('agentos-tools', JSON.stringify(SAMPLE_TOOLS)); }
         }
       } catch (error) {
         console.warn('Backend tools unavailable, using local storage:', error);
         const stored = localStorage.getItem('agentos-tools');
         if (stored) { setTools(JSON.parse(stored)); }
-        else { setTools(SAMPLE_TOOLS); localStorage.setItem('agentos-tools', JSON.stringify(SAMPLE_TOOLS)); }
       } finally {
         setLoading(false);
       }
@@ -131,7 +120,6 @@ const ToolManager: React.FC = () => {
         name: selectedTool.name,
         arguments: executeParams || '{}',
       });
-      console.log('Tool execution result:', result);
       saveTools(tools.map(t => t.id === selectedTool.id ? { ...t, status: 'active' as const } : t));
       setExecuteParams('');
       setShowExecuteModal(false);

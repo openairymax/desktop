@@ -4,6 +4,7 @@ import {
   Sparkles, Download, Star, Search, Filter, CheckCircle, RefreshCw,
   ExternalLink, Package, Tag, Users, Clock, ChevronRight
 } from 'lucide-react'
+import { invoke } from '@tauri-apps/api/core'
 
 interface OpenLabApp {
   id: string
@@ -138,14 +139,24 @@ const OpenLab: React.FC = () => {
       }
       return app
     }))
-    setTimeout(() => {
-      setApps(prev => prev.map(app => {
-        if (app.id === id) {
-          return { ...app, status: app.status === 'installed' ? 'available' : 'installed' }
-        }
-        return app
-      }))
-    }, 1500)
+    invoke('call_tool', { name: 'app_install', arguments: JSON.stringify({ app_id: id }) })
+      .then(() => {
+        setApps(prev => prev.map(app => {
+          if (app.id === id) {
+            return { ...app, status: app.status === 'installed' ? 'available' : 'installed' }
+          }
+          return app
+        }))
+      })
+      .catch((e: unknown) => {
+        console.warn('App install failed:', e)
+        setApps(prev => prev.map(app => {
+          if (app.id === id) {
+            return { ...app, status: 'available' }
+          }
+          return app
+        }))
+      })
   }
 
   const renderStars = (rating: number) => {

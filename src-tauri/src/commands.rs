@@ -757,15 +757,45 @@ pub async fn list_llm_providers() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-pub async fn save_llm_provider(config: serde_json::Value) -> Result<serde_json::Value, String> {
+pub async fn save_llm_provider(config: serde_json::Value, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
     log::info!("Saving LLM provider config: {:?}", config);
-    Ok(config)
+
+    let provider_id = config.get("id").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
+
+    match state.backend.send_jsonrpc("llm.save_provider", config.clone()).await {
+        Ok(result) => {
+            log::info!("LLM provider '{}' saved via backend", provider_id);
+            Ok(result)
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for save_llm_provider: {}, saving locally", e);
+            let key = format!("llm_provider_{}", provider_id);
+            if let Err(e2) = state.backend.set_config(&key, &config.to_string()).await {
+                log::warn!("Failed to save provider config locally: {}", e2);
+            }
+            Ok(config)
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn delete_llm_provider(provider_id: String) -> Result<(), String> {
+pub async fn delete_llm_provider(provider_id: String, state: State<'_, AppState>) -> Result<(), String> {
     log::info!("Deleting LLM provider: {}", provider_id);
-    Ok(())
+
+    match state.backend.send_jsonrpc("llm.delete_provider", serde_json::json!({"provider_id": provider_id})).await {
+        Ok(_) => {
+            log::info!("LLM provider '{}' deleted via backend", provider_id);
+            Ok(())
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for delete_llm_provider: {}, removing locally", e);
+            let key = format!("llm_provider_{}", provider_id);
+            if let Err(e2) = state.backend.set_config(&key, "").await {
+                log::warn!("Failed to delete provider config locally: {}", e2);
+            }
+            Ok(())
+        }
+    }
 }
 
 // ==================== Memory System Commands ====================
@@ -1164,20 +1194,20 @@ pub async fn call_tool(
 }
 
 #[tauri::command]
-pub async fn list_tools() -> Result<Vec<serde_json::Value>, String> {
-    Ok(vec![
-        serde_json::json!({"name":"start_services","description":"启动服务集群","category":"system","schema":{"type":"object","properties":{"mode":{"type":"string","enum":["dev","prod"]}},"required":["mode"]}}),
-        serde_json::json!({"name":"stop_services","description":"停止所有服务","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"get_service_status","description":"查询服务运行状态","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"list_agents","description":"列出已注册智能体","category":"agent","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"register_agent","description":"注册新智能体","category":"agent","schema":{"type":"object","properties":{"name":{"type":"string"},"type":{"type":"string"}},"required":["name","type"]}}),
-        serde_json::json!({"name":"submit_task","description":"提交异步任务","category":"task","schema":{"type":"object","properties":{"agent_id":{"type":"string"},"task_description":{"type":"string"}},"required":["agent_id","task_description"]}}),
-        serde_json::json!({"name":"get_system_info","description":"获取系统硬件信息","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"memory_store","description":"存储记忆到向量库","category":"memory","schema":{"type":"object","properties":{"type":{"type":"string"},"content":{"type":"string"}},"required":["type","content"]}}),
-        serde_json::json!({"name":"memory_search","description":"语义搜索长期记忆","category":"memory","schema":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}),
-        serde_json::json!({"name":"read_file","description":"读取本地文件","category":"io","schema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}),
-        serde_json::json!({"name":"write_file","description":"写入本地文件","category":"io","schema":{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}}),
-    ])
+pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    match state.backend.send_jsonrpc("tools.list", serde_json::json!({})).await {
+        Ok(result) => {
+            if let Some(tools) = result.as_array() {
+                Ok(tools.clone())
+            } else {
+                Ok(vec![])
+            }
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for list_tools: {}, returning empty", e);
+            Ok(vec![])
+        }
+    }
 }
 
 #[tauri::command]
@@ -1223,26 +1253,41 @@ pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, Str
 }
 
 #[tauri::command]
-pub async fn delete_task(task_id: String) -> Result<(), String> {
-    log::info!("Task deleted: {}", task_id);
-    Ok(())
+pub async fn delete_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    match state.backend.cancel_task(&task_id).await {
+        Ok(()) => {
+            log::info!("Task deleted: {}", task_id);
+            Ok(())
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for delete_task: {}", e);
+            Err(format!("Failed to delete task: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn restart_task(task_id: String) -> Result<TaskInfo, String> {
-    log::info!("Task restarted: {}", task_id);
-    Ok(TaskInfo {
-        id: task_id,
-        agentId: Some("agent-001".to_string()),
-        name: None,
-        type_: None,
-        status: "pending".to_string(),
-        progress: 0.0,
-        createdAt: chrono::Utc::now().to_rfc3339(),
-        updatedAt: None,
-        result: None,
-        error: None,
-    })
+pub async fn restart_task(task_id: String, state: State<'_, AppState>) -> Result<TaskInfo, String> {
+    let body = serde_json::json!({"task_id": task_id});
+
+    match state.backend.send_jsonrpc("task.restart", body).await {
+        Ok(result) => Ok(TaskInfo {
+            id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&task_id).to_string(),
+            agentId: result.get("agent_id").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            name: result.get("name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            type_: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            status: result.get("status").and_then(|v| v.as_str()).unwrap_or("pending").to_string(),
+            progress: result.get("progress").and_then(|v| v.as_f64()).unwrap_or(0.0) as f32,
+            createdAt: result.get("created_at").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            updatedAt: result.get("updated_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            result: result.get("result").cloned(),
+            error: result.get("error").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for restart_task: {}", e);
+            Err(format!("Failed to restart task: {}", e))
+        }
+    }
 }
 
 // ==================== Extended Agent Commands ====================
