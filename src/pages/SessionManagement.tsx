@@ -7,6 +7,7 @@ import {
 import { useSessions, useAgentOS, useAgents } from '../hooks/useAgentOS'
 import type { Session } from '../services/agentos.service'
 import { SessionStatus } from '../services/agentos.service'
+import { useTranslation } from 'react-i18next'
 
 interface DisplaySession {
   id: string
@@ -20,11 +21,11 @@ interface DisplaySession {
   description: string
 }
 
-function toDisplaySession(s: Session): DisplaySession {
+function toDisplaySession(s: Session, t: (...args: any[]) => string): DisplaySession {
   return {
     id: s.id,
-    name: (s.context?.name as string) || (s.metadata?.name as string) || `会话 ${s.id.slice(0, 8)}`,
-    agent: (s.context?.agent as string) || (s.metadata?.agent as string) || s.userId || '默认',
+    name: (s.context?.name as string) || (s.metadata?.name as string) || t('sessionExtended.defaultSessionName', { id: s.id.slice(0, 8) }),
+    agent: (s.context?.agent as string) || (s.metadata?.agent as string) || s.userId || t('sessionExtended.defaultAgent'),
     status: s.status === SessionStatus.ACTIVE ? 'active' :
             s.status === SessionStatus.EXPIRED ? 'archived' :
             s.status === SessionStatus.INACTIVE ? 'completed' : 'error',
@@ -37,10 +38,11 @@ function toDisplaySession(s: Session): DisplaySession {
 }
 
 const DEFAULT_AGENTS = [
-  { id: 'auto', name: '自动选择' },
+  { id: 'auto', name: 'Auto Select' },
 ]
 
 export default function SessionManagement() {
+  const { t } = useTranslation()
   const { sessions: apiSessions, loading, error, fetchSessions, createSession, closeSession } = useSessions()
   const { connection } = useAgentOS()
   const { agents, fetchAgents } = useAgents()
@@ -57,7 +59,7 @@ export default function SessionManagement() {
     }
   }, [connection.status, fetchSessions])
 
-  const displaySessions: DisplaySession[] = apiSessions.map(toDisplaySession)
+  const displaySessions: DisplaySession[] = apiSessions.map(s => toDisplaySession(s, t as any))
 
   const filtered = displaySessions.filter(s => {
     const matchSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -82,7 +84,7 @@ export default function SessionManagement() {
   }, [closeSession])
 
   const deleteSession = useCallback(async (id: string) => {
-    if (confirm('确定要删除此会话吗？')) {
+    if (confirm(t('sessionExtended.deleteConfirm'))) {
       try {
         await closeSession(id)
       } catch (e) { console.warn('Failed to delete session:', e) }
@@ -100,17 +102,17 @@ export default function SessionManagement() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <div className="grid-4" style={{ flex: 1, maxWidth: '600px' }}>
-          <StatCard label="总会话" value={stats.total} />
-          <StatCard label="进行中" value={stats.active} color="var(--success)" />
-          <StatCard label="已完成" value={stats.completed} color="var(--info)" />
-          <StatCard label="已归档" value={stats.archived} color="var(--text-muted)" />
+          <StatCard label={t('sessionExtended.totalSessions')} value={stats.total} />
+          <StatCard label={t('sessionExtended.inProgress')} value={stats.active} color="var(--success)" />
+          <StatCard label={t('sessionExtended.completedSessions')} value={stats.completed} color="var(--info)" />
+          <StatCard label={t('sessionExtended.archivedSessions')} value={stats.archived} color="var(--text-muted)" />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button className="btn btn-secondary btn-sm" onClick={() => fetchSessions()} disabled={loading}>
             <RefreshCw size={14} className={loading ? 'spin' : ''} />
           </button>
           <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
-            <Plus size={16} /> 新建会话
+            <Plus size={16} /> {t('sessionExtended.newSession')}
           </button>
         </div>
       </div>
@@ -127,16 +129,16 @@ export default function SessionManagement() {
           <input
             type="text"
             className="input"
-            placeholder="搜索会话..."
+            placeholder={t('sessionExtended.searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             style={{ paddingLeft: '38px' }}
           />
         </div>
         <select className="input" style={{ width: '140px' }} value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option value="all">全部状态</option>
-          <option value="active">进行中</option>
-          <option value="completed">已完成</option>
+          <option value="all">{t('sessionExtended.allStatuses')}</option>
+          <option value="active">{t('sessionExtended.statusActive')}</option>
+          <option value="completed">{t('sessionExtended.statusCompleted')}</option>
           <option value="archived">已归档</option>
           <option value="error">错误</option>
         </select>

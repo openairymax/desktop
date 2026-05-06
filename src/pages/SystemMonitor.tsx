@@ -5,6 +5,7 @@ import {
   RefreshCw, Loader2, Zap, AlertTriangle, CheckCircle2, Wifi, WifiOff
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 
 interface SystemData {
   cpu: { usagePercent: number; cores: Array<{ coreId: number; usage: number }> };
@@ -24,6 +25,7 @@ interface MetricCard {
 }
 
 const SystemMonitor: React.FC = () => {
+  const { t } = useTranslation();
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [systemData, setSystemData] = useState<SystemData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -33,7 +35,9 @@ const SystemMonitor: React.FC = () => {
 
   const formatUptime = (s: number) => {
     const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60);
-    return d > 0 ? `${d}天 ${h}时` : h > 0 ? `${h}小时 ${m}分` : `${m}分钟`;
+    if (d > 0) return t('systemMonitorExtended.uptimeFormat', { days: d, hours: h });
+    if (h > 0) return t('systemMonitorExtended.uptimeFormatHours', { hours: h, minutes: m });
+    return t('systemMonitorExtended.uptimeFormatMinutes', { minutes: m });
   };
 
   const formatBytes = (gb: number) => `${gb.toFixed(1)} GB`;
@@ -51,41 +55,41 @@ const SystemMonitor: React.FC = () => {
 
       setMetrics([
         {
-          label: 'CPU 使用率',
+          label: t('systemMonitorExtended.cpuUsage'),
           value: `${data.cpu.usagePercent.toFixed(1)}%`,
-          sub: `${data.cpu.cores.length} 核心`,
+          sub: t('systemMonitorExtended.cores', { count: data.cpu.cores.length }),
           icon: <Cpu size={18} />,
           color: cpuColor,
           progress: data.cpu.usagePercent,
         },
         {
-          label: '内存使用',
+          label: t('systemMonitorExtended.memoryUsage'),
           value: `${data.memory.usedGb.toFixed(1)} / ${data.memory.totalGb.toFixed(1)} GB`,
-          sub: `可用 ${data.memory.freeGb.toFixed(1)} GB (${data.memory.percent.toFixed(1)}%)`,
+          sub: t('systemMonitorExtended.memoryAvailable', { gb: data.memory.freeGb.toFixed(1), percent: data.memory.percent.toFixed(1) }),
           icon: <MemoryStick size={18} />,
           color: memColor,
           progress: data.memory.percent,
         },
         {
-          label: '磁盘使用',
+          label: t('systemMonitorExtended.diskUsage'),
           value: `${data.disk.usedGb.toFixed(0)} / ${data.disk.totalGb.toFixed(0)} GB`,
-          sub: `可用 ${data.disk.freeGb.toFixed(0)} GB (${data.disk.percent.toFixed(1)}%)`,
+          sub: t('systemMonitorExtended.diskAvailable', { gb: data.disk.freeGb.toFixed(0), percent: data.disk.percent.toFixed(1) }),
           icon: <HardDrive size={18} />,
           color: diskColor,
           progress: data.disk.percent,
         },
         {
-          label: '系统运行时间',
+          label: t('systemMonitorExtended.uptime'),
           value: formatUptime(data.uptimeSeconds),
-          sub: `自上次启动`,
+          sub: t('systemMonitorExtended.sinceBoot'),
           icon: <Clock size={18} />,
           color: '#6366f1',
           progress: Math.min((data.uptimeSeconds / 86400) * 100, 100),
         },
         {
-          label: '网络接口',
-          value: `${data.network.filter(n => n.isUp).length} 活跃`,
-          sub: `共 ${data.network.length} 个接口`,
+          label: t('systemMonitorExtended.networkInterfaces'),
+          value: t('systemMonitorExtended.activeCount', { count: data.network.filter(n => n.isUp).length }),
+          sub: t('systemMonitorExtended.totalInterfaces', { count: data.network.length }),
           icon: data.network.some(n => n.isUp) ? <Wifi size={18} /> : <WifiOff size={18} />,
           color: data.network.some(n => n.isUp) ? '#10b981' : '#ef4444',
           progress: data.network.length > 0 ? (data.network.filter(n => n.isUp).length / data.network.length) * 100 : 0,
@@ -106,10 +110,10 @@ const SystemMonitor: React.FC = () => {
     const memPct = perf.memory ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100) : 45;
 
     setMetrics([
-      { label: 'JS 堆内存', value: perf.memory ? `${(perf.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB` : '--', sub: perf.memory ? `上限 ${(perf.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0)} MB` : '浏览器不支持', icon: <MemoryStick size={18} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
-      { label: '平台', value: navigator.platform?.substring(0, 14) || '--', sub: navigator.userAgent.includes('Tauri') ? 'Tauri 桌面端' : 'Web 浏览器', icon: <Cpu size={18} />, color: '#8b5cf6', progress: 50 },
-      { label: '语言', value: navigator.language || 'zh-CN', sub: `时区: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`, icon: <Zap size={18} />, color: '#06b6d4', progress: 100 },
-      { label: '在线状态', value: navigator.onLine ? '在线' : '离线', sub: navigator.onLine ? '网络可用' : '网络不可用', icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />, color: navigator.onLine ? '#10b981' : '#ef4444', progress: navigator.onLine ? 100 : 0 },
+      { label: t('systemMonitorExtended.jsHeapMemory'), value: perf.memory ? `${(perf.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB` : '--', sub: perf.memory ? t('systemMonitorExtended.memoryLimit', { mb: (perf.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0) }) : t('systemMonitorExtended.browserNotSupported'), icon: <MemoryStick size={18} />, color: memPct > 80 ? '#f59e0b' : '#10b981', progress: memPct },
+      { label: t('systemMonitorExtended.platform'), value: navigator.platform?.substring(0, 14) || '--', sub: navigator.userAgent.includes('Tauri') ? t('systemMonitorExtended.tauriDesktop') : t('systemMonitorExtended.webBrowser'), icon: <Cpu size={18} />, color: '#8b5cf6', progress: 50 },
+      { label: t('systemMonitorExtended.language'), value: navigator.language || 'zh-CN', sub: t('systemMonitorExtended.timezone', { tz: Intl.DateTimeFormat().resolvedOptions().timeZone }), icon: <Zap size={18} />, color: '#06b6d4', progress: 100 },
+      { label: t('systemMonitorExtended.onlineStatus'), value: navigator.onLine ? t('systemMonitorExtended.online') : t('systemMonitorExtended.offline'), sub: navigator.onLine ? t('systemMonitorExtended.networkAvailable') : t('systemMonitorExtended.networkUnavailable'), icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />, color: navigator.onLine ? '#10b981' : '#ef4444', progress: navigator.onLine ? 100 : 0 },
     ]);
   };
 
@@ -137,15 +141,15 @@ const SystemMonitor: React.FC = () => {
             <BarChart3 size={20} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>系统监控</h1>
+            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>{t('systemMonitor.title')}</h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '2px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>实时系统资源与运行指标</span>
+              <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{t('systemMonitorExtended.realtimeMetrics')}</span>
               {connected ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981' }}><CheckCircle2 size={12} /> 后端已连接</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#10b981' }}><CheckCircle2 size={12} /> {t('systemMonitorExtended.backendConnected')}</span>
               ) : (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#f59e0b' }}><AlertTriangle size={12} /> 浏览器模式</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#f59e0b' }}><AlertTriangle size={12} /> {t('systemMonitorExtended.browserMode')}</span>
               )}
-              {lastUpdate && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>更新于 {lastUpdate.toLocaleTimeString()}</span>}
+              {lastUpdate && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{t('systemMonitorExtended.updatedAt', { time: lastUpdate.toLocaleTimeString() })}</span>}
             </div>
           </div>
         </div>
@@ -153,12 +157,12 @@ const SystemMonitor: React.FC = () => {
           style={{ padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: refreshing ? 'wait' : 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-          }}>{refreshing ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} 刷新</button>
+          }}>{refreshing ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} {t('common.refresh')}</button>
       </div>
 
       {error && !connected && (
         <div style={{ padding: '10px 14px', marginBottom: '16px', background: 'var(--bg-error)', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--error)' }}>
-          <AlertTriangle size={14} /> 后端不可用: {error} — 显示浏览器本地指标
+          <AlertTriangle size={14} /> {t('systemMonitorExtended.backendUnavailable', { error })}
         </div>
       )}
 
@@ -188,7 +192,7 @@ const SystemMonitor: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
           <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Cpu size={16} /> CPU 核心详情
+              <Cpu size={16} /> {t('systemMonitorExtended.cpuCoreDetails')}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '8px' }}>
               {systemData.cpu.cores.map((core) => (
@@ -202,7 +206,7 @@ const SystemMonitor: React.FC = () => {
 
           <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={16} /> 网络接口
+              <Activity size={16} /> {t('systemMonitorExtended.networkInterfaceDetails')}
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {systemData.network.map((iface) => (
@@ -214,7 +218,7 @@ const SystemMonitor: React.FC = () => {
                   <span style={{ fontSize: '12px', color: iface.isUp ? '#10b981' : '#ef4444' }}>{iface.isUp ? 'UP' : 'DOWN'}</span>
                 </div>
               ))}
-              {systemData.network.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>无网络接口数据</div>}
+              {systemData.network.length === 0 && <div style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '12px' }}>{t('systemMonitorExtended.noNetworkData')}</div>}
             </div>
           </div>
         </div>
@@ -224,16 +228,16 @@ const SystemMonitor: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
           <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Cpu size={16} /> 运行环境
+              <Cpu size={16} /> {t('systemMonitorExtended.runtimeEnvironment')}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
               {[
-                ['平台', navigator.platform || '--'],
-                ['语言', navigator.language],
-                ['在线', navigator.onLine ? '是' : '否'],
-                ['CPU 核心数', String(navigator.hardwareConcurrency || '--')],
-                ['屏幕分辨率', `${screen.width}x${screen.height}`],
-                ['视口大小', `${window.innerWidth}x${window.innerHeight}`],
+                [t('systemMonitorExtended.platformLabel'), navigator.platform || '--'],
+                [t('systemMonitorExtended.languageLabel'), navigator.language],
+                [t('systemMonitorExtended.onlineLabel'), navigator.onLine ? t('systemMonitorExtended.yes') : t('systemMonitorExtended.no')],
+                [t('systemMonitorExtended.cpuCores'), String(navigator.hardwareConcurrency || '--')],
+                [t('systemMonitorExtended.screenResolution'), `${screen.width}x${screen.height}`],
+                [t('systemMonitorExtended.viewportSize'), `${window.innerWidth}x${window.innerHeight}`],
               ].map(([k, v]) => (
                 <React.Fragment key={k}>
                   <span style={{ color: 'var(--text-muted)' }}>{k}</span>
@@ -244,14 +248,14 @@ const SystemMonitor: React.FC = () => {
           </div>
           <div style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '20px' }}>
             <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={16} /> 性能数据
+              <Activity size={16} /> {t('systemMonitorExtended.performanceData')}
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', fontSize: '13px' }}>
               {[
-                ['导航开始', `${performance.timeOrigin.toFixed(2)} ms`],
-                ['当前时间戳', `${performance.now().toFixed(2)} ms`],
-                ['连接类型', (navigator as any)?.connection?.effectiveType || '--'],
-                ['设备内存', (navigator as any)?.deviceMemory ? `${(navigator as any).deviceMemory} GB` : '--'],
+                [t('systemMonitorExtended.navStart'), `${performance.timeOrigin.toFixed(2)} ms`],
+                [t('systemMonitorExtended.currentTimestamp'), `${performance.now().toFixed(2)} ms`],
+                [t('systemMonitorExtended.connectionType'), (navigator as any)?.connection?.effectiveType || '--'],
+                [t('systemMonitorExtended.deviceMemory'), (navigator as any)?.deviceMemory ? `${(navigator as any).deviceMemory} GB` : '--'],
               ].map(([k, v]) => (
                 <React.Fragment key={k}>
                   <span style={{ color: 'var(--text-muted)' }}>{k}</span>
