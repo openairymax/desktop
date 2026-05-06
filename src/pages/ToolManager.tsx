@@ -6,6 +6,7 @@ import {
   Settings, Zap, Eye, X, Copy, Terminal
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useTranslation } from 'react-i18next';
 
 interface Tool {
   id: string;
@@ -19,23 +20,24 @@ interface Tool {
 
 const CATEGORIES = ['general', 'web', 'file', 'code', 'data', 'system'];
 
-const CATEGORY_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  general: { label: '通用工具', icon: <Wrench size={14} />, color: '#6366f1' },
-  web: { label: '网络工具', icon: <Globe size={14} />, color: '#3b82f6' },
-  file: { label: '文件操作', icon: <FileText size={14} />, color: '#10b981' },
-  code: { label: '代码工具', icon: <Code2 size={14} />, color: '#f59e0b' },
-  data: { label: '数据处理', icon: <Database size={14} />, color: '#ef4444' },
-  system: { label: '系统工具', icon: <Terminal size={14} />, color: '#8b5cf6' },
+const CATEGORY_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
+  general: { icon: <Wrench size={14} />, color: '#6366f1' },
+  web: { icon: <Globe size={14} />, color: '#3b82f6' },
+  file: { icon: <FileText size={14} />, color: '#10b981' },
+  code: { icon: <Code2 size={14} />, color: '#f59e0b' },
+  data: { icon: <Database size={14} />, color: '#ef4444' },
+  system: { icon: <Terminal size={14} />, color: '#8b5cf6' },
 };
 
-const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
-  active: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '活跃' },
-  registered: { color: 'var(--info-color)', bg: 'var(--info-light)', label: '已注册' },
-  disabled: { color: 'var(--text-muted)', bg: 'var(--bg-tertiary)', label: '已禁用' },
-  error: { color: 'var(--error-color)', bg: 'var(--error-light)', label: '异常' },
+const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
+  active: { color: 'var(--success-color)', bg: 'var(--success-light)' },
+  registered: { color: 'var(--info-color)', bg: 'var(--info-light)' },
+  disabled: { color: 'var(--text-muted)', bg: 'var(--bg-tertiary)' },
+  error: { color: 'var(--error-color)', bg: 'var(--error-light)' },
 };
 
 const ToolManager: React.FC = () => {
+  const { t } = useTranslation();
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,6 +51,22 @@ const ToolManager: React.FC = () => {
   const [newDescription, setNewDescription] = useState('');
   const [newCategory, setNewCategory] = useState('general');
   const [executeParams, setExecuteParams] = useState('');
+
+  const categoryLabels: Record<string, string> = {
+    general: t('toolManager.categories.general'),
+    web: t('toolManager.categories.web'),
+    file: t('toolManager.categories.file'),
+    code: t('toolManager.categories.code'),
+    data: t('toolManager.categories.data'),
+    system: t('toolManager.categories.system'),
+  };
+
+  const statusLabels: Record<string, string> = {
+    active: t('toolManager.statuses.active'),
+    registered: t('toolManager.statuses.registered'),
+    disabled: t('toolManager.statuses.disabled'),
+    error: t('toolManager.statuses.error'),
+  };
 
   useEffect(() => {
     const loadTools = async () => {
@@ -87,7 +105,7 @@ const ToolManager: React.FC = () => {
     const tool: Tool = {
       id: `tool-${Date.now()}`,
       name: newName.trim(),
-      description: newDescription.trim() || '自定义工具',
+      description: newDescription.trim() || t('toolManager.customTool'),
       category: newCategory,
       status: 'registered',
       createdAt: new Date().toISOString(),
@@ -126,7 +144,7 @@ const ToolManager: React.FC = () => {
       setActionLoading(null);
     } catch (error) {
       console.error('Tool execution failed:', error);
-      alert(`工具执行失败: ${error instanceof Error ? error.message : String(error)}`);
+      alert(`${t('toolManager.executionFailed')} ${error instanceof Error ? error.message : String(error)}`);
       setActionLoading(null);
     }
   };
@@ -140,8 +158,8 @@ const ToolManager: React.FC = () => {
             <Wrench size={20} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>工具与技能</h1>
-            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>注册、管理和调用智能体工具</p>
+            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>{t('toolManager.title')}</h1>
+            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>{t('toolManager.subtitle')}</p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
@@ -149,22 +167,22 @@ const ToolManager: React.FC = () => {
             padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
             backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-          }}><RefreshCw size={14} /> 刷新</button>
+          }}><RefreshCw size={14} /> {t('toolManager.refresh')}</button>
           <button onClick={() => setShowAddModal(true)} style={{
             padding: '8px 16px', border: 'none', borderRadius: '8px',
             background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white', cursor: 'pointer',
             fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-          }}><Plus size={16} /> 注册工具</button>
+          }}><Plus size={16} /> {t('toolManager.registerTool')}</button>
         </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         {[
-          { label: '总工具数', value: tools.length, icon: <Wrench size={16} />, bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
-          { label: '活跃', value: tools.filter(t => t.status === 'active').length, icon: <Zap size={16} />, bg: 'var(--success-light)', color: 'var(--success-color)' },
-          { label: '已注册', value: tools.filter(t => t.status === 'registered').length, icon: <CheckCircle2 size={16} />, bg: 'var(--info-light)', color: 'var(--info-color)' },
-          { label: '已禁用', value: tools.filter(t => t.status === 'disabled').length, icon: <X size={16} />, bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' },
+          { label: t('toolManager.statTotal'), value: tools.length, icon: <Wrench size={16} />, bg: 'rgba(99,102,241,0.1)', color: '#6366f1' },
+          { label: t('toolManager.statActive'), value: tools.filter(t => t.status === 'active').length, icon: <Zap size={16} />, bg: 'var(--success-light)', color: 'var(--success-color)' },
+          { label: t('toolManager.statRegistered'), value: tools.filter(t => t.status === 'registered').length, icon: <CheckCircle2 size={16} />, bg: 'var(--info-light)', color: 'var(--info-color)' },
+          { label: t('toolManager.statDisabled'), value: tools.filter(t => t.status === 'disabled').length, icon: <X size={16} />, bg: 'var(--bg-tertiary)', color: 'var(--text-muted)' },
         ].map(s => (
           <div key={s.label} style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
@@ -179,19 +197,19 @@ const ToolManager: React.FC = () => {
           padding: '6px 14px', borderRadius: '20px', border: `1px solid ${categoryFilter === 'all' ? 'var(--primary-color)' : 'var(--border-color)'}`,
           background: categoryFilter === 'all' ? 'var(--primary-light)' : 'transparent', color: categoryFilter === 'all' ? 'var(--primary-color)' : 'var(--text-secondary)',
           fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
-        }}>全部 ({tools.length})</button>
-        {(Object.entries(CATEGORY_LABELS) as [string, typeof CATEGORY_LABELS.general][]).map(([key, cfg]) => {
+        }}>{t('toolManager.all')} ({tools.length})</button>
+        {(Object.entries(CATEGORY_ICONS) as [string, typeof CATEGORY_ICONS.general][]).map(([key, cfg]) => {
           const count = tools.filter(t => t.category === key).length;
           return (<button key={key} onClick={() => setCategoryFilter(key)} style={{
             padding: '6px 14px', borderRadius: '20px', border: `1px solid ${categoryFilter === key ? cfg.color : 'var(--border-color)'}`,
             background: categoryFilter === key ? `${cfg.color}15` : 'transparent', color: categoryFilter === key ? cfg.color : 'var(--text-secondary)',
             fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-          }}>{cfg.icon}{cfg.label} ({count})</button>);
+          }}>{cfg.icon}{categoryLabels[key]} ({count})</button>);
         })}
       </div>
       <div style={{ position: 'relative', marginBottom: '16px' }}>
         <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索工具名称或描述..."
+        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder={t('toolManager.searchPlaceholder')}
           style={{ width: '100%', paddingLeft: '34px', paddingRight: '14px', padding: '9px 14px 9px 34px', border: '1px solid var(--border-color)',
             borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
         />
@@ -204,7 +222,7 @@ const ToolManager: React.FC = () => {
       {!loading && filtered.length === 0 && (
         <div style={{ textAlign: 'center', padding: '48px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px dashed var(--border-color)' }}>
           <Wrench size={40} style={{ color: 'var(--text-muted)', opacity: 0.5, margin: '0 auto 12px' }} />
-          <p style={{ color: 'var(--text-muted)' }}>暂无工具数据</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('toolManager.noTools')}</p>
         </div>
       )}
 
@@ -213,8 +231,8 @@ const ToolManager: React.FC = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '14px' }}>
           <AnimatePresence>
             {filtered.map((tool, index) => {
-              const catCfg = CATEGORY_LABELS[tool.category] || CATEGORY_LABELS.general;
-              const stCfg = STATUS_CONFIG[tool.status];
+              const catCfg = CATEGORY_ICONS[tool.category] || CATEGORY_ICONS.general;
+              const stCfg = STATUS_COLORS[tool.status];
               return (
                 <motion.div key={tool.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}
                   style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '12px', padding: '18px' }}
@@ -228,15 +246,15 @@ const ToolManager: React.FC = () => {
                       </div>
                       <div>
                         <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)', fontFamily: 'monospace' }}>{tool.name}</h3>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{catCfg.label}</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{categoryLabels[tool.category]}</span>
                       </div>
                     </div>
-                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', fontWeight: '500', color: stCfg.color, backgroundColor: stCfg.bg }}>{stCfg.label}</span>
+                    <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '12px', fontWeight: '500', color: stCfg.color, backgroundColor: stCfg.bg }}>{statusLabels[tool.status]}</span>
                   </div>
                   <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{tool.description}</p>
                   {tool.parameters && Object.keys(tool.parameters).length > 0 && (
                     <div style={{ marginBottom: '14px', padding: '8px 10px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '6px' }}>
-                      <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>参数定义</p>
+                      <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>{t('toolManager.parameters')}</p>
                       <pre style={{ margin: 0, fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)', overflow: 'auto' }}>{JSON.stringify(tool.parameters)}</pre>
                     </div>
                   )}
@@ -246,11 +264,11 @@ const ToolManager: React.FC = () => {
                       style={{ flex: 1, padding: '7px 10px', border: 'none', borderRadius: '6px', background: tool.status === 'active' ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : 'var(--bg-tertiary)',
                         color: tool.status === 'active' ? 'white' : 'var(--text-muted)', cursor: tool.status === 'disabled' ? 'not-allowed' : 'pointer',
                         fontSize: '12px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                      }}><Play size={12} /> 执行</button>
+                      }}><Play size={12} /> {t('toolManager.execute')}</button>
                     <button onClick={() => handleToggleStatus(tool.id)} disabled={actionLoading === `toggle-${tool.id}`}
                       style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'transparent',
                         color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit',
-                      }}>{actionLoading === `toggle-${tool.id}` ? <Loader2 size={12} /> : tool.status === 'active' ? <Eye size={12} /> : <CheckCircle2 size={12} />}{tool.status === 'active' ? ' 禁用' : ' 启用'}</button>
+                      }}>{actionLoading === `toggle-${tool.id}` ? <Loader2 size={12} /> : tool.status === 'active' ? <Eye size={12} /> : <CheckCircle2 size={12} />}{tool.status === 'active' ? ` ${t('toolManager.disable')}` : ` ${t('toolManager.enable')}`}</button>
                     <button onClick={() => handleDelete(tool.id)} disabled={actionLoading === `del-${tool.id}`}
                       style={{ width: '32px', border: '1px solid var(--border-color)', borderRadius: '6px', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     >{actionLoading === `del-${tool.id}` ? <Loader2 size={11} /> : <Trash2 size={13} />}</button>
@@ -273,38 +291,38 @@ const ToolManager: React.FC = () => {
                 backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px',
                 boxShadow: '0 25px 50px rgba(0,0,0,0.3)', maxWidth: '480px', width: '90vw', padding: '24px',
               }}>
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>注册新工具</h3>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '16px' }}>{t('toolManager.addToolTitle')}</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>工具名称 *</label>
-                  <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="例如：web_search"
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('toolManager.toolName')} *</label>
+                  <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('toolManager.namePlaceholder')}
                     style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
                       backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>描述</label>
-                  <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={2} placeholder="描述工具的功能..."
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('toolManager.description')}</label>
+                  <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={2} placeholder={t('toolManager.descPlaceholder')}
                     style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
                       backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>分类</label>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('toolManager.category')}</label>
                   <select value={newCategory} onChange={e => setNewCategory(e.target.value)} style={{
                     width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
                     backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', cursor: 'pointer',
                   }}>
-                    {Object.entries(CATEGORY_LABELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                    {Object.entries(CATEGORY_ICONS).map(([k, v]) => <option key={k} value={k}>{categoryLabels[k]}</option>)}
                   </select>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button onClick={() => setShowAddModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>取消</button>
+                <button onClick={() => setShowAddModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>{t('toolManager.cancel')}</button>
                 <button onClick={handleAdd} disabled={!newName.trim()} style={{
                   padding: '8px 16px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', color: 'white',
                   cursor: !newName.trim() ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-                }}>{actionLoading === 'add' ? <Loader2 size={14} /> : <Plus size={14} />}注册</button>
+                }}>{actionLoading === 'add' ? <Loader2 size={14} /> : <Plus size={14} />}{t('toolManager.register')}</button>
               </div>
             </motion.div>
           </>
@@ -322,27 +340,27 @@ const ToolManager: React.FC = () => {
                 backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px',
                 boxShadow: '0 25px 50px rgba(0,0,0,0.3)', maxWidth: '520px', width: '90vw', padding: '24px',
               }}>
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>执行工具</h3>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>{t('toolManager.executeTitle')}</h3>
               <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: 'var(--text-muted)' }}><code style={{ fontFamily: 'monospace', color: 'var(--primary-color)' }}>{selectedTool.name}</code> — {selectedTool.description}</p>
               {selectedTool.parameters && Object.keys(selectedTool.parameters).length > 0 && (
                 <div style={{ marginBottom: '14px', padding: '10px 14px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                  <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--text-muted)' }}>预期参数：</p>
+                  <p style={{ margin: '0 0 6px 0', fontSize: '12px', color: 'var(--text-muted)' }}>{t('toolManager.expectedParams')}：</p>
                   <pre style={{ margin: 0, fontSize: '12px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{JSON.stringify(selectedTool.parameters, null, 2)}</pre>
                 </div>
               )}
               <textarea value={executeParams} onChange={e => setExecuteParams(e.target.value)} rows={4}
-                placeholder='输入 JSON 格式的参数，例如：{"query": "AI Agent"}'
+                placeholder={t('toolManager.paramsPlaceholder')}
                 style={{ width: '100%', padding: '12px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
                   backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: "'JetBrains Mono', monospace",
                   outline: 'none', resize: 'vertical', marginBottom: '16px', boxSizing: 'border-box'
                 }}
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button onClick={() => setShowExecuteModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>取消</button>
+                <button onClick={() => setShowExecuteModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: '13px', fontFamily: 'inherit' }}>{t('toolManager.cancel')}</button>
                 <button onClick={handleExecute} disabled={actionLoading === 'exec'} style={{
                   padding: '8px 16px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #06b6d4, #0891b2)', color: 'white',
                   cursor: actionLoading === 'exec' ? 'not-allowed' : 'pointer', fontSize: '13px', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: '4px',
-                }}>{actionLoading === 'exec' ? <Loader2 size={14} /> : <Play size={14} />}执行</button>
+                }}>{actionLoading === 'exec' ? <Loader2 size={14} /> : <Play size={14} />}{t('toolManager.execute')}</button>
               </div>
             </motion.div>
           </>
