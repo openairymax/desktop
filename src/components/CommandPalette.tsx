@@ -36,67 +36,113 @@ interface CommandItem {
 
 const COMMANDS: CommandItem[] = [
   {
-    id: 'goto-dash', label: 'Go to Dashboard', shortcut: ['Ctrl', '1'],
-    icon: LayoutDashboard, category: 'navigation', path: '/',
+    id: 'goto-dash',
+    label: 'Go to Dashboard',
+    shortcut: ['Ctrl', '1'],
+    icon: LayoutDashboard,
+    category: 'navigation',
+    path: '/',
     keywords: ['dashboard', 'home', 'overview', 'main'],
   },
   {
-    id: 'goto-serv', label: 'Go to Services', shortcut: ['Ctrl', '2'],
-    icon: Server, category: 'navigation', path: '/services',
+    id: 'goto-serv',
+    label: 'Go to Services',
+    shortcut: ['Ctrl', '2'],
+    icon: Server,
+    category: 'navigation',
+    path: '/services',
     keywords: ['services', 'docker', 'containers'],
   },
   {
-    id: 'goto-agen', label: 'Go to Agents', shortcut: ['Ctrl', '3'],
-    icon: Users, category: 'navigation', path: '/agents',
+    id: 'goto-agen',
+    label: 'Go to Agents',
+    shortcut: ['Ctrl', '3'],
+    icon: Users,
+    category: 'navigation',
+    path: '/agents',
     keywords: ['agents', 'ai', 'bots'],
   },
   {
-    id: 'goto-task', label: 'Go to Tasks', shortcut: ['Ctrl', '4'],
-    icon: ClipboardList, category: 'navigation', path: '/tasks',
+    id: 'goto-task',
+    label: 'Go to Tasks',
+    shortcut: ['Ctrl', '4'],
+    icon: ClipboardList,
+    category: 'navigation',
+    path: '/tasks',
     keywords: ['tasks', 'jobs'],
   },
   {
-    id: 'goto-llm', label: 'AI Model Configuration',
-    icon: Brain, category: 'navigation', path: '/llm-config',
+    id: 'goto-llm',
+    label: 'AI Model Configuration',
+    icon: Brain,
+    category: 'navigation',
+    path: '/llm-config',
     keywords: ['ai', 'llm', 'model', 'openai', 'claude', 'api'],
   },
   {
-    id: 'goto-conf', label: 'Configuration Editor',
-    icon: SettingsIcon, category: 'navigation', path: '/config',
+    id: 'goto-conf',
+    label: 'Configuration Editor',
+    icon: SettingsIcon,
+    category: 'navigation',
+    path: '/config',
     keywords: ['config', 'yaml', 'env', 'settings'],
   },
   {
-    id: 'goto-logs', label: 'View System Logs',
-    icon: FileText, category: 'navigation', path: '/logs',
+    id: 'goto-logs',
+    label: 'View System Logs',
+    icon: FileText,
+    category: 'navigation',
+    path: '/logs',
     keywords: ['logs', 'errors', 'debugging'],
   },
   {
-    id: 'goto-term', label: 'Open Terminal',
-    icon: Terminal, category: 'navigation', path: '/terminal',
+    id: 'goto-term',
+    label: 'Open Terminal',
+    icon: Terminal,
+    category: 'navigation',
+    path: '/terminal',
     keywords: ['terminal', 'shell', 'command', 'bash'],
   },
   {
-    id: 'goto-sett', label: 'Settings & Preferences',
-    icon: SettingsIcon, category: 'navigation', path: '/settings',
+    id: 'goto-sett',
+    label: 'Settings & Preferences',
+    icon: SettingsIcon,
+    category: 'navigation',
+    path: '/settings',
     keywords: ['preferences', 'theme', 'language'],
   },
   {
-    id: 'toggle-sidebar', label: 'Toggle Sidebar',
-    shortcut: ['Ctrl', 'B'], icon: Search, category: 'actions',
+    id: 'toggle-sidebar',
+    label: 'Toggle Sidebar',
+    shortcut: ['Ctrl', 'B'],
+    icon: Search,
+    category: 'actions',
     keywords: ['sidebar', 'panel', 'toggle', 'hide', 'show'],
-    action: () => { window.dispatchEvent(new CustomEvent('toggle-sidebar')); },
+    action: () => {
+      window.dispatchEvent(new CustomEvent('toggle-sidebar'));
+    },
   },
   {
-    id: 'refresh-page', label: 'Refresh Page',
-    shortcut: ['F5'], icon: RefreshCw, category: 'actions',
+    id: 'refresh-page',
+    label: 'Refresh Page',
+    shortcut: ['F5'],
+    icon: RefreshCw,
+    category: 'actions',
     keywords: ['refresh', 'reload', 'restart'],
-    action: () => { window.location.reload(); },
+    action: () => {
+      window.location.reload();
+    },
   },
   {
-    id: 'clear-cache', label: 'Clear Cache',
-    icon: Trash2, category: 'tools',
+    id: 'clear-cache',
+    label: 'Clear Cache',
+    icon: Trash2,
+    category: 'tools',
     keywords: ['cache', 'clear', 'storage'],
-    action: () => { localStorage.clear(); sessionStorage.clear(); },
+    action: () => {
+      localStorage.clear();
+      sessionStorage.clear();
+    },
   },
 ];
 
@@ -121,13 +167,12 @@ const CommandPalette: React.FC = () => {
   const filteredCommands = useMemo(() => {
     let result = COMMANDS;
     if (activeCategory !== 'all') {
-      result = result.filter(c => c.category === activeCategory);
+      result = result.filter((c) => c.category === activeCategory);
     }
     if (query.trim()) {
       const q = query.toLowerCase();
-      result = result.filter(cmd =>
-        cmd.label.toLowerCase().includes(q) ||
-        cmd.keywords.some(k => k.includes(q))
+      result = result.filter(
+        (cmd) => cmd.label.toLowerCase().includes(q) || cmd.keywords.some((k) => k.includes(q)),
       );
     }
     return result;
@@ -141,12 +186,18 @@ const CommandPalette: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'P') {
         e.preventDefault();
-        setIsOpen(prev => !prev);
+        setIsOpen((prev) => !prev);
       }
       if (e.key === 'Escape') setIsOpen(false);
       if (isOpen) {
-        if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedIndex(i => Math.min(i + 1, filteredCommands.length - 1)); }
-        if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedIndex(i => Math.max(i - 1, 0)); }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedIndex((i) => Math.min(i + 1, filteredCommands.length - 1));
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedIndex((i) => Math.max(i - 1, 0));
+        }
         if (e.key === 'Enter' && filteredCommands[selectedIndex]) {
           e.preventDefault();
           executeCommand(filteredCommands[selectedIndex]);
@@ -193,10 +244,15 @@ const CommandPalette: React.FC = () => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)',
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '14px 18px',
+                borderBottom: '1px solid var(--border-subtle)',
+              }}
+            >
               <Command size={18} style={{ color: 'var(--primary-color)' }} />
               <input
                 ref={inputRef}
@@ -208,24 +264,35 @@ const CommandPalette: React.FC = () => {
                 autoFocus
               />
               {query && (
-                <button onClick={() => setQuery('')} className="icon-btn"><X size={16} /></button>
+                <button onClick={() => setQuery('')} className="icon-btn">
+                  <X size={16} />
+                </button>
               )}
             </div>
 
             {/* Category Tabs */}
-            <div style={{
-              display: 'flex', gap: '4px', padding: '8px 14px',
-              borderBottom: '1px solid var(--border-subtle)',
-            }}>
-              {CATEGORIES.map(cat => (
+            <div
+              style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '8px 14px',
+                borderBottom: '1px solid var(--border-subtle)',
+              }}
+            >
+              {CATEGORIES.map((cat) => (
                 <button
                   key={cat.key}
                   onClick={() => setActiveCategory(cat.key)}
                   style={{
-                    padding: '5px 12px', border: 'none', borderRadius: 'var(--radius-sm)',
+                    padding: '5px 12px',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
                     background: activeCategory === cat.key ? 'var(--primary-light)' : 'transparent',
-                    color: activeCategory === cat.key ? 'var(--primary-color)' : 'var(--text-secondary)',
-                    fontSize: '12px', fontWeight: 500, cursor: 'pointer',
+                    color:
+                      activeCategory === cat.key ? 'var(--primary-color)' : 'var(--text-secondary)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
                     transition: 'all var(--transition-fast)',
                   }}
                 >
@@ -248,9 +315,11 @@ const CommandPalette: React.FC = () => {
                     onClick={() => executeCommand(cmd)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
-                    <div className={`global-search-result-icon ${idx === selectedIndex ? '' : ''}`}
+                    <div
+                      className={`global-search-result-icon ${idx === selectedIndex ? '' : ''}`}
                       style={{
-                        background: idx === selectedIndex ? 'var(--primary-color)' : 'var(--bg-tertiary)',
+                        background:
+                          idx === selectedIndex ? 'var(--primary-color)' : 'var(--bg-tertiary)',
                         color: idx === selectedIndex ? '#fff' : 'var(--text-secondary)',
                       }}
                     >
@@ -265,15 +334,26 @@ const CommandPalette: React.FC = () => {
                           if (!sc) return null;
                           return sc.map((key, kidx) => (
                             <React.Fragment key={kidx}>
-                              <kbd className="kbd-key" style={{ fontSize: '10px', padding: '1px 6px' }}>{key}</kbd>
-                              {kidx < sc.length - 1 && <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>+</span>}
+                              <kbd
+                                className="kbd-key"
+                                style={{ fontSize: '10px', padding: '1px 6px' }}
+                              >
+                                {key}
+                              </kbd>
+                              {kidx < sc.length - 1 && (
+                                <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                                  +
+                                </span>
+                              )}
                             </React.Fragment>
                           ));
                         })()}
                       </span>
                     </div>
 
-                    {idx === selectedIndex && <ArrowRight size={13} style={{ color: 'var(--primary-color)' }} />}
+                    {idx === selectedIndex && (
+                      <ArrowRight size={13} style={{ color: 'var(--primary-color)' }} />
+                    )}
                   </button>
                 ))
               )}
@@ -282,10 +362,14 @@ const CommandPalette: React.FC = () => {
             {/* Footer */}
             <div className="global-search-footer">
               <div className="global-search-shortcuts">
-                <kbd>↑↓</kbd><span>Navigate</span>
-                <kbd>↵</kbd><span>Execute</span>
-                <kbd>Esc</kbd><span>Close</span>
-                <kbd>Tab</kbd><span>Switch Category</span>
+                <kbd>↑↓</kbd>
+                <span>Navigate</span>
+                <kbd>↵</kbd>
+                <span>Execute</span>
+                <kbd>Esc</kbd>
+                <span>Close</span>
+                <kbd>Tab</kbd>
+                <span>Switch Category</span>
               </div>
             </div>
           </div>

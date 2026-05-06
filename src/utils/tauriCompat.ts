@@ -28,11 +28,11 @@ async function gatewayInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
   return (json.result ?? json.data) as T;
 }
 
-const fallbackInvoke = async <T = unknown>(cmd: string, _args?: Record<string, unknown>): Promise<T> => {
-  if (cmd.includes('list') || cmd.includes('search')) return [] as T;
-  if (cmd.includes('get') && cmd.includes('status')) return { healthy: false } as T;
-  if (cmd.includes('count') || cmd.includes('metrics')) return { count: 0 } as T;
-  return {} as T;
+const fallbackInvoke = async <T = unknown>(
+  cmd: string,
+  _args?: Record<string, unknown>,
+): Promise<T> => {
+  throw new Error(`Tauri API unavailable: cannot invoke '${cmd}'. Ensure the app is running in Tauri or Gateway is accessible.`);
 };
 
 let tauriInvoke: InvokeFn | null = null;
@@ -45,7 +45,10 @@ import('@tauri-apps/api/core')
     tauriInvoke = null;
   });
 
-const invoke: InvokeFn = async <T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
+const invoke: InvokeFn = async <T = unknown>(
+  cmd: string,
+  args?: Record<string, unknown>,
+): Promise<T> => {
   if (tauriInvoke) {
     try {
       return await tauriInvoke<T>(cmd, args);

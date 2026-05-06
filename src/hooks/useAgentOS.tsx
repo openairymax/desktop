@@ -72,7 +72,7 @@ export function AgentOSProvider({ children }: { children: ReactNode }) {
           const h = await client.testConnection();
           setConnection((prev) => ({ ...prev, health: h }));
         } catch (e) {
-      console.warn('Hook fallback:', e);
+          console.warn('Hook fallback:', e);
           setConnection((prev) =>
             prev.status === 'connected'
               ? { status: 'disconnected', error: 'Connection lost' }
@@ -136,68 +136,88 @@ export function useTasks() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTasks = useCallback(async (opts?: ListOptions) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await client.tasks.list(opts);
-      setTasks(result);
-      return result;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch tasks';
-      setError(msg);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const fetchTasks = useCallback(
+    async (opts?: ListOptions) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await client.tasks.list(opts);
+        setTasks(result);
+        return result;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to fetch tasks';
+        setError(msg);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client],
+  );
 
-  const submitTask = useCallback(async (
-    description: string,
-    options?: { priority?: number; metadata?: Record<string, unknown> },
-  ): Promise<Task | null> => {
-    try {
-      const task = options?.priority !== undefined || options?.metadata
-        ? await client.tasks.submitWithOptions(description, options.priority ?? 0, options.metadata)
-        : await client.tasks.submit(description);
-      await fetchTasks();
-      return task;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit task');
-      return null;
-    }
-  }, [client, fetchTasks]);
+  const submitTask = useCallback(
+    async (
+      description: string,
+      options?: { priority?: number; metadata?: Record<string, unknown> },
+    ): Promise<Task | null> => {
+      try {
+        const task =
+          options?.priority !== undefined || options?.metadata
+            ? await client.tasks.submitWithOptions(
+                description,
+                options.priority ?? 0,
+                options.metadata,
+              )
+            : await client.tasks.submit(description);
+        await fetchTasks();
+        return task;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to submit task');
+        return null;
+      }
+    },
+    [client, fetchTasks],
+  );
 
-  const getTask = useCallback(async (taskId: string): Promise<Task | null> => {
-    try {
-      return await client.tasks.get(taskId);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to get task');
-      return null;
-    }
-  }, [client]);
+  const getTask = useCallback(
+    async (taskId: string): Promise<Task | null> => {
+      try {
+        return await client.tasks.get(taskId);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to get task');
+        return null;
+      }
+    },
+    [client],
+  );
 
-  const cancelTask = useCallback(async (taskId: string): Promise<boolean> => {
-    try {
-      await client.tasks.cancel(taskId);
-      await fetchTasks();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel task');
-      return false;
-    }
-  }, [client, fetchTasks]);
+  const cancelTask = useCallback(
+    async (taskId: string): Promise<boolean> => {
+      try {
+        await client.tasks.cancel(taskId);
+        await fetchTasks();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to cancel task');
+        return false;
+      }
+    },
+    [client, fetchTasks],
+  );
 
-  const deleteTask = useCallback(async (taskId: string): Promise<boolean> => {
-    try {
-      await client.tasks.delete(taskId);
-      await fetchTasks();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete task');
-      return false;
-    }
-  }, [client, fetchTasks]);
+  const deleteTask = useCallback(
+    async (taskId: string): Promise<boolean> => {
+      try {
+        await client.tasks.delete(taskId);
+        await fetchTasks();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete task');
+        return false;
+      }
+    },
+    [client, fetchTasks],
+  );
 
   const waitForTask = useCallback(
     async (taskId: string, timeout?: number): Promise<TaskResult | null> => {
@@ -255,21 +275,24 @@ export function useMemory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchMemories = useCallback(async (opts?: ListOptions) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await client.memories.list(opts);
-      setMemories(result);
-      return result;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch memories';
-      setError(msg);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const fetchMemories = useCallback(
+    async (opts?: ListOptions) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await client.memories.list(opts);
+        setMemories(result);
+        return result;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to fetch memories';
+        setError(msg);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client],
+  );
 
   const writeMemory = useCallback(
     async (content: string, layer: MemoryLayer): Promise<Memory | null> => {
@@ -297,16 +320,19 @@ export function useMemory() {
     [client],
   );
 
-  const deleteMemory = useCallback(async (memoryId: string): Promise<boolean> => {
-    try {
-      await client.memories.delete(memoryId);
-      await fetchMemories();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete memory');
-      return false;
-    }
-  }, [client, fetchMemories]);
+  const deleteMemory = useCallback(
+    async (memoryId: string): Promise<boolean> => {
+      try {
+        await client.memories.delete(memoryId);
+        await fetchMemories();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete memory');
+        return false;
+      }
+    },
+    [client, fetchMemories],
+  );
 
   const getMemoryCount = useCallback(async (): Promise<number> => {
     try {
@@ -368,43 +394,52 @@ export function useSessions() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSessions = useCallback(async (opts?: ListOptions) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await client.sessions.list(opts);
-      setSessions(result);
-      return result;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch sessions';
-      setError(msg);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const fetchSessions = useCallback(
+    async (opts?: ListOptions) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await client.sessions.list(opts);
+        setSessions(result);
+        return result;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to fetch sessions';
+        setError(msg);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client],
+  );
 
-  const createSession = useCallback(async (userId: string): Promise<Session | null> => {
-    try {
-      const session = await client.sessions.create(userId);
-      await fetchSessions();
-      return session;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create session');
-      return null;
-    }
-  }, [client, fetchSessions]);
+  const createSession = useCallback(
+    async (userId: string): Promise<Session | null> => {
+      try {
+        const session = await client.sessions.create(userId);
+        await fetchSessions();
+        return session;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to create session');
+        return null;
+      }
+    },
+    [client, fetchSessions],
+  );
 
-  const closeSession = useCallback(async (sessionId: string): Promise<boolean> => {
-    try {
-      await client.sessions.close(sessionId);
-      await fetchSessions();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to close session');
-      return false;
-    }
-  }, [client, fetchSessions]);
+  const closeSession = useCallback(
+    async (sessionId: string): Promise<boolean> => {
+      try {
+        await client.sessions.close(sessionId);
+        await fetchSessions();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to close session');
+        return false;
+      }
+    },
+    [client, fetchSessions],
+  );
 
   const getSessionCount = useCallback(async (): Promise<number> => {
     try {
@@ -454,32 +489,38 @@ export function useSkills() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchSkills = useCallback(async (opts?: ListOptions) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await client.skills.list(opts);
-      setSkills(result);
-      return result;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Failed to fetch skills';
-      setError(msg);
-      return [];
-    } finally {
-      setLoading(false);
-    }
-  }, [client]);
+  const fetchSkills = useCallback(
+    async (opts?: ListOptions) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const result = await client.skills.list(opts);
+        setSkills(result);
+        return result;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to fetch skills';
+        setError(msg);
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [client],
+  );
 
-  const loadSkill = useCallback(async (skillId: string): Promise<Skill | null> => {
-    try {
-      const skill = await client.skills.load(skillId);
-      await fetchSkills();
-      return skill;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load skill');
-      return null;
-    }
-  }, [client, fetchSkills]);
+  const loadSkill = useCallback(
+    async (skillId: string): Promise<Skill | null> => {
+      try {
+        const skill = await client.skills.load(skillId);
+        await fetchSkills();
+        return skill;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load skill');
+        return null;
+      }
+    },
+    [client, fetchSkills],
+  );
 
   const executeSkill = useCallback(
     async (skillId: string, parameters?: Record<string, unknown>): Promise<SkillResult | null> => {
@@ -493,19 +534,26 @@ export function useSkills() {
     [client],
   );
 
-  const unloadSkill = useCallback(async (skillId: string): Promise<boolean> => {
-    try {
-      await client.skills.unload(skillId);
-      await fetchSkills();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to unload skill');
-      return false;
-    }
-  }, [client, fetchSkills]);
+  const unloadSkill = useCallback(
+    async (skillId: string): Promise<boolean> => {
+      try {
+        await client.skills.unload(skillId);
+        await fetchSkills();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to unload skill');
+        return false;
+      }
+    },
+    [client, fetchSkills],
+  );
 
   const registerSkill = useCallback(
-    async (name: string, description: string, parameters?: Record<string, unknown>): Promise<Skill | null> => {
+    async (
+      name: string,
+      description: string,
+      parameters?: Record<string, unknown>,
+    ): Promise<Skill | null> => {
       try {
         const skill = await client.skills.register(name, description, parameters);
         await fetchSkills();
@@ -518,16 +566,19 @@ export function useSkills() {
     [client, fetchSkills],
   );
 
-  const deleteSkill = useCallback(async (skillId: string): Promise<boolean> => {
-    try {
-      await client.skills.delete(skillId);
-      await fetchSkills();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete skill');
-      return false;
-    }
-  }, [client, fetchSkills]);
+  const deleteSkill = useCallback(
+    async (skillId: string): Promise<boolean> => {
+      try {
+        await client.skills.delete(skillId);
+        await fetchSkills();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to delete skill');
+        return false;
+      }
+    },
+    [client, fetchSkills],
+  );
 
   const searchSkills = useCallback(
     async (query: string, topK = 10): Promise<Skill[]> => {
@@ -587,36 +638,45 @@ export function useAgents() {
     }
   }, [client]);
 
-  const spawnAgent = useCallback(async (name: string, spec?: Record<string, unknown>) => {
-    try {
-      const agent = await client.agents.spawn(name, spec);
-      await fetchAgents();
-      return agent;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to spawn agent');
-      return null;
-    }
-  }, [client, fetchAgents]);
+  const spawnAgent = useCallback(
+    async (name: string, spec?: Record<string, unknown>) => {
+      try {
+        const agent = await client.agents.spawn(name, spec);
+        await fetchAgents();
+        return agent;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to spawn agent');
+        return null;
+      }
+    },
+    [client, fetchAgents],
+  );
 
-  const terminateAgent = useCallback(async (agentId: string): Promise<boolean> => {
-    try {
-      await client.agents.terminate(agentId);
-      await fetchAgents();
-      return true;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to terminate agent');
-      return false;
-    }
-  }, [client, fetchAgents]);
+  const terminateAgent = useCallback(
+    async (agentId: string): Promise<boolean> => {
+      try {
+        await client.agents.terminate(agentId);
+        await fetchAgents();
+        return true;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to terminate agent');
+        return false;
+      }
+    },
+    [client, fetchAgents],
+  );
 
-  const invokeAgent = useCallback(async (agentId: string, input: string): Promise<string | null> => {
-    try {
-      return await client.agents.invoke(agentId, input);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to invoke agent');
-      return null;
-    }
-  }, [client]);
+  const invokeAgent = useCallback(
+    async (agentId: string, input: string): Promise<string | null> => {
+      try {
+        return await client.agents.invoke(agentId, input);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to invoke agent');
+        return null;
+      }
+    },
+    [client],
+  );
 
   return {
     agents,

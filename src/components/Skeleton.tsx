@@ -38,7 +38,12 @@ const SkeletonCard: React.FC<{ lines?: number }> = ({ lines = 3 }) => (
       </div>
     </div>
     {Array.from({ length: lines }).map((_, i) => (
-      <Skeleton key={i} height={12} style={{ marginBottom: i < lines - 1 ? '10px' : 0 }} width={i === lines - 1 ? '70%' : '100%'} />
+      <Skeleton
+        key={i}
+        height={12}
+        style={{ marginBottom: i < lines - 1 ? '10px' : 0 }}
+        width={i === lines - 1 ? '70%' : '100%'}
+      />
     ))}
   </div>
 );
@@ -63,7 +68,7 @@ const SkeletonTable: React.FC<{ rows?: number; cols?: number }> = ({ rows = 5, c
         <tr>
           {Array.from({ length: cols }).map((_, i) => (
             <th key={i} style={{ padding: '14px 16px', textAlign: 'left' }}>
-              <Skeleton width={`${60 + (i * 15)}%`} height={12} />
+              <Skeleton width={`${60 + i * 15}%`} height={12} />
             </th>
           ))}
         </tr>
@@ -74,7 +79,13 @@ const SkeletonTable: React.FC<{ rows?: number; cols?: number }> = ({ rows = 5, c
             {Array.from({ length: cols }).map((_, colIdx) => (
               <td key={colIdx} style={{ padding: '16px' }}>
                 <Skeleton
-                  width={colIdx === 0 ? `${50 + (rowIdx % 3) * 15}%` : colIdx === cols - 1 ? '40%' : '65%'}
+                  width={
+                    colIdx === 0
+                      ? `${50 + (rowIdx % 3) * 15}%`
+                      : colIdx === cols - 1
+                        ? '40%'
+                        : '65%'
+                  }
                   height={13}
                 />
               </td>
@@ -108,14 +119,28 @@ export const Skeletons = {
 
 export const PageLoader: React.FC = () => (
   <div className="page-container" style={{ paddingTop: '40px' }}>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(4, 1fr)',
+        gap: '16px',
+        marginBottom: '24px',
+      }}
+    >
       <SkeletonStatCard />
       <SkeletonStatCard />
       <SkeletonStatCard />
       <SkeletonStatCard />
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '24px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, 1fr)',
+        gap: '16px',
+        marginBottom: '24px',
+      }}
+    >
       <SkeletonCard lines={4} />
       <SkeletonCard lines={4} />
     </div>

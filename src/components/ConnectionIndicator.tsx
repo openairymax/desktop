@@ -10,14 +10,17 @@ interface ConnectionIndicatorProps {
   showReconnect?: boolean;
 }
 
-const STATUS_CONFIG: Record<ConnectionStatus, {
-  color: string;
-  bgColor: string;
-  label: string;
-  labelCn: string;
-  icon: React.ReactNode;
-  pulse: boolean;
-}> = {
+const STATUS_CONFIG: Record<
+  ConnectionStatus,
+  {
+    color: string;
+    bgColor: string;
+    label: string;
+    labelCn: string;
+    icon: React.ReactNode;
+    pulse: boolean;
+  }
+> = {
   connected: {
     color: 'var(--success-color, #22c55e)',
     bgColor: 'rgba(34, 197, 94, 0.1)',
@@ -109,7 +112,8 @@ const ConnectionIndicator: React.FC<ConnectionIndicatorProps> = ({
     borderRadius: '4px',
     backgroundColor: compact ? 'transparent' : config.bgColor,
     transition: 'all 0.3s ease',
-    cursor: (status === 'disconnected' || status === 'error') && showReconnect ? 'pointer' : 'default',
+    cursor:
+      (status === 'disconnected' || status === 'error') && showReconnect ? 'pointer' : 'default',
     userSelect: 'none',
   };
 
@@ -146,11 +150,13 @@ const ConnectionIndicator: React.FC<ConnectionIndicatorProps> = ({
       `}</style>
       <div
         style={containerStyle}
-        onClick={(status === 'disconnected' || status === 'error') && showReconnect ? handleReconnect : undefined}
+        onClick={
+          (status === 'disconnected' || status === 'error') && showReconnect
+            ? handleReconnect
+            : undefined
+        }
         title={
-          status === 'error' && errorDetail
-            ? `${config.labelCn}: ${errorDetail}`
-            : config.labelCn
+          status === 'error' && errorDetail ? `${config.labelCn}: ${errorDetail}` : config.labelCn
         }
       >
         <div style={dotStyle} />

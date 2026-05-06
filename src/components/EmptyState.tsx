@@ -10,7 +10,13 @@ import {
   Sparkles,
 } from 'lucide-react';
 
-export type EmptyStateType = 'no-data' | 'search-empty' | 'offline' | 'error' | 'success' | 'custom';
+export type EmptyStateType =
+  | 'no-data'
+  | 'search-empty'
+  | 'offline'
+  | 'error'
+  | 'success'
+  | 'custom';
 
 interface EmptyStateProps {
   type?: EmptyStateType;
@@ -27,10 +33,10 @@ interface EmptyStateProps {
 const ICON_MAP: Record<EmptyStateType, React.ReactNode> = {
   'no-data': <Inbox size={48} />,
   'search-empty': <Search size={48} />,
-  'offline': <WifiOff size={48} />,
-  'error': <AlertCircle size={48} />,
-  'success': <Sparkles size={48} />,
-  'custom': <Inbox size={48} />,
+  offline: <WifiOff size={48} />,
+  error: <AlertCircle size={48} />,
+  success: <Sparkles size={48} />,
+  custom: <Inbox size={48} />,
 };
 
 const EmptyState: React.FC<EmptyStateProps> = ({
@@ -63,15 +69,11 @@ const EmptyState: React.FC<EmptyStateProps> = ({
 
   return (
     <div className="empty-state">
-      <div className="empty-state-icon">
-        {icon || ICON_MAP[type]}
-      </div>
+      <div className="empty-state-icon">{icon || ICON_MAP[type]}</div>
 
       <div className="empty-state-text">{title}</div>
 
-      {description && (
-        <div className="empty-state-hint">{description}</div>
-      )}
+      {description && <div className="empty-state-hint">{description}</div>}
 
       {(actionLabel || secondaryLabel) && (
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>

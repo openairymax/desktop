@@ -1,20 +1,26 @@
-export const exportToCSV = (data: Record<string, any>[], filename: string, columns?: { key: string; label: string }[]) => {
+export const exportToCSV = (
+  data: Record<string, any>[],
+  filename: string,
+  columns?: { key: string; label: string }[],
+) => {
   if (!data || data.length === 0) return;
 
-  const keys = columns ? columns.map(c => c.key) : Object.keys(data[0]);
-  const labels = columns ? columns.map(c => c.label) : keys;
+  const keys = columns ? columns.map((c) => c.key) : Object.keys(data[0]);
+  const labels = columns ? columns.map((c) => c.label) : keys;
 
   const csvContent = [
     labels.join(','),
-    ...data.map(row =>
-      keys.map(key => {
-        const value = row[key];
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value ?? '';
-      }).join(',')
-    )
+    ...data.map((row) =>
+      keys
+        .map((key) => {
+          const value = row[key];
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value ?? '';
+        })
+        .join(','),
+    ),
   ].join('\n');
 
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -72,7 +78,7 @@ export const generateId = (): string => {
 
 export const debounce = <T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): ((...args: Parameters<T>) => void) => {
   let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
@@ -83,7 +89,7 @@ export const debounce = <T extends (...args: any[]) => any>(
 
 export const throttle = <T extends (...args: any[]) => any>(
   func: T,
-  limit: number
+  limit: number,
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
   return (...args: Parameters<T>) => {

@@ -73,9 +73,8 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
 
   if (!isOpen) return null;
 
-  const filtered = activeCategory === 'all'
-    ? SHORTCUTS
-    : SHORTCUTS.filter(s => s.category === activeCategory);
+  const filtered =
+    activeCategory === 'all' ? SHORTCUTS : SHORTCUTS.filter((s) => s.category === activeCategory);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -99,7 +98,7 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
           >
             All
           </button>
-          {CATEGORIES.map(cat => (
+          {CATEGORIES.map((cat) => (
             <button
               key={cat.key}
               className={`kbd-cat-btn ${activeCategory === cat.key ? 'active' : ''}`}
@@ -131,7 +130,9 @@ const KeyboardShortcutsModal: React.FC<KeyboardShortcutsModalProps> = ({ isOpen,
         {/* Footer */}
         <div className="keyboard-shortcuts-footer">
           <HelpCircle size={14} />
-          <span>Press <kbd className="kbd-key">?</kbd> anytime to show this dialog</span>
+          <span>
+            Press <kbd className="kbd-key">?</kbd> anytime to show this dialog
+          </span>
         </div>
       </div>
     </div>
@@ -147,7 +148,7 @@ export function useKeyboardShortcuts() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '?' && !isInputFocused()) {
         e.preventDefault();
-        setShowShortcuts(prev => !prev);
+        setShowShortcuts((prev) => !prev);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -159,5 +160,9 @@ export function useKeyboardShortcuts() {
 
 function isInputFocused(): boolean {
   const el = document.activeElement;
-  return el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.getAttribute('contenteditable') === 'true';
+  return (
+    el?.tagName === 'INPUT' ||
+    el?.tagName === 'TEXTAREA' ||
+    el?.getAttribute('contenteditable') === 'true'
+  );
 }
