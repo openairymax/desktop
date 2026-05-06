@@ -823,8 +823,6 @@ pub struct MemoryEntry {
     pub created_at: String,
 }
 
-static MEMORY_STORE: Mutex<Vec<MemoryEntry>> = Mutex::new(Vec::new());
-
 #[tauri::command]
 pub async fn memory_store(
     memory_type: String,
@@ -855,18 +853,8 @@ pub async fn memory_store(
             Ok(entry)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_store: {}, using local fallback", e);
-            let entry = MemoryEntry {
-                id: format!("mem-{}", uuid::Uuid::new_v4()),
-                memory_type: memory_type.clone(),
-                content: content.clone(),
-                source,
-                metadata,
-                tokens: ((content.len() as f32) / 4.0).ceil() as u32,
-                created_at: chrono::Utc::now().to_rfc3339(),
-            };
-            MEMORY_STORE.lock().unwrap().push(entry.clone());
-            Ok(entry)
+            log::error!("Backend unavailable for memory_store: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -905,24 +893,8 @@ pub async fn memory_search(
             Ok(entries)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_search: {}, using local fallback", e);
-            let limit = limit.unwrap_or(10) as usize;
-            let store = MEMORY_STORE.lock().unwrap();
-            let results: Vec<MemoryEntry> = store
-                    .iter()
-                    .filter(|m| {
-                        if let Some(ref t) = type_filter {
-                            if m.memory_type != *t { return false; }
-                        }
-                        if !query.is_empty() && !m.content.to_lowercase().contains(&query.to_lowercase()) {
-                            return false;
-                        }
-                        true
-                    })
-                    .take(limit)
-                    .cloned()
-                    .collect();
-            Ok(results)
+            log::error!("Backend unavailable for memory_search: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -958,15 +930,8 @@ pub async fn memory_list(
             Ok(entries)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_list: {}, using local fallback", e);
-            let limit = limit.unwrap_or(50) as usize;
-            let store = MEMORY_STORE.lock().unwrap();
-            let results: Vec<MemoryEntry> = if let Some(ref t) = type_filter {
-                    store.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
-                } else {
-                    store.iter().take(limit).cloned().collect()
-                };
-            Ok(results)
+            log::error!("Backend unavailable for memory_list: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -981,9 +946,8 @@ pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Res
             Ok(())
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_delete: {}, using local fallback", e);
-            MEMORY_STORE.lock().unwrap().retain(|m| m.id != memory_id);
-            Ok(())
+            log::error!("Backend unavailable for memory_delete: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -999,17 +963,8 @@ pub async fn memory_clear(type_filter: Option<String>, state: State<'_, AppState
             Ok(deleted)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_clear: {}, using local fallback", e);
-            let mut store = MEMORY_STORE.lock().unwrap();
-            let count_before = store.len();
-            if let Some(ref t) = type_filter {
-                store.retain(|m| m.memory_type != *t);
-            } else {
-                store.clear();
-            }
-            let count_after = store.len();
-            let deleted = (count_before - count_after) as u64;
-            Ok(deleted)
+            log::error!("Backend unavailable for memory_clear: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -1019,27 +974,8 @@ pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_js
     match state.backend.send_jsonrpc("memory.context_stats", serde_json::json!({})).await {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::warn!("Backend unavailable for context_window_stats: {}, using local fallback", e);
-            let total_entries: usize;
-            total_entries = MEMORY_STORE.lock().unwrap().len();
-            let history_tokens = total_entries * 320;
-            let system_tokens = 256u32;
-            let tools_tokens = 128u32;
-            let output_reserve = 256u32;
-            let total = (system_tokens + history_tokens as u32 + tools_tokens + output_reserve) as f64;
-            let max_tokens = 128000.0;
-
-            Ok(serde_json::json!({
-                "totalTokens": total.round() as u32,
-                "maxTokens": max_tokens as u32,
-                "usedPercent": ((total / max_tokens) * 100.0 * 100.0).round() / 100.0,
-                "breakdown": {
-                    "system": system_tokens,
-                    "history": history_tokens,
-                    "tools": tools_tokens,
-                    "output": output_reserve
-                }
-            }))
+            log::error!("Backend unavailable for context_window_stats: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -1096,32 +1032,8 @@ pub async fn run_cognitive_loop(
                 }
             }
 
-            let now = chrono::Utc::now().to_rfc3339();
-            let fallback_steps = vec![
-                CognitiveStep {
-                    phase: "perception".to_string(),
-                    thought: format!("Input received and processed via backend: {}", &input[..input.len().min(30)]),
-                    detail: Some("Processed through AgentOS Gateway JSON-RPC".to_string()),
-                    timestamp: now.clone(),
-                    tool_call: None,
-                },
-                CognitiveStep {
-                    phase: "reasoning".to_string(),
-                    thought: "Backend reasoning completed".to_string(),
-                    detail: Some(format!("Response keys: {:?}", result.as_object().map(|o| o.keys().collect::<Vec<_>>()))),
-                    timestamp: now.clone(),
-                    tool_call: None,
-                },
-                CognitiveStep {
-                    phase: "reflection".to_string(),
-                    thought: "Cognitive loop completed successfully".to_string(),
-                    detail: None,
-                    timestamp: now,
-                    tool_call: None,
-                },
-            ];
-
-            Ok(fallback_steps)
+            log::warn!("Cognitive loop returned empty steps from backend");
+            Ok(vec![])
         }
         Err(e) => {
             log::warn!("Backend cognitive loop unavailable, returning structured error: {}", e);
@@ -1222,27 +1134,13 @@ pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Va
 
 #[tauri::command]
 pub async fn runtime_metrics(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    let entry_count: usize;
-    entry_count = MEMORY_STORE.lock().unwrap().len();
-
     match state.backend.get_metrics().await {
         Ok(metrics) => {
-            let mut result = metrics;
-            if result.get("memory_entries_count").is_none() {
-                result.as_object_mut().map(|o| o.insert("memory_entries_count".to_string(), serde_json::Value::Number(entry_count.into())));
-            }
-            Ok(result)
+            Ok(metrics)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for runtime_metrics: {}, using local data", e);
-            Ok(serde_json::json!({
-                "cycle_count": 0,
-                "tool_call_count": 0,
-                "memory_entries_count": entry_count,
-                "avg_latency_ms": 0,
-                "success_rate": 0.0,
-                "total_tokens_consumed": 0
-            }))
+            log::error!("Backend unavailable for runtime_metrics: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }
@@ -1457,18 +1355,8 @@ pub async fn get_agent_config(agent_id: String, state: State<'_, AppState>) -> R
     match state.backend.send_jsonrpc("agent.get_config", body).await {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::warn!("Backend unavailable for get_agent_config: {}", e);
-            Ok(serde_json::json!({
-                "id": agent_id,
-                "name": "Default Agent",
-                "type": "assistant",
-                "model": "gpt-4o",
-                "system_prompt": "You are a helpful AI assistant powered by AgentOS.",
-                "tools": ["search", "code", "file"],
-                "auto_start": false,
-                "max_concurrent_tasks": 5,
-                "memory_config": { "max_entries": 1000, "retention_days": 30 }
-            }))
+            log::error!("Backend unavailable for get_agent_config: {}", e);
+            Err(format!("Backend unavailable: {}. Please ensure AgentOS Gateway is running.", e))
         }
     }
 }

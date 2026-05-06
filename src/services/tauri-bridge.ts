@@ -6,6 +6,7 @@
 // ============================================================
 
 import { initSdk, isTauri, autoInit } from './agentos-sdk';
+import { AGENTOS_GATEWAY_URL } from '../constants/endpoints';
 
 let initialized = false;
 
@@ -37,44 +38,29 @@ export async function initializeTauri(): Promise<void> {
  * Attempts to connect to real AgentOS Gateway via HTTP, with fallback to simulated data.
  */
 function setupGatewayInvoke(): void {
-  const GATEWAY_URL = localStorage.getItem('agentos-endpoint') || 'http://localhost:18789';
+  const GATEWAY_URL = localStorage.getItem('agentos-endpoint') || AGENTOS_GATEWAY_URL;
 
   initSdk(async <T>(cmd: string, args?: Record<string, unknown>): Promise<T> => {
-    try {
-      const response = await fetch(`${GATEWAY_URL}/jsonrpc`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          jsonrpc: '2.0',
-          method: cmd,
-          params: args || {},
-          id: Date.now(),
-        }),
-      });
+    const response = await fetch(`${GATEWAY_URL}/jsonrpc`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: cmd,
+        params: args || {},
+        id: Date.now(),
+      }),
+    });
 
-      if (response.ok) {
-        const json = await response.json();
-        return (json.result || json.data) as T;
-      }
-    } catch (e) {
-      console.warn(`[Browser] Gateway call failed for ${cmd}, using fallback:`, e);
+    if (!response.ok) {
+      throw new Error(`Gateway call '${cmd}' returned HTTP ${response.status}`);
     }
 
-    const now = new Date().toISOString();
-    const fallbacks: Record<string, unknown> = {
-      get_health_status: { healthy: true, version: '0.2.0' },
-      get_system_info: { os: 'Linux', cpuCores: 8, totalMemoryGb: 16.0 },
-      list_agents: [],
-      list_tasks: [],
-      memory_list: [],
-      list_tools: [],
-      runtime_metrics: { cycleCount: 0, memoryEntriesCount: 0 },
-    };
-
-    if (fallbacks[cmd]) return fallbacks[cmd] as T;
-    if (cmd.includes('list') || cmd.includes('search')) return [] as T;
-    if (cmd.includes('get') && cmd.includes('status')) return { healthy: false } as T;
-    return {} as T;
+    const json = await response.json();
+    if (json.error) {
+      throw new Error(`Gateway call '${cmd}' error: ${json.error.message || JSON.stringify(json.error)}`);
+    }
+    return (json.result || json.data) as T;
   });
 }
 

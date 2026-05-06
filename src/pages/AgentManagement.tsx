@@ -1,7 +1,20 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Bot, Plus, Play, Square, Search, Trash2, Eye,
-  AlertCircle, Clock, X, Zap, RefreshCw, Loader2, ChevronDown
+  Bot,
+  Plus,
+  Play,
+  Square,
+  Search,
+  Trash2,
+  Eye,
+  AlertCircle,
+  Clock,
+  X,
+  Zap,
+  RefreshCw,
+  Loader2,
+  ChevronDown,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAgents } from '../hooks/useAgentOS';
@@ -17,14 +30,42 @@ interface Agent {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string; dot: string }> = {
-  running: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '运行中', dot: 'bg-green-500' },
-  idle: { color: 'var(--warning-color)', bg: 'var(--warning-light)', label: '空闲', dot: 'bg-yellow-500' },
-  stopped: { color: 'var(--text-muted)', bg: 'var(--bg-tertiary)', label: '已停止', dot: 'bg-gray-400' },
-  error: { color: 'var(--error-color)', bg: 'var(--error-light)', label: '错误', dot: 'bg-red-500' },
+  running: {
+    color: 'var(--success-color)',
+    bg: 'var(--success-light)',
+    label: '运行中',
+    dot: 'bg-green-500',
+  },
+  idle: {
+    color: 'var(--warning-color)',
+    bg: 'var(--warning-light)',
+    label: '空闲',
+    dot: 'bg-yellow-500',
+  },
+  stopped: {
+    color: 'var(--text-muted)',
+    bg: 'var(--bg-tertiary)',
+    label: '已停止',
+    dot: 'bg-gray-400',
+  },
+  error: {
+    color: 'var(--error-color)',
+    bg: 'var(--error-light)',
+    label: '错误',
+    dot: 'bg-red-500',
+  },
 };
 
 const AgentManagement: React.FC = () => {
-  const { agents: apiAgents, loading: apiLoading, fetchAgents, spawnAgent, terminateAgent, invokeAgent } = useAgents();
+  const { t } = useTranslation();
+  const {
+    agents: apiAgents,
+    loading: apiLoading,
+    fetchAgents,
+    spawnAgent,
+    terminateAgent,
+    invokeAgent,
+  } = useAgents();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,7 +89,14 @@ const AgentManagement: React.FC = () => {
       const mapped: Agent[] = apiAgents.map((a: any) => ({
         id: a.id || a.agent_id || '',
         name: a.name || a.agent_id || 'Unknown',
-        status: a.status === 'active' ? 'running' : a.status === 'idle' ? 'idle' : a.status === 'stopped' ? 'stopped' : 'error',
+        status:
+          a.status === 'active'
+            ? 'running'
+            : a.status === 'idle'
+              ? 'idle'
+              : a.status === 'stopped'
+                ? 'stopped'
+                : 'error',
         description: a.description || a.spec || undefined,
         model: a.model || undefined,
         createdAt: a.created_at || a.createdAt || new Date().toISOString(),
@@ -64,7 +112,7 @@ const AgentManagement: React.FC = () => {
     localStorage.setItem('agentos-agents', JSON.stringify(updated));
   };
 
-  const filteredAgents = agents.filter(a => {
+  const filteredAgents = agents.filter((a) => {
     const name = a.name || '';
     const matchesSearch = !searchQuery || name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || a.status === statusFilter;
@@ -73,9 +121,9 @@ const AgentManagement: React.FC = () => {
 
   const stats = {
     total: agents.length,
-    running: agents.filter(a => a.status === 'running').length,
-    idle: agents.filter(a => a.status === 'idle').length,
-    stopped: agents.filter(a => a.status === 'stopped' || a.status === 'error').length,
+    running: agents.filter((a) => a.status === 'running').length,
+    idle: agents.filter((a) => a.status === 'idle').length,
+    stopped: agents.filter((a) => a.status === 'stopped' || a.status === 'error').length,
   };
 
   const handleSpawn = async () => {
@@ -154,53 +202,167 @@ const AgentManagement: React.FC = () => {
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '24px',
+          flexWrap: 'wrap',
+          gap: '16px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '48px', height: '48px', borderRadius: '12px',
-            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-          }}>
+          <div
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+            }}
+          >
             <Bot size={20} />
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>智能体管理</h1>
-            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>管理 AI 智能体生命周期和配置</p>
+            <h1
+              style={{
+                margin: 0,
+                fontSize: '22px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {t('agents.title')}
+            </h1>
+            <p style={{ margin: '2px 0 0 0', fontSize: '13px', color: 'var(--text-muted)' }}>
+              {t('agents.subtitle')}
+            </p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={async () => { setLoading(true); await fetchAgents(); setLoading(false); }} style={{
-            padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
-            backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: '13px',
-          }}>
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> 刷新
+          <button
+            onClick={async () => {
+              setLoading(true);
+              await fetchAgents();
+              setLoading(false);
+            }}
+            style={{
+              padding: '8px 12px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-secondary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: 'inherit',
+              fontSize: '13px',
+            }}
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {t('common.refresh')}
           </button>
-          <button onClick={() => setShowCreateModal(true)} style={{
-            padding: '8px 16px', border: 'none', borderRadius: '8px',
-            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'inherit', fontSize: '13px',
-          }}>
-            <Plus size={16} /> 创建智能体
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              color: 'white',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontFamily: 'inherit',
+              fontSize: '13px',
+            }}
+          >
+            <Plus size={16} /> {t('agents.registerAgent')}
           </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+          gap: '14px',
+          marginBottom: '24px',
+        }}
+      >
         {[
-          { label: '智能体总数', value: stats.total, icon: <Bot size={18} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)' },
-          { label: '运行中', value: stats.running, icon: <Zap size={18} />, color: 'var(--success-color)', bg: 'var(--success-light)' },
-          { label: '空闲', value: stats.idle, icon: <Clock size={18} />, color: 'var(--warning-color)', bg: 'var(--warning-light)' },
-          { label: '已停止', value: stats.stopped, icon: <Square size={18} />, color: 'var(--text-muted)', bg: 'var(--bg-tertiary)' },
-        ].map(s => (
-          <div key={s.label} style={{
-            backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-            borderRadius: '12px', padding: '18px 20px', display: 'flex', alignItems: 'center', gap: '14px',
-          }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: s.bg, color: s.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{s.icon}</div>
+          {
+            label: t('dashboard.activeAgents'),
+            value: stats.total,
+            icon: <Bot size={18} />,
+            color: '#8b5cf6',
+            bg: 'rgba(139,92,246,0.1)',
+          },
+          {
+            label: t('agents.running'),
+            value: stats.running,
+            icon: <Zap size={18} />,
+            color: 'var(--success-color)',
+            bg: 'var(--success-light)',
+          },
+          {
+            label: t('agents.idle'),
+            value: stats.idle,
+            icon: <Clock size={18} />,
+            color: 'var(--warning-color)',
+            bg: 'var(--warning-light)',
+          },
+          {
+            label: t('agents.error'),
+            value: stats.stopped,
+            icon: <Square size={18} />,
+            color: 'var(--text-muted)',
+            bg: 'var(--bg-tertiary)',
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            style={{
+              backgroundColor: 'var(--bg-secondary)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '12px',
+              padding: '18px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+            }}
+          >
+            <div
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: s.bg,
+                color: s.color,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {s.icon}
+            </div>
             <div>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{s.label}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: '22px', fontWeight: '700', color: 'var(--text-primary)' }}>{s.value}</p>
+              <p
+                style={{
+                  margin: '2px 0 0 0',
+                  fontSize: '22px',
+                  fontWeight: '700',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                {s.value}
+              </p>
             </div>
           </div>
         ))}
@@ -208,53 +370,126 @@ const AgentManagement: React.FC = () => {
 
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="搜索智能体..." style={{
-            width: '100%', padding: '10px 14px 10px 36px', border: '1px solid var(--border-color)',
-            borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)',
-            fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-          }} />
+          <Search
+            size={16}
+            style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--text-muted)',
+            }}
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('agents.searchAgents')}
+            style={{
+              width: '100%',
+              padding: '10px 14px 10px 36px',
+              border: '1px solid var(--border-color)',
+              borderRadius: '8px',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
+              fontSize: '13px',
+              fontFamily: 'inherit',
+              outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
         </div>
-        <div style={{ display: 'flex', gap: '4px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', padding: '4px' }}>
-          {['all', 'running', 'idle', 'stopped', 'error'].map(s => (
-            <button key={s} onClick={() => setStatusFilter(s)} style={{
-              padding: '6px 12px', borderRadius: '6px', border: 'none',
-              backgroundColor: statusFilter === s ? 'white' : 'transparent',
-              color: statusFilter === s ? 'var(--text-primary)' : 'var(--text-muted)',
-              fontSize: '12px', fontWeight: statusFilter === s ? '500' : '400',
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}>
-              {STATUS_CONFIG[s]?.label || '全部'}
+        <div
+          style={{
+            display: 'flex',
+            gap: '4px',
+            backgroundColor: 'var(--bg-secondary)',
+            borderRadius: '8px',
+            padding: '4px',
+          }}
+        >
+          {['all', 'running', 'idle', 'stopped', 'error'].map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                backgroundColor: statusFilter === s ? 'white' : 'transparent',
+                color: statusFilter === s ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: '12px',
+                fontWeight: statusFilter === s ? '500' : '400',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              {STATUS_CONFIG[s]?.label || t('common.all')}
             </button>
           ))}
         </div>
       </div>
 
       {loading && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px' }}>
-          <Loader2 size={32} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '48px',
+          }}
+        >
+          <Loader2
+            size={32}
+            style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }}
+          />
         </div>
       )}
 
       {!loading && filteredAgents.length === 0 && (
-        <div style={{
-          backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-          borderRadius: '12px', padding: '48px', textAlign: 'center',
-        }}>
-          <Bot size={48} style={{ color: 'var(--text-muted)', margin: '0 auto 16px auto', opacity: 0.5 }} />
-          <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>暂无智能体</p>
-          <button onClick={() => setShowCreateModal(true)} style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px',
-            background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
-            borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px',
-          }}>
-            <Plus size={16} /> 创建第一个智能体
+        <div
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: '12px',
+            padding: '48px',
+            textAlign: 'center',
+          }}
+        >
+          <Bot
+            size={48}
+            style={{ color: 'var(--text-muted)', margin: '0 auto 16px auto', opacity: 0.5 }}
+          />
+          <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>{t('agents.noAgents')}</p>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+              fontSize: '13px',
+            }}
+          >
+            <Plus size={16} /> {t('agents.registerAgent')}
           </button>
         </div>
       )}
 
       {!loading && filteredAgents.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '16px',
+          }}
+        >
           <AnimatePresence>
             {filteredAgents.map((agent, index) => {
               const statusCfg = STATUS_CONFIG[agent.status] || STATUS_CONFIG.idle;
@@ -265,84 +500,226 @@ const AgentManagement: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04 }}
                   style={{
-                    backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-                    borderRadius: '12px', padding: '20px',
+                    backgroundColor: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '12px',
+                    padding: '20px',
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-md)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'none'; }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none';
+                    e.currentTarget.style.transform = 'none';
+                  }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      justifyContent: 'space-between',
+                      marginBottom: '12px',
+                    }}
+                  >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '42px', height: '42px', borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center', color: 'white',
-                      }}>
+                      <div
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
                         <Bot size={20} />
                       </div>
                       <div>
-                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '600', color: 'var(--text-primary)' }}>{agent.name}</h3>
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px',
-                          padding: '2px 8px', borderRadius: '12px', fontWeight: '500',
-                          color: statusCfg.color, backgroundColor: statusCfg.bg,
-                        }}>
-                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: agent.status === 'running' ? 'var(--success-color)' : statusCfg.color, display: 'inline-block' }} />
+                        <h3
+                          style={{
+                            margin: 0,
+                            fontSize: '15px',
+                            fontWeight: '600',
+                            color: 'var(--text-primary)',
+                          }}
+                        >
+                          {agent.name}
+                        </h3>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontWeight: '500',
+                            color: statusCfg.color,
+                            backgroundColor: statusCfg.bg,
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor:
+                                agent.status === 'running'
+                                  ? 'var(--success-color)'
+                                  : statusCfg.color,
+                              display: 'inline-block',
+                            }}
+                          />
                           {statusCfg.label}
                         </span>
                       </div>
                     </div>
-                    <button onClick={() => viewDetail(agent)} style={{
-                      width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      border: 'none', borderRadius: '6px', backgroundColor: 'var(--bg-tertiary)',
-                      color: 'var(--text-muted)', cursor: 'pointer',
-                    }}>
+                    <button
+                      onClick={() => viewDetail(agent)}
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        borderRadius: '6px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-muted)',
+                        cursor: 'pointer',
+                      }}
+                    >
                       <ChevronDown size={14} />
                     </button>
                   </div>
 
                   {agent.description && (
-                    <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{agent.description}</p>
+                    <p
+                      style={{
+                        margin: '0 0 12px 0',
+                        fontSize: '13px',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {agent.description}
+                    </p>
                   )}
 
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>#{agent.id?.slice(0, 8)}</span>
-                    {agent.model && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>· {agent.model}</span>}
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--text-muted)',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      #{agent.id?.slice(0, 8)}
+                    </span>
+                    {agent.model && (
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                        · {agent.model}
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '6px' }}>
                     {agent.status === 'running' ? (
-                      <button onClick={() => handleTerminate(agent.id)} disabled={actionLoading === `terminate-${agent.id}`} style={{
-                        flex: 1, padding: '8px 12px', border: '1px solid var(--error-color)', borderRadius: '8px',
-                        backgroundColor: 'var(--error-light)', color: 'var(--error-color)', cursor: 'pointer',
-                        fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                        opacity: actionLoading === `terminate-${agent.id}` ? 0.5 : 1,
-                      }}>
-                        {actionLoading === `terminate-${agent.id}` ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Square size={14} />}停止
+                      <button
+                        onClick={() => handleTerminate(agent.id)}
+                        disabled={actionLoading === `terminate-${agent.id}`}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          border: '1px solid var(--error-color)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--error-light)',
+                          color: 'var(--error-color)',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          opacity: actionLoading === `terminate-${agent.id}` ? 0.5 : 1,
+                        }}
+                      >
+                        {actionLoading === `terminate-${agent.id}` ? (
+                          <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                        ) : (
+                          <Square size={14} />
+                        )}
+                        {t('common.stop')}
                       </button>
                     ) : (
-                      <button onClick={() => handleStart(agent.id)} disabled={actionLoading === `start-${agent.id}`} style={{
-                        flex: 1, padding: '8px 12px', border: 'none', borderRadius: '8px',
-                        background: 'linear-gradient(135deg, var(--success-color), #4ade80)', color: 'white',
-                        cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                        opacity: actionLoading === `start-${agent.id}` ? 0.5 : 1,
-                      }}>
-                        {actionLoading === `start-${agent.id}` ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />}启动
+                      <button
+                        onClick={() => handleStart(agent.id)}
+                        disabled={actionLoading === `start-${agent.id}`}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          background: 'linear-gradient(135deg, var(--success-color), #4ade80)',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          opacity: actionLoading === `start-${agent.id}` ? 0.5 : 1,
+                        }}
+                      >
+                        {actionLoading === `start-${agent.id}` ? (
+                          <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                        ) : (
+                          <Play size={14} />
+                        )}
+                        {t('common.start')}
                       </button>
                     )}
-                    <button onClick={() => handleOpenInvoke(agent)} style={{
-                      flex: 1, padding: '8px 12px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                      backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer',
-                      fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                    }}>
-                      <Zap size={14} /> 调用
+                    <button
+                      onClick={() => handleOpenInvoke(agent)}
+                      style={{
+                        flex: 1,
+                        padding: '8px 12px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        fontSize: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <Zap size={14} /> {t('common.invoke')}
                     </button>
-                    <button onClick={() => handleDelete(agent.id)} disabled={actionLoading === `delete-${agent.id}`} style={{
-                      width: '34px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                      backgroundColor: 'var(--bg-tertiary)', color: 'var(--error-color)', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      opacity: actionLoading === `delete-${agent.id}` ? 0.5 : 1,
-                    }}>
+                    <button
+                      onClick={() => handleDelete(agent.id)}
+                      disabled={actionLoading === `delete-${agent.id}`}
+                      style={{
+                        width: '34px',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--bg-tertiary)',
+                        color: 'var(--error-color)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: actionLoading === `delete-${agent.id}` ? 0.5 : 1,
+                      }}
+                    >
                       <Trash2 size={14} />
                     </button>
                   </div>
@@ -357,38 +734,148 @@ const AgentManagement: React.FC = () => {
       <AnimatePresence>
         {showCreateModal && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowCreateModal(false)}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1000,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(8px)',
+              }}
             />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001,
-                backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.3)', maxWidth: '480px', width: '90%', padding: '24px',
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1001,
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '16px',
+                boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+                maxWidth: '480px',
+                width: '90%',
+                padding: '24px',
               }}
             >
-              <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '20px' }}>创建智能体</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '17px',
+                  fontWeight: '600',
+                  color: 'var(--text-primary)',
+                  marginBottom: '20px',
+                }}
+              >
+                {t('agents.registerAgent')}
+              </h2>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '16px',
+                  marginBottom: '24px',
+                }}
+              >
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>名称</label>
-                  <input type="text" value={newName} onChange={e => setNewName(e.target.value)} placeholder="输入智能体名称..." style={{
-                    width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                    backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-                  }} />
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {t('common.name')}
+                  </label>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder={t('agents.agentNameHelp')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>描述</label>
-                  <textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} rows={3} placeholder="描述智能体的功能..." style={{
-                    width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                    backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box',
-                  }} />
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {t('common.description')}
+                  </label>
+                  <textarea
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    rows={3}
+                    placeholder={t('agents.agentDetails')}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      resize: 'vertical',
+                      boxSizing: 'border-box',
+                    }}
+                  />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)', marginBottom: '6px' }}>模型</label>
-                  <select value={newModel} onChange={e => setNewModel(e.target.value)} style={{
-                    width: '100%', padding: '10px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                    backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
-                  }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      color: 'var(--text-secondary)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    {t('common.model')}
+                  </label>
+                  <select
+                    value={newModel}
+                    onChange={(e) => setNewModel(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-primary)',
+                      color: 'var(--text-primary)',
+                      fontSize: '13px',
+                      fontFamily: 'inherit',
+                      outline: 'none',
+                      boxSizing: 'border-box',
+                    }}
+                  >
                     <option value="gpt-4o">gpt-4o (OpenAI)</option>
                     <option value="claude-sonnet-4">claude-sonnet-4 (Anthropic)</option>
                     <option value="deepseek-chat">deepseek-chat (DeepSeek)</option>
@@ -397,13 +884,45 @@ const AgentManagement: React.FC = () => {
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button onClick={() => setShowCreateModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>取消</button>
-                <button onClick={handleSpawn} disabled={!newName.trim() || actionLoading === 'spawn'} style={{
-                  padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
-                  borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px',
-                  opacity: (!newName.trim() || actionLoading === 'spawn') ? 0.5 : 1,
-                }}>
-                  {actionLoading === 'spawn' ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Plus size={16} />}创建
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
+                  }}
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleSpawn}
+                  disabled={!newName.trim() || actionLoading === 'spawn'}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: !newName.trim() || actionLoading === 'spawn' ? 0.5 : 1,
+                  }}
+                >
+                  {actionLoading === 'spawn' ? (
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <Plus size={16} />
+                  )}
+                  创建
                 </button>
               </div>
             </motion.div>
@@ -415,30 +934,119 @@ const AgentManagement: React.FC = () => {
       <AnimatePresence>
         {showInvokeModal && selectedAgent && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowInvokeModal(false)}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1000,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(8px)',
+              }}
             />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001,
-                backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.3)', maxWidth: '520px', width: '90%', padding: '24px',
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1001,
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '16px',
+                boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+                maxWidth: '520px',
+                width: '90%',
+                padding: '24px',
               }}
             >
-              <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)', marginBottom: '4px' }}>调用智能体</h2>
-              <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>{selectedAgent.name}</p>
-              <textarea value={invokeInput} onChange={e => setInvokeInput(e.target.value)} rows={4} placeholder="输入要发送给智能体的指令..." style={{
-                width: '100%', padding: '12px 14px', border: '1px solid var(--border-color)', borderRadius: '8px',
-                backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'inherit', outline: 'none', resize: 'vertical', marginBottom: '16px', boxSizing: 'border-box',
-              }} />
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: '17px',
+                  fontWeight: '600',
+                  color: 'var(--text-primary)',
+                  marginBottom: '4px',
+                }}
+              >
+                调用智能体
+              </h2>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  color: 'var(--text-muted)',
+                  marginBottom: '16px',
+                }}
+              >
+                {selectedAgent.name}
+              </p>
+              <textarea
+                value={invokeInput}
+                onChange={(e) => setInvokeInput(e.target.value)}
+                rows={4}
+                placeholder="输入要发送给智能体的指令..."
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '8px',
+                  backgroundColor: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  fontSize: '13px',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  resize: 'vertical',
+                  marginBottom: '16px',
+                  boxSizing: 'border-box',
+                }}
+              />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button onClick={() => setShowInvokeModal(false)} style={{ padding: '8px 16px', border: '1px solid var(--border-color)', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px' }}>取消</button>
-                <button onClick={handleInvoke} disabled={!invokeInput.trim() || actionLoading === 'invoke'} style={{
-                  padding: '8px 16px', background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)', color: 'white', border: 'none',
-                  borderRadius: '8px', cursor: 'pointer', fontFamily: 'inherit', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px',
-                  opacity: (!invokeInput.trim() || actionLoading === 'invoke') ? 0.5 : 1,
-                }}>
-                  {actionLoading === 'invoke' ? <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Zap size={16} />}发送
+                <button
+                  onClick={() => setShowInvokeModal(false)}
+                  style={{
+                    padding: '8px 16px',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
+                  }}
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleInvoke}
+                  disabled={!invokeInput.trim() || actionLoading === 'invoke'}
+                  style={{
+                    padding: '8px 16px',
+                    background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: !invokeInput.trim() || actionLoading === 'invoke' ? 0.5 : 1,
+                  }}
+                >
+                  {actionLoading === 'invoke' ? (
+                    <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                  ) : (
+                    <Zap size={16} />
+                  )}
+                  发送
                 </button>
               </div>
             </motion.div>
@@ -450,19 +1058,71 @@ const AgentManagement: React.FC = () => {
       <AnimatePresence>
         {showDetail && selectedAgent && (
           <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
               onClick={() => setShowDetail(false)}
-              style={{ position: 'fixed', inset: 0, zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 1000,
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(8px)',
+              }}
             />
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              style={{ position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 1001,
-                backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '16px',
-                boxShadow: '0 25px 50px rgba(0,0,0,0.3)', maxWidth: '480px', width: '90%', padding: '24px',
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              style={{
+                position: 'fixed',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 1001,
+                backgroundColor: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '16px',
+                boxShadow: '0 25px 50px rgba(0,0,0,0.3)',
+                maxWidth: '480px',
+                width: '90%',
+                padding: '24px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h2 style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-primary)' }}>智能体详情</h2>
-                <button onClick={() => setShowDetail(false)} style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-subtle)', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                }}
+              >
+                <h2
+                  style={{
+                    margin: 0,
+                    fontSize: '17px',
+                    fontWeight: '600',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  智能体详情
+                </h2>
+                <button
+                  onClick={() => setShowDetail(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: '8px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                  }}
+                >
                   <X size={18} />
                 </button>
               </div>
@@ -472,28 +1132,102 @@ const AgentManagement: React.FC = () => {
                   { label: '名称', value: selectedAgent.name },
                   { label: '模型', value: selectedAgent.model || '—' },
                   { label: '创建时间', value: new Date(selectedAgent.createdAt).toLocaleString() },
-                ].map(item => (
-                  <div key={item.label} style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}>{item.label}</p>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-primary)', fontFamily: item.mono ? 'monospace' : 'inherit', wordBreak: 'break-all' }}>{item.value}</p>
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <p
+                      style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}
+                    >
+                      {item.label}
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        color: 'var(--text-primary)',
+                        fontFamily: item.mono ? 'monospace' : 'inherit',
+                        wordBreak: 'break-all',
+                      }}
+                    >
+                      {item.value}
+                    </p>
                   </div>
                 ))}
-                <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}>状态</p>
-                  <p style={{ margin: 0, fontSize: '13px', color: STATUS_CONFIG[selectedAgent.status]?.color, fontWeight: '500' }}>
+                <div
+                  style={{
+                    padding: '12px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}>
+                    状态
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '13px',
+                      color: STATUS_CONFIG[selectedAgent.status]?.color,
+                      fontWeight: '500',
+                    }}
+                  >
                     {STATUS_CONFIG[selectedAgent.status]?.label || selectedAgent.status}
                   </p>
                 </div>
                 {selectedAgent.description && (
-                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}>描述</p>
-                    <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{selectedAgent.description}</p>
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <p
+                      style={{ margin: '0 0 4px 0', fontSize: '11px', color: 'var(--text-muted)' }}
+                    >
+                      描述
+                    </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: '13px',
+                        color: 'var(--text-secondary)',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {selectedAgent.description}
+                    </p>
                   </div>
                 )}
                 {selectedAgent.metadata && Object.keys(selectedAgent.metadata).length > 0 && (
-                  <div style={{ padding: '12px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--text-muted)' }}>元数据</p>
-                    <pre style={{ margin: 0, fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)', maxHeight: '120px', overflow: 'auto' }}>
+                  <div
+                    style={{
+                      padding: '12px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      borderRadius: '8px',
+                    }}
+                  >
+                    <p
+                      style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--text-muted)' }}
+                    >
+                      元数据
+                    </p>
+                    <pre
+                      style={{
+                        margin: 0,
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        color: 'var(--text-secondary)',
+                        maxHeight: '120px',
+                        overflow: 'auto',
+                      }}
+                    >
                       {JSON.stringify(selectedAgent.metadata, null, 2)}
                     </pre>
                   </div>

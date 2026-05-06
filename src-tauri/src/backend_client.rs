@@ -9,10 +9,13 @@ pub struct BackendConfig {
     pub api_key: Option<String>,
 }
 
+const DEFAULT_GATEWAY_HOST: &str = "localhost";
+const DEFAULT_GATEWAY_PORT: u16 = 18789;
+
 impl Default for BackendConfig {
     fn default() -> Self {
         Self {
-            gateway_url: "http://localhost:18789".to_string(),
+            gateway_url: format!("http://{}:{}", DEFAULT_GATEWAY_HOST, DEFAULT_GATEWAY_PORT),
             timeout_seconds: 30,
             api_key: None,
         }

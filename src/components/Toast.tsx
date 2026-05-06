@@ -1,11 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import {
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
-  Info,
-  X,
-} from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
@@ -35,7 +29,10 @@ let toastIdCounter = 0;
 
 const generateId = () => `toast-${++toastIdCounter}-${Date.now()}`;
 
-const TOAST_CONFIGS: Record<ToastType, { icon: React.ElementType; color: string; bgColor: string; borderColor: string }> = {
+const TOAST_CONFIGS: Record<
+  ToastType,
+  { icon: React.ElementType; color: string; bgColor: string; borderColor: string }
+> = {
   success: {
     icon: CheckCircle2,
     color: '#22c55e',
@@ -68,18 +65,18 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const addToast = useCallback((toastData: Omit<Toast, 'id'>) => {
     const id = generateId();
     const toast: Toast = { ...toastData, id };
-    setToasts(prev => [...prev, toast]);
+    setToasts((prev) => [...prev, toast]);
 
     const duration = toastData.duration ?? (toastData.type === 'error' ? 6000 : 4000);
     if (duration > 0) {
       setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id));
+        setToasts((prev) => prev.filter((t) => t.id !== id));
       }, duration);
     }
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   return (
@@ -98,7 +95,7 @@ const ToastContainer: React.FC<{
 
   return (
     <div className="toast-container" aria-live="polite">
-      {toasts.map(toast => (
+      {toasts.map((toast) => (
         <ToastItem key={toast.id} toast={toast} onClose={() => onRemove(toast.id)} />
       ))}
     </div>

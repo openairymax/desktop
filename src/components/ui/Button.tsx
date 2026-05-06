@@ -144,13 +144,19 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <div className="animate-spin" style={{
-            width: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
-            height: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
-            border: `2px solid ${variant === 'primary' || variant === 'danger' || variant === 'success' ? 'rgba(255, 255, 255, 0.3)' : 'var(--border-color)'}`,
-            borderTopColor: variant === 'primary' || variant === 'danger' || variant === 'success' ? 'white' : 'var(--text-primary)',
-            borderRadius: '50%',
-          }} />
+          <div
+            className="animate-spin"
+            style={{
+              width: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
+              height: size === 'sm' ? '12px' : size === 'md' ? '14px' : '16px',
+              border: `2px solid ${variant === 'primary' || variant === 'danger' || variant === 'success' ? 'rgba(255, 255, 255, 0.3)' : 'var(--border-color)'}`,
+              borderTopColor:
+                variant === 'primary' || variant === 'danger' || variant === 'success'
+                  ? 'white'
+                  : 'var(--text-primary)',
+              borderRadius: '50%',
+            }}
+          />
           <span>处理中...</span>
         </div>
       ) : (

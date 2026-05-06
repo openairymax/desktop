@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRight, CheckCircle2, X, LayoutDashboard, Users, ClipboardList, Server, Activity, MessageCircle, Terminal, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  X,
+  LayoutDashboard,
+  Users,
+  ClipboardList,
+  Server,
+  Activity,
+  MessageCircle,
+  Terminal,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from './ui/Button';
 
 interface Step {
@@ -15,7 +27,8 @@ const steps: Step[] = [
   {
     id: 1,
     title: '欢迎使用 AgentOS',
-    description: 'AgentOS 是一个工业级 AI 智能体系统，提供全方位的智能体管理、任务编排和系统监控功能。',
+    description:
+      'AgentOS 是一个工业级 AI 智能体系统，提供全方位的智能体管理、任务编排和系统监控功能。',
     icon: <LayoutDashboard size={24} />,
   },
   {
@@ -122,69 +135,83 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ onComplete }) 
   const currentStepData = steps[currentStep];
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 10000,
-      backdropFilter: 'blur(8px) saturate(120%)',
-      animation: 'fadeIn 0.3s ease-out',
-    }}>
-      <div style={{
-        background: 'var(--bg-secondary)',
-        borderRadius: '12px',
-        boxShadow: 'var(--shadow-xl)',
-        maxWidth: '500px',
-        width: '90%',
-        maxHeight: '80vh',
-        overflow: 'auto',
-        padding: '32px',
-        border: '1px solid var(--border-subtle)',
-        animation: 'scaleInCenter 0.3s ease-out',
-      }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000,
+        backdropFilter: 'blur(8px) saturate(120%)',
+        animation: 'fadeIn 0.3s ease-out',
+      }}
+    >
+      <div
+        style={{
+          background: 'var(--bg-secondary)',
+          borderRadius: '12px',
+          boxShadow: 'var(--shadow-xl)',
+          maxWidth: '500px',
+          width: '90%',
+          maxHeight: '80vh',
+          overflow: 'auto',
+          padding: '32px',
+          border: '1px solid var(--border-subtle)',
+          animation: 'scaleInCenter 0.3s ease-out',
+        }}
+      >
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: '24px',
-        }}>
-          <div style={{
+        <div
+          style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-          }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              background: 'var(--primary-gradient)',
+            justifyContent: 'space-between',
+            marginBottom: '24px',
+          }}
+        >
+          <div
+            style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
-            }}>
+              gap: '12px',
+            }}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: 'var(--primary-gradient)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
+              }}
+            >
               {currentStepData.icon}
             </div>
             <div>
-              <h2 style={{
-                fontSize: '18px',
-                fontWeight: 600,
-                color: 'var(--text-primary)',
-                margin: '0 0 4px 0',
-              }}>
+              <h2
+                style={{
+                  fontSize: '18px',
+                  fontWeight: 600,
+                  color: 'var(--text-primary)',
+                  margin: '0 0 4px 0',
+                }}
+              >
                 {currentStepData.title}
               </h2>
-              <div style={{
-                fontSize: '14px',
-                color: 'var(--text-secondary)',
-              }}>
+              <div
+                style={{
+                  fontSize: '14px',
+                  color: 'var(--text-secondary)',
+                }}
+              >
                 步骤 {currentStep + 1} / {steps.length}
               </div>
             </div>
@@ -215,41 +242,51 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ onComplete }) 
         </div>
 
         {/* Content */}
-        <div style={{
-          marginBottom: '32px',
-        }}>
-          <p style={{
-            fontSize: '14px',
-            lineHeight: 1.6,
-            color: 'var(--text-primary)',
-            margin: 0,
-          }}>
+        <div
+          style={{
+            marginBottom: '32px',
+          }}
+        >
+          <p
+            style={{
+              fontSize: '14px',
+              lineHeight: 1.6,
+              color: 'var(--text-primary)',
+              margin: 0,
+            }}
+          >
             {currentStepData.description}
           </p>
         </div>
 
         {/* Progress Bar */}
-        <div style={{
-          height: '4px',
-          background: 'var(--bg-tertiary)',
-          borderRadius: '2px',
-          marginBottom: '24px',
-          overflow: 'hidden',
-        }}>
-          <div style={{
-            height: '100%',
-            width: `${((currentStep + 1) / steps.length) * 100}%`,
-            background: 'var(--primary-gradient)',
-            transition: 'width 0.3s ease',
-          }} />
+        <div
+          style={{
+            height: '4px',
+            background: 'var(--bg-tertiary)',
+            borderRadius: '2px',
+            marginBottom: '24px',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%',
+              width: `${((currentStep + 1) / steps.length) * 100}%`,
+              background: 'var(--primary-gradient)',
+              transition: 'width 0.3s ease',
+            }}
+          />
         </div>
 
         {/* Navigation */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
           <Button
             variant="secondary"
             onClick={handlePrevious}

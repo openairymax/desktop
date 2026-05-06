@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface AnimationConfig {
   duration?: number;
@@ -23,9 +23,12 @@ export const useSpringAnimation = (trigger: boolean, config: AnimationConfig = {
         element.style.opacity = '1';
       });
 
-      const timeout = setTimeout(() => {
-        setIsAnimating(false);
-      }, (config.duration || 600) + (config.delay || 0));
+      const timeout = setTimeout(
+        () => {
+          setIsAnimating(false);
+        },
+        (config.duration || 600) + (config.delay || 0),
+      );
 
       return () => clearTimeout(timeout);
     }
@@ -45,10 +48,10 @@ export const useRippleEffect = () => {
     const y = event.clientY - rect.top - size / 2;
 
     const id = Date.now();
-    setRipples(prev => [...prev, { id, x, y, size }]);
+    setRipples((prev) => [...prev, { id, x, y, size }]);
 
     setTimeout(() => {
-      setRipples(prev => prev.filter(r => r.id !== id));
+      setRipples((prev) => prev.filter((r) => r.id !== id));
     }, 600);
   }, []);
 
@@ -97,32 +100,39 @@ export const useTypewriterEffect = (text: string, speed: number = 50) => {
   return { displayText, isComplete };
 };
 
-export const useCountUp = (target: number, duration: number = 2000, startOnMount: boolean = true) => {
+export const useCountUp = (
+  target: number,
+  duration: number = 2000,
+  startOnMount: boolean = true,
+) => {
   const [current, setCurrent] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  const animate = useCallback((to: number) => {
-    setIsAnimating(true);
-    const startTime = Date.now();
-    const from = current;
+  const animate = useCallback(
+    (to: number) => {
+      setIsAnimating(true);
+      const startTime = Date.now();
+      const from = current;
 
-    const step = () => {
-      const now = Date.now();
-      const progress = Math.min((now - startTime) / duration, 1);
+      const step = () => {
+        const now = Date.now();
+        const progress = Math.min((now - startTime) / duration, 1);
 
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-      setCurrent(Math.floor(from + (to - from) * easeOutQuart));
+        const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+        setCurrent(Math.floor(from + (to - from) * easeOutQuart));
 
-      if (progress < 1) {
-        requestAnimationFrame(step);
-      } else {
-        setCurrent(to);
-        setIsAnimating(false);
-      }
-    };
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        } else {
+          setCurrent(to);
+          setIsAnimating(false);
+        }
+      };
 
-    requestAnimationFrame(step);
-  }, [current, duration]);
+      requestAnimationFrame(step);
+    },
+    [current, duration],
+  );
 
   useEffect(() => {
     if (startOnMount) {
@@ -186,7 +196,7 @@ export const GlowCard: React.FC<{
   intensity = 0.4,
   className = '',
   style = {},
-  hoverable = true
+  hoverable = true,
 }) => {
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const cardRef = useRef<HTMLDivElement>(null);
@@ -219,15 +229,17 @@ export const GlowCard: React.FC<{
         style={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, ${glowColor}${Math.round(intensity * 255).toString(16).padStart(2, '0')}, transparent 60%)`,
+          background: `radial-gradient(circle at ${mousePos.x}% ${mousePos.y}%, ${glowColor}${Math.round(
+            intensity * 255,
+          )
+            .toString(16)
+            .padStart(2, '0')}, transparent 60%)`,
           opacity: hoverable ? 1 : 0,
           pointerEvents: 'none',
           transition: 'opacity 0.3s ease',
         }}
       />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-        {children}
-      </div>
+      <div style={{ position: 'relative', zIndex: 1 }}>{children}</div>
     </div>
   );
 };
@@ -238,7 +250,13 @@ export const GradientText: React.FC<{
   animated?: boolean;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ children, colors = ['#6366f1', '#a78bfa'], animated = true, className = '', style = {} }) => (
+}> = ({
+  children,
+  colors = ['#6366f1', '#a78bfa'],
+  animated = true,
+  className = '',
+  style = {},
+}) => (
   <span
     className={`gradient-text ${className}`}
     style={{
@@ -265,11 +283,13 @@ export const FloatingElement: React.FC<{
 }> = ({ children, amplitude = 10, frequency = 3, delay = 0, className = '', style = {} }) => (
   <div
     className={`floating-element ${className}`}
-    style={{
-      ...style,
-      animation: `float ${frequency}s ease-in-out ${delay}s infinite`,
-      '--float-amplitude': `${amplitude}px`,
-    } as React.CSSProperties}
+    style={
+      {
+        ...style,
+        animation: `float ${frequency}s ease-in-out ${delay}s infinite`,
+        '--float-amplitude': `${amplitude}px`,
+      } as React.CSSProperties
+    }
   >
     {children}
   </div>

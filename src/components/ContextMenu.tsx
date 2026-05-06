@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 
 export interface MenuItem {
   id: string;
@@ -38,13 +38,15 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setFocusedIndex(prev => Math.min(prev + 1, items.filter(i => !i.disabled && !i.divider).length - 1));
+        setFocusedIndex((prev) =>
+          Math.min(prev + 1, items.filter((i) => !i.disabled && !i.divider).length - 1),
+        );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setFocusedIndex(prev => Math.max(prev - 1, 0));
+        setFocusedIndex((prev) => Math.max(prev - 1, 0));
       } else if (e.key === 'Enter' && focusedIndex >= 0) {
         e.preventDefault();
-        const enabledItems = items.filter(i => !i.disabled && !i.divider);
+        const enabledItems = items.filter((i) => !i.disabled && !i.divider);
         if (enabledItems[focusedIndex]) {
           onSelect(enabledItems[focusedIndex].id);
           onClose();
@@ -67,10 +69,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
     setFocusedIndex(-1);
   }, [position]);
 
-  const handleSelect = useCallback((id: string) => {
-    onSelect(id);
-    onClose();
-  }, [onSelect, onClose]);
+  const handleSelect = useCallback(
+    (id: string) => {
+      onSelect(id);
+      onClose();
+    },
+    [onSelect, onClose],
+  );
 
   if (!position) return null;
 
@@ -89,15 +94,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
       }}
       className="context-menu-wrapper"
     >
-      <div style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border-color)',
-        borderRadius: 'var(--radius-md)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15)',
-        padding: '6px',
-        animation: 'contextMenuFadeIn 0.15s ease-out',
-        overflow: 'hidden',
-      }}>
+      <div
+        style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-color)',
+          borderRadius: 'var(--radius-md)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25), 0 2px 8px rgba(0, 0, 0, 0.15)',
+          padding: '6px',
+          animation: 'contextMenuFadeIn 0.15s ease-out',
+          overflow: 'hidden',
+        }}
+      >
         {items.map((item, index) => {
           if (item.divider) {
             return (
@@ -130,11 +137,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
                 {item.icon && <span style={{ fontSize: '15px' }}>{item.icon}</span>}
                 <span style={{ flex: 1, fontSize: '13.5px' }}>{item.label}</span>
                 {item.shortcut && (
-                  <span style={{
-                    fontSize: '11px',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    color: 'var(--text-muted)',
-                  }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      fontFamily: "'JetBrains Mono', monospace",
+                      color: 'var(--text-muted)',
+                    }}
+                  >
                     {item.shortcut}
                   </span>
                 )}
@@ -170,11 +179,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
               {item.icon && <span style={{ fontSize: '15px' }}>{item.icon}</span>}
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.shortcut && (
-                <span style={{
-                  fontSize: '11px',
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: 'var(--text-muted)',
-                }}>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    color: 'var(--text-muted)',
+                  }}
+                >
                   {item.shortcut}
                 </span>
               )}
@@ -196,7 +207,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ items, onSelect, position, on
         }
       `}</style>
     </div>,
-    document.body
+    document.body,
   );
 };
 
