@@ -7,8 +7,6 @@ import {
   Square,
   Search,
   Trash2,
-  Eye,
-  AlertCircle,
   Clock,
   X,
   Zap,
@@ -106,11 +104,6 @@ const AgentManagement: React.FC = () => {
     }
     setLoading(apiLoading);
   }, [apiAgents, apiLoading]);
-
-  const saveAgents = (updated: Agent[]) => {
-    setAgents(updated);
-    localStorage.setItem('agentos-agents', JSON.stringify(updated));
-  };
 
   const filteredAgents = agents.filter((a) => {
     const name = a.name || '';

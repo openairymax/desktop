@@ -6,11 +6,7 @@ import {
   Search,
   Plus,
   Trash2,
-  X,
   Clock,
-  AlertCircle,
-  Eye,
-  BarChart3,
   RefreshCw,
   Loader2,
   Layers,
@@ -75,7 +71,6 @@ const MemoryEvolution: React.FC = () => {
     evolveMemory,
     clearMemories,
     searchMemory,
-    getMemoryStats,
   } = useMemory();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,18 +142,6 @@ const MemoryEvolution: React.FC = () => {
       await fetchMemories();
     } catch (e) {
       console.error('Failed to clear memories:', e);
-    }
-  };
-
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) {
-      await fetchMemories();
-      return;
-    }
-    try {
-      await searchMemory(searchQuery.trim(), 20);
-    } catch (e) {
-      console.error('Failed to search memory:', e);
     }
   };
 

@@ -114,12 +114,12 @@ export default defineConfig(async () => ({
       '/health': {
         target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
         changeOrigin: true,
-        rewrite: (path: string) => '/api/v1/health',
+        rewrite: (_path: string) => '/api/v1/health',
       },
       '/metrics': {
         target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
         changeOrigin: true,
-        rewrite: (path: string) => '/api/v1/metrics',
+        rewrite: (_path: string) => '/api/v1/metrics',
       },
       '/ws': {
         target: process.env.VITE_WS_URL || 'ws://localhost:18789',

@@ -77,7 +77,7 @@ const ModelConfig: React.FC = () => {
   const [providers, setProviders] = useState<LLMProviderConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [_editingId, _setEditingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [newProviderType, setNewProviderType] = useState('openai');

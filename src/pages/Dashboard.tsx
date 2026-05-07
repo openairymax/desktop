@@ -1,28 +1,21 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Cpu,
   MemoryStick,
-  HardDrive,
   Activity,
-  Clock,
-  AlertCircle,
   Bot,
   Workflow,
   Terminal,
   MessageSquare,
   Brain,
   Wrench,
-  CheckCircle2,
-  PlayCircle,
   Zap,
   ArrowUpRight,
   Sparkles,
-  Settings,
   Server,
   BarChart3,
-  FileText,
   Eye,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';

@@ -9,13 +9,8 @@ import {
   Lock,
   FileText,
   Search,
-  Filter,
-  Bell,
   Settings,
   Eye,
-  RefreshCw,
-  ChevronDown,
-  ChevronRight,
   User,
   Clock,
   Activity,
@@ -142,7 +137,7 @@ const SecurityCenter: React.FC = () => {
     const saved = localStorage.getItem('agentos-security-policies');
     return saved ? JSON.parse(saved) : defaultPolicies;
   });
-  const [logs, setLogs] = useState<AuditLog[]>(() => {
+  const [logs, _setLogs] = useState<AuditLog[]>(() => {
     const saved = localStorage.getItem('agentos-audit-logs');
     return saved ? JSON.parse(saved) : defaultLogs;
   });

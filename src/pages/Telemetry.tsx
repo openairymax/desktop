@@ -6,7 +6,6 @@ import {
   Cpu,
   HardDrive,
   Network,
-  Clock,
   TrendingUp,
   AlertTriangle,
   CheckCircle,

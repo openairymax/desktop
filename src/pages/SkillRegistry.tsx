@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Play,
   Trash2,
-  Eye,
   ChevronDown,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,7 +33,6 @@ const SkillRegistry: React.FC = () => {
     executeSkill,
     unloadSkill,
     deleteSkill,
-    getSkillCount,
   } = useSkills();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');

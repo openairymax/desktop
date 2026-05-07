@@ -12,16 +12,14 @@ import {
   Eye,
   X,
   ChevronDown,
-  BarChart3,
   FileText,
-  Zap,
   Hourglass,
   Ban,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTasks } from '../hooks/useAgentOS';
-import type { Task as AgentOSTask, TaskStatus } from '../services/agentos.service';
+import type { Task as AgentOSTask } from '../services/agentos.service';
 
 const STATUS_CONFIG: Record<
   string,

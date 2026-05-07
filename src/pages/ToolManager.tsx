@@ -33,7 +33,7 @@ interface Tool {
   createdAt: string;
 }
 
-const CATEGORIES = ['general', 'web', 'file', 'code', 'data', 'system'];
+const _CATEGORIES = ['general', 'web', 'file', 'code', 'data', 'system'];
 
 const CATEGORY_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
   general: { icon: <Wrench size={14} />, color: '#6366f1' },
@@ -58,7 +58,7 @@ const ToolManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
+  const [_showDetail, _setShowDetail] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
   const [selectedTool, setSelectedTool] = useState<Tool | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -169,7 +169,7 @@ const ToolManager: React.FC = () => {
     if (!selectedTool) return;
     setActionLoading('exec');
     try {
-      const result = await invoke<any>('call_tool', {
+      await invoke<any>('call_tool', {
         name: selectedTool.name,
         arguments: executeParams || '{}',
       });
@@ -818,7 +818,7 @@ const ToolManager: React.FC = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    {Object.entries(CATEGORY_ICONS).map(([k, v]) => (
+                    {Object.entries(CATEGORY_ICONS).map(([k, _v]) => (
                       <option key={k} value={k}>
                         {categoryLabels[k]}
                       </option>

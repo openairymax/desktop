@@ -57,7 +57,7 @@ const LEVEL_CONFIG = {
 
 const LogsTerminal: React.FC = () => {
   const { t } = useTranslation();
-  const { client, connection } = useAgentOS();
+  const { connection } = useAgentOS();
   const { health, metrics, fetchHealth, fetchMetrics } = useHealth();
   const { agents, fetchAgents } = useAgents();
   const { tasks, fetchTasks } = useTasks();
