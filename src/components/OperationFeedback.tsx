@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
@@ -161,17 +161,26 @@ export const OperationFeedbackProvider: React.FC<OperationFeedbackProviderProps>
     }>
   >([]);
 
-  const addFeedback = (props: OperationFeedbackProps) => {
+  const removeFeedback = useCallback((id: string) => {
+    setFeedbacks((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const addFeedback = useCallback((props: OperationFeedbackProps) => {
     const id = `feedback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     setFeedbacks((prev) => [
       ...prev,
       { id, props: { ...props, onClose: () => removeFeedback(id) } },
     ]);
-  };
+  }, [removeFeedback]);
 
-  const removeFeedback = (id: string) => {
-    setFeedbacks((prev) => prev.filter((f) => f.id !== id));
-  };
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      addFeedback(detail);
+    };
+    window.addEventListener('addFeedback', handler);
+    return () => window.removeEventListener('addFeedback', handler);
+  }, [addFeedback]);
 
   return (
     <div style={{ position: 'relative' }}>

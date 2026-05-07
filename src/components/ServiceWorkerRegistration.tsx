@@ -10,23 +10,19 @@ export function ServiceWorkerRegistration() {
         }
       },
       onOfflineReady() {
-        console.log('AgentOS 已准备好离线使用');
+        void 0;
       },
-      onRegisteredSW(swUrl, registration) {
-        console.log('Service Worker 已注册:', swUrl);
-        
+      onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
         if (registration) {
           setInterval(() => {
             registration.update();
           }, 60 * 60 * 1000);
         }
       },
-      onRegisterError(error) {
-        console.error('Service Worker 注册失败:', error);
+      onRegisterError(_error: Error) {
+        void 0;
       },
     });
-    
-    return () => {};
   }, []);
 
   return null;

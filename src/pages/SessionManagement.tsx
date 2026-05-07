@@ -84,7 +84,7 @@ export default function SessionManagement() {
       fetchSessions();
       fetchAgents();
     }
-  }, [connection.status, fetchSessions]);
+  }, [connection.status, fetchSessions, fetchAgents]);
 
   const displaySessions: DisplaySession[] = apiSessions.map((s) => toDisplaySession(s, t as any));
 
@@ -128,7 +128,7 @@ export default function SessionManagement() {
         }
       }
     },
-    [closeSession],
+    [closeSession, t],
   );
 
   const stats = {

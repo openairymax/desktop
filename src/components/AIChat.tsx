@@ -35,7 +35,7 @@ const AIChat: React.FC<{
   onSendMessage?: (message: string) => void;
   compact?: boolean;
 }> = ({ onSendMessage, compact = false }) => {
-  const { agents, fetchAgents, invokeAgent } = useAgents();
+  const { agents, invokeAgent } = useAgents();
   const { submitTask } = useTasks();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');

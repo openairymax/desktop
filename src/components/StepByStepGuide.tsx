@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   CheckCircle2,
-  X,
   LayoutDashboard,
   Users,
   ClipboardList,
-  Server,
   Activity,
   MessageCircle,
   Terminal,

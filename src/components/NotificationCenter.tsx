@@ -6,16 +6,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
-  Zap,
   Server,
-  Users,
-  Brain,
-  Settings as SettingsIcon,
-  ChevronRight,
   Trash2,
-  ExternalLink,
 } from 'lucide-react';
-import { useI18n } from '../i18n';
 
 export interface NotificationItem {
   id: string;
