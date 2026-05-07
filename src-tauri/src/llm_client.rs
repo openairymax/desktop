@@ -45,7 +45,7 @@ impl LLMProviderConfig {
             id: "localai".to_string(),
             name: "Local AI (Ollama)".to_string(),
             provider_type: "ollama".to_string(),
-            base_url: base_url.unwrap_or_else(|| "http://localhost:11434/v1".to_string()),
+            base_url: base_url.unwrap_or_else(|| format!("http://localhost:{}/v1", 11434)),
             api_key: None,
             model: model.unwrap_or_else(|| "llama3".to_string()),
             timeout_seconds: 300,
