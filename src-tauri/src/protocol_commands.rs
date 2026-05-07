@@ -213,7 +213,7 @@ pub async fn get_protocol_capabilities(
 fn get_backend_client(state: &AppState) -> Result<BackendClient, String> {
     let config = state.config.lock().map_err(|e| e.to_string())?;
     Ok(BackendClient::new(crate::backend_client::BackendConfig {
-        gateway_url: config.gateway_url.clone().unwrap_or_else(|| "http://localhost:18789".to_string()),
+        gateway_url: config.gateway_url.clone().unwrap_or_else(|| format!("http://localhost:{}", 18789)),
         timeout_seconds: config.timeout_seconds,
         api_key: config.api_key.clone(),
     }))
