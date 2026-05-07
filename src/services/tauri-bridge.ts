@@ -5,7 +5,7 @@
 // browser environments. Automatically initializes the AgentOS SDK.
 // ============================================================
 
-import { initSdk, isTauri, autoInit } from './agentos-sdk';
+import { initSdk, isTauri } from './agentos-sdk';
 import { AGENTOS_GATEWAY_URL } from '../constants/endpoints';
 
 let initialized = false;

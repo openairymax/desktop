@@ -58,9 +58,8 @@ const STATUS_MAP: Record<
 };
 
 const ServiceManagement: React.FC = () => {
-  const { t } = useTranslation();
   const { health, fetchHealth } = useHealth();
-  const { connection, connect } = useConnection();
+  const { connection } = useConnection();
   const [services, setServices] = useState<ServiceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [checkingId, setCheckingId] = useState<string | null>(null);

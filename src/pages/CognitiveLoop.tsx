@@ -9,9 +9,7 @@ import {
   Loader2,
   ChevronRight,
   Settings2,
-  ArrowRight,
   Sparkles,
-  RefreshCw,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';

@@ -6,15 +6,11 @@ import {
   Palette,
   Database,
   Shield,
-  Bell,
   Save,
-  RefreshCw,
   Loader2,
   Trash2,
   Download,
-  Upload,
   CheckCircle2,
-  AlertTriangle,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
