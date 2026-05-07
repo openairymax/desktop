@@ -6,15 +6,10 @@ import {
   Download,
   Star,
   Search,
-  Filter,
   CheckCircle,
   RefreshCw,
-  ExternalLink,
   Package,
   Tag,
-  Users,
-  Clock,
-  ChevronRight,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 

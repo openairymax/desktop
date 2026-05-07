@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Target,
   Lightbulb,
   MessageSquare,
   Wrench,
@@ -19,7 +18,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import sdk from '../services/agentos-sdk';
-import type { CognitiveStep, ToolDefinition } from '../services/agentos-sdk';
+import type { CognitiveStep } from '../services/agentos-sdk';
 
 type CyclePhase = 'perception' | 'reasoning' | 'action' | 'reflection' | 'idle';
 

@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
-  X,
   ArrowRight,
   Command,
-  Zap,
   LayoutDashboard,
   Bot,
   ListTodo,
@@ -139,9 +137,14 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
     setFiltered(SEARCH_ITEMS);
   }, [open]);
 
+  const navigateTo = useCallback((item: SearchResult | undefined) => {
+    if (!item) return;
+    navigate(item.path);
+    onClose();
+  }, [navigate, onClose]);
+
   useEffect(() => {
     if (!open) return;
-
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -167,13 +170,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [open, selectedIndex, filtered?.length]);
-
-  const navigateTo = (item: SearchResult | undefined) => {
-    if (!item) return;
-    navigate(item.path);
-    onClose();
-  };
+  }, [open, selectedIndex, filtered, navigateTo, onClose]);
 
   const categories = [...new Set(filtered.map((i) => i.category))];
 
@@ -292,7 +289,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
                   </div>
                   {filtered
                     .filter((i) => i.category === cat)
-                    .map((item, idx) => {
+                    .map((item) => {
                       const globalIdx = filtered.indexOf(item);
                       const isSelected = globalIdx === selectedIndex;
                       return (

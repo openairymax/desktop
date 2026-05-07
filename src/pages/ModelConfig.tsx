@@ -1,27 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Brain,
   Plus,
   CheckCircle2,
   XCircle,
   Loader2,
-  ExternalLink,
   Zap,
-  Shield,
   Globe,
   Cpu,
   Sparkles,
-  Key,
   Eye,
   EyeOff,
   Settings,
-  Server,
   Database,
   Save,
   Trash2,
   RefreshCw,
-  AlertTriangle,
-  Info,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -98,11 +92,7 @@ const ModelConfig: React.FC = () => {
   });
   const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([]);
 
-  useEffect(() => {
-    loadAllData();
-  }, []);
-
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
       if (client) {
@@ -135,12 +125,16 @@ const ModelConfig: React.FC = () => {
           if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
         }
       }
-    } catch (e) {
-      console.error('Failed to load config:', e);
+    } catch {
+      void 0;
     } finally {
       setLoading(false);
     }
-  };
+  }, [client]);
+
+  useEffect(() => {
+    loadAllData();
+  }, [loadAllData]);
 
   const saveAll = async () => {
     localStorage.setItem('agentos-config', JSON.stringify({ providers, systemParams, envVars }));

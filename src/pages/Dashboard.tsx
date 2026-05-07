@@ -191,15 +191,6 @@ const Dashboard: React.FC = () => {
     return () => clearInterval(iv);
   }, [uptime, health, metrics, connection]);
 
-  const formatUptime = (sec: number): string => {
-    const d = Math.floor(sec / 86400),
-      h = Math.floor((sec % 86400) / 3600),
-      m = Math.floor((sec % 3600) / 60);
-    if (d > 0) return `${d}天 ${h}时`;
-    if (h > 0) return `${h}小时 ${m}分`;
-    return `${m}分钟`;
-  };
-
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.06, delayChildren: 0.05 } },

@@ -5,21 +5,17 @@ import {
   Clock,
   Layers,
   Search,
-  Plus,
   Trash2,
-  ExternalLink,
   Zap,
   FileText,
   MessageSquare,
   Cpu,
   Shield,
   ChevronRight,
-  ArrowUpRight,
   TrendingUp,
   Hash,
   Eye,
   RefreshCw,
-  AlertTriangle,
 } from 'lucide-react';
 import sdk from '../services/agentos-sdk';
 import type { MemoryEntry } from '../services/agentos-sdk';
@@ -196,16 +192,6 @@ const MemorySystem: React.FC = () => {
     if (searchQuery && !m.content.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;
   });
-
-  const typeStats = Object.entries(
-    memories.reduce(
-      (acc, m) => {
-        acc[m.type] = (acc[m.type] || 0) + 1;
-        return acc;
-      },
-      {} as Record<string, number>,
-    ),
-  ).sort((a, b) => b[1] - a[1]);
 
   const totalTokens = memories.reduce((s, m) => s + m.tokens, 0);
 

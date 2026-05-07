@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Server,
-  Globe,
   Wifi,
   WifiOff,
   RefreshCw,
@@ -10,11 +9,9 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Settings,
   Link as LinkIcon,
   Activity,
 } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useHealth, useConnection } from '../hooks/useAgentOS';
 
 interface ServiceInfo {
@@ -66,7 +63,7 @@ const ServiceManagement: React.FC = () => {
 
   useEffect(() => {
     fetchHealth();
-  }, []);
+  }, [fetchHealth]);
 
   useEffect(() => {
     const gatewayStatus: ServiceInfo['status'] =

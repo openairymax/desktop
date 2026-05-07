@@ -70,7 +70,6 @@ const MemoryEvolution: React.FC = () => {
     deleteMemory,
     evolveMemory,
     clearMemories,
-    searchMemory,
   } = useMemory();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +82,7 @@ const MemoryEvolution: React.FC = () => {
 
   useEffect(() => {
     fetchMemories();
-  }, []);
+  }, [fetchMemories]);
 
   useEffect(() => {
     if (apiMemories && apiMemories.length > 0) {

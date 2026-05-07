@@ -51,16 +51,68 @@ const SystemMonitor: React.FC = () => {
   const [connected, setConnected] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const formatUptime = (s: number) => {
+  const formatUptime = useCallback((s: number) => {
     const d = Math.floor(s / 86400),
       h = Math.floor((s % 86400) / 3600),
       m = Math.floor((s % 3600) / 60);
     if (d > 0) return t('systemMonitorExtended.uptimeFormat', { days: d, hours: h });
     if (h > 0) return t('systemMonitorExtended.uptimeFormatHours', { hours: h, minutes: m });
     return t('systemMonitorExtended.uptimeFormatMinutes', { minutes: m });
-  };
+  }, [t]);
 
-  const formatBytes = (gb: number) => `${gb.toFixed(1)} GB`;
+  const updateBrowserMetrics = useCallback(() => {
+    const perf = performance as any;
+    const memPct = perf.memory
+      ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100)
+      : 45;
+
+    setMetrics([
+      {
+        label: t('systemMonitorExtended.jsHeapMemory'),
+        value: perf.memory ? `${(perf.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB` : '--',
+        sub: perf.memory
+          ? t('systemMonitorExtended.memoryLimit', {
+              mb: (perf.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0),
+            })
+          : t('systemMonitorExtended.browserNotSupported'),
+        icon: <MemoryStick size={18} />,
+        color: memPct > 80 ? '#f59e0b' : '#10b981',
+        progress: memPct,
+      },
+      {
+        label: t('systemMonitorExtended.platform'),
+        value: navigator.platform?.substring(0, 14) || '--',
+        sub: navigator.userAgent.includes('Tauri')
+          ? t('systemMonitorExtended.tauriDesktop')
+          : t('systemMonitorExtended.webBrowser'),
+        icon: <Cpu size={18} />,
+        color: '#8b5cf6',
+        progress: 50,
+      },
+      {
+        label: t('systemMonitorExtended.language'),
+        value: navigator.language || 'zh-CN',
+        sub: t('systemMonitorExtended.timezone', {
+          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
+        icon: <Zap size={18} />,
+        color: '#06b6d4',
+        progress: 100,
+      },
+      {
+        label: t('systemMonitorExtended.onlineStatus'),
+        value: navigator.onLine
+          ? t('systemMonitorExtended.online')
+          : t('systemMonitorExtended.offline'),
+        sub: navigator.onLine
+          ? t('systemMonitorExtended.networkAvailable')
+          : t('systemMonitorExtended.networkUnavailable'),
+        icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />,
+        color: navigator.onLine ? '#10b981' : '#ef4444',
+        progress: navigator.onLine ? 100 : 0,
+      },
+    ]);
+  }, [t]);
 
   const fetchSystemData = useCallback(async () => {
     try {
@@ -137,61 +189,7 @@ const SystemMonitor: React.FC = () => {
       setError(e instanceof Error ? e.message : String(e));
       updateBrowserMetrics();
     }
-  }, []);
-
-  const updateBrowserMetrics = () => {
-    const perf = performance as any;
-    const memPct = perf.memory
-      ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100)
-      : 45;
-
-    setMetrics([
-      {
-        label: t('systemMonitorExtended.jsHeapMemory'),
-        value: perf.memory ? `${(perf.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)} MB` : '--',
-        sub: perf.memory
-          ? t('systemMonitorExtended.memoryLimit', {
-              mb: (perf.memory.jsHeapSizeLimit / 1024 / 1024).toFixed(0),
-            })
-          : t('systemMonitorExtended.browserNotSupported'),
-        icon: <MemoryStick size={18} />,
-        color: memPct > 80 ? '#f59e0b' : '#10b981',
-        progress: memPct,
-      },
-      {
-        label: t('systemMonitorExtended.platform'),
-        value: navigator.platform?.substring(0, 14) || '--',
-        sub: navigator.userAgent.includes('Tauri')
-          ? t('systemMonitorExtended.tauriDesktop')
-          : t('systemMonitorExtended.webBrowser'),
-        icon: <Cpu size={18} />,
-        color: '#8b5cf6',
-        progress: 50,
-      },
-      {
-        label: t('systemMonitorExtended.language'),
-        value: navigator.language || 'zh-CN',
-        sub: t('systemMonitorExtended.timezone', {
-          tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-        icon: <Zap size={18} />,
-        color: '#06b6d4',
-        progress: 100,
-      },
-      {
-        label: t('systemMonitorExtended.onlineStatus'),
-        value: navigator.onLine
-          ? t('systemMonitorExtended.online')
-          : t('systemMonitorExtended.offline'),
-        sub: navigator.onLine
-          ? t('systemMonitorExtended.networkAvailable')
-          : t('systemMonitorExtended.networkUnavailable'),
-        icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />,
-        color: navigator.onLine ? '#10b981' : '#ef4444',
-        progress: navigator.onLine ? 100 : 0,
-      },
-    ]);
-  };
+  }, [t, formatUptime, updateBrowserMetrics]);
 
   useEffect(() => {
     fetchSystemData();

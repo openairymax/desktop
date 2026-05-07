@@ -6,9 +6,9 @@ export function PWAPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
 
   useEffect(() => {
-    const isStandaloneMode = window.matchMedia('(display-mode: standalone)').matches 
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
       || (window.navigator as any).standalone === true;
-    setIsStandalone(isStandalone);
+    setIsStandalone(standalone);
 
     const handler = (e: Event) => {
       e.preventDefault();
@@ -27,7 +27,7 @@ export function PWAPrompt() {
       const { outcome } = await deferredPrompt.userChoice;
       
       if (outcome === 'accepted') {
-        console.log('PWA 安装已接受');
+        void outcome;
       }
       
       setDeferredPrompt(null);

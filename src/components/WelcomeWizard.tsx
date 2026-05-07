@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import sdk from '../services/agentos-sdk';
 import { useI18n } from '../i18n';
 import {
-  ChevronRight,
   Globe,
-  FolderOpen,
   Server,
   CheckCircle2,
   Sparkles,
@@ -16,9 +14,7 @@ import {
   Cpu,
   Activity,
   Lightbulb,
-  Target,
   Database,
-  Workflow,
 } from 'lucide-react';
 
 interface WelcomeWizardProps {
@@ -26,9 +22,9 @@ interface WelcomeWizardProps {
 }
 
 const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
-  const { language, setLanguage, t, availableLanguages } = useI18n();
+  const { language, setLanguage, availableLanguages } = useI18n();
   const [step, setStep] = useState(1);
-  const [projectPath, setProjectPath] = useState('');
+  const [projectPath] = useState('');
   const [serviceMode, setServiceMode] = useState<'docker' | 'local'>('docker');
   const [isConfiguring, setIsConfiguring] = useState(false);
 
@@ -425,7 +421,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             </p>
 
             <div style={{ display: 'flex', gap: '14px' }}>
-              {availableLanguages.map((lang) => (
+              {availableLanguages.map((lang: { code: 'en' | 'zh'; name: string }) => (
                 <button
                   key={lang.code}
                   onClick={() => setLanguage(lang.code as 'en' | 'zh')}
@@ -654,7 +650,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               {[
                 {
                   label: '界面语言',
-                  value: availableLanguages.find((l) => l.code === language)?.name || language,
+                  value: availableLanguages.find((l: { code: string; name: string }) => l.code === language)?.name || language,
                 },
                 {
                   label: '服务模式',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Terminal,
   Search,
@@ -11,16 +11,11 @@ import {
   FileText,
   ArrowRight,
   Command,
-  Zap,
-  Palette,
-  Globe,
-  Download,
   Trash2,
   RefreshCw,
   X,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../i18n';
 import { useToast } from './Toast';
 
 interface CommandItem {
@@ -161,7 +156,6 @@ const CommandPalette: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
-  const { t } = useI18n();
   const { addToast } = useToast();
 
   const filteredCommands = useMemo(() => {
@@ -177,6 +171,14 @@ const CommandPalette: React.FC = () => {
     }
     return result;
   }, [query, activeCategory]);
+
+  const executeCommand = useCallback((cmd: CommandItem) => {
+    if (cmd.path) navigate(cmd.path);
+    if (cmd.action) cmd.action();
+    addToast({ type: 'info', title: `Command executed: ${cmd.label}`, duration: 2500 });
+    setIsOpen(false);
+    setQuery('');
+  }, [navigate, addToast]);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -206,25 +208,11 @@ const CommandPalette: React.FC = () => {
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filteredCommands]);
+  }, [isOpen, selectedIndex, filteredCommands, executeCommand]);
 
   useEffect(() => {
     if (isOpen && inputRef.current) inputRef.current.focus();
   }, [isOpen]);
-
-  const executeCommand = (cmd: CommandItem) => {
-    if (cmd.path) navigate(cmd.path);
-    if (cmd.action) cmd.action();
-
-    addToast({
-      type: 'info',
-      title: `Command executed: ${cmd.label}`,
-      duration: 2500,
-    });
-
-    setIsOpen(false);
-    setQuery('');
-  };
 
   return (
     <>

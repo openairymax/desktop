@@ -1,5 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import { AlertTriangle, CheckCircle2, Info, XCircle, X, HelpCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle, HelpCircle } from 'lucide-react';
 
 export type ModalType = 'confirm' | 'danger' | 'info' | 'success' | 'warning';
 
@@ -79,12 +79,12 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (modal) {
       modal.resolve(false);
       setModal(null);
     }
-  };
+  }, [modal]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -92,7 +92,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [modal]);
+  }, [modal, handleCancel]);
 
   return (
     <ModalContext.Provider value={{ showModal }}>
