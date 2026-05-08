@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type FeedbackType = 'success' | 'error' | 'warning' | 'info';
@@ -80,32 +80,40 @@ export const OperationFeedback: React.FC<OperationFeedbackProps> = ({
         transition: 'all 0.3s ease',
       }}
     >
-      <div style={{
-        color: config.color,
-        flexShrink: 0,
-        marginTop: '2px',
-      }}>
+      <div
+        style={{
+          color: config.color,
+          flexShrink: 0,
+          marginTop: '2px',
+        }}
+      >
         <Icon size={20} />
       </div>
-      <div style={{
-        flex: 1,
-        minWidth: 0,
-      }}>
-        <h3 style={{
-          fontSize: '14px',
-          fontWeight: 500,
-          color: 'var(--text-primary)',
-          margin: '0 0 4px 0',
-        }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+        }}
+      >
+        <h3
+          style={{
+            fontSize: '14px',
+            fontWeight: 500,
+            color: 'var(--text-primary)',
+            margin: '0 0 4px 0',
+          }}
+        >
           {title}
         </h3>
         {message && (
-          <p style={{
-            fontSize: '13px',
-            lineHeight: 1.4,
-            color: 'var(--text-secondary)',
-            margin: 0,
-          }}>
+          <p
+            style={{
+              fontSize: '13px',
+              lineHeight: 1.4,
+              color: 'var(--text-secondary)',
+              margin: 0,
+            }}
+          >
             {message}
           </p>
         )}
@@ -143,35 +151,53 @@ interface OperationFeedbackProviderProps {
   children: React.ReactNode;
 }
 
-export const OperationFeedbackProvider: React.FC<OperationFeedbackProviderProps> = ({ children }) => {
-  const [feedbacks, setFeedbacks] = useState<Array<{
-    id: string;
-    props: OperationFeedbackProps;
-  }>>([]);
+export const OperationFeedbackProvider: React.FC<OperationFeedbackProviderProps> = ({
+  children,
+}) => {
+  const [feedbacks, setFeedbacks] = useState<
+    Array<{
+      id: string;
+      props: OperationFeedbackProps;
+    }>
+  >([]);
 
-  const addFeedback = (props: OperationFeedbackProps) => {
-    const id = `feedback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    setFeedbacks(prev => [...prev, { id, props: { ...props, onClose: () => removeFeedback(id) } }]);
-  };
+  const removeFeedback = useCallback((id: string) => {
+    setFeedbacks((prev) => prev.filter((f) => f.id !== id));
+  }, []);
 
-  const removeFeedback = (id: string) => {
-    setFeedbacks(prev => prev.filter(f => f.id !== id));
-  };
+  const addFeedback = useCallback((props: OperationFeedbackProps) => {
+    const id = `feedback-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+    setFeedbacks((prev) => [
+      ...prev,
+      { id, props: { ...props, onClose: () => removeFeedback(id) } },
+    ]);
+  }, [removeFeedback]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      addFeedback(detail);
+    };
+    window.addEventListener('addFeedback', handler);
+    return () => window.removeEventListener('addFeedback', handler);
+  }, [addFeedback]);
 
   return (
     <div style={{ position: 'relative' }}>
       {children}
-      <div style={{
-        position: 'fixed',
-        top: '80px',
-        left: '20px',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-        pointerEvents: 'none',
-      }}>
-        {feedbacks.map(feedback => (
+      <div
+        style={{
+          position: 'fixed',
+          top: '80px',
+          left: '20px',
+          zIndex: 1000,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+          pointerEvents: 'none',
+        }}
+      >
+        {feedbacks.map((feedback) => (
           <div key={feedback.id} style={{ pointerEvents: 'auto' }}>
             <OperationFeedback {...feedback.props} />
           </div>

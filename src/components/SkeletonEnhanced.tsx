@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 interface SkeletonProps {
   variant?: 'text' | 'circular' | 'rectangular';
@@ -44,12 +44,14 @@ export const SkeletonCard: React.FC<SkeletonCardProps> = ({
   lines = 3,
   showButton = true,
 }) => (
-  <div style={{
-    padding: '20px',
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: 'var(--radius-lg)',
-  }}>
+  <div
+    style={{
+      padding: '20px',
+      background: 'var(--bg-secondary)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 'var(--radius-lg)',
+    }}
+  >
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
       {showAvatar && <Skeleton variant="circular" width={48} height={48} />}
       <div style={{ flex: 1 }}>
@@ -85,21 +87,25 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
   columns = 4,
   showHeader = true,
 }) => (
-  <div style={{
-    background: 'var(--bg-secondary)',
-    border: '1px solid var(--border-subtle)',
-    borderRadius: 'var(--radius-lg)',
-    overflow: 'hidden',
-  }}>
+  <div
+    style={{
+      background: 'var(--bg-secondary)',
+      border: '1px solid var(--border-subtle)',
+      borderRadius: 'var(--radius-lg)',
+      overflow: 'hidden',
+    }}
+  >
     {showHeader && (
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: `repeat(${columns}, 1fr)`,
-        gap: '12px',
-        padding: '14px 16px',
-        borderBottom: '1px solid var(--border-subtle)',
-        background: 'var(--bg-tertiary)',
-      }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${columns}, 1fr)`,
+          gap: '12px',
+          padding: '14px 16px',
+          borderBottom: '1px solid var(--border-subtle)',
+          background: 'var(--bg-tertiary)',
+        }}
+      >
         {Array.from({ length: columns }).map((_, i) => (
           <Skeleton key={i} height={14} width="70%" />
         ))}
@@ -117,7 +123,11 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
         }}
       >
         {Array.from({ length: columns }).map((_, colIndex) => (
-          <Skeleton key={colIndex} height={14} width={colIndex === 0 ? '60%' : `${50 + Math.random() * 30}%`} />
+          <Skeleton
+            key={colIndex}
+            height={14}
+            width={colIndex === 0 ? '60%' : `${50 + Math.random() * 30}%`}
+          />
         ))}
       </div>
     ))}
@@ -127,7 +137,14 @@ export const SkeletonTable: React.FC<SkeletonTableProps> = ({
 interface SkeletonDashboardProps {}
 
 export const SkeletonDashboard: React.FC<SkeletonDashboardProps> = () => (
-  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' }}>
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '16px',
+      marginBottom: '20px',
+    }}
+  >
     {Array.from({ length: 4 }).map((_, i) => (
       <div
         key={i}
@@ -152,10 +169,7 @@ interface SkeletonListProps {
   showIcon?: boolean;
 }
 
-export const SkeletonList: React.FC<SkeletonListProps> = ({
-  items = 5,
-  showIcon = true,
-}) => (
+export const SkeletonList: React.FC<SkeletonListProps> = ({ items = 5, showIcon = true }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
     {Array.from({ length: items }).map((_, i) => (
       <div

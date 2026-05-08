@@ -1,12 +1,5 @@
 import React, { useState, useEffect, createContext, useContext, useCallback } from 'react';
-import {
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  XCircle,
-  X,
-  HelpCircle,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XCircle, HelpCircle } from 'lucide-react';
 
 export type ModalType = 'confirm' | 'danger' | 'info' | 'success' | 'warning';
 
@@ -31,16 +24,46 @@ export const useModal = () => {
   return ctx;
 };
 
-const MODAL_CONFIGS: Record<ModalType, { icon: React.ElementType; color: string; bg: string; borderColor: string }> = {
-  confirm: { icon: HelpCircle, color: '#6366f1', bg: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.25)' },
-  danger: { icon: XCircle, color: '#ef4444', bg: 'rgba(239,68,68,0.08)', borderColor: 'rgba(239,68,68,0.25)' },
-  info: { icon: Info, color: '#3b82f6', bg: 'rgba(59,130,246,0.08)', borderColor: 'rgba(59,130,246,0.25)' },
-  success: { icon: CheckCircle2, color: '#22c55e', bg: 'rgba(34,197,94,0.08)', borderColor: 'rgba(34,197,94,0.25)' },
-  warning: { icon: AlertTriangle, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', borderColor: 'rgba(245,158,11,0.25)' },
+const MODAL_CONFIGS: Record<
+  ModalType,
+  { icon: React.ElementType; color: string; bg: string; borderColor: string }
+> = {
+  confirm: {
+    icon: HelpCircle,
+    color: '#6366f1',
+    bg: 'rgba(99,102,241,0.08)',
+    borderColor: 'rgba(99,102,241,0.25)',
+  },
+  danger: {
+    icon: XCircle,
+    color: '#ef4444',
+    bg: 'rgba(239,68,68,0.08)',
+    borderColor: 'rgba(239,68,68,0.25)',
+  },
+  info: {
+    icon: Info,
+    color: '#3b82f6',
+    bg: 'rgba(59,130,246,0.08)',
+    borderColor: 'rgba(59,130,246,0.25)',
+  },
+  success: {
+    icon: CheckCircle2,
+    color: '#22c55e',
+    bg: 'rgba(34,197,94,0.08)',
+    borderColor: 'rgba(34,197,94,0.25)',
+  },
+  warning: {
+    icon: AlertTriangle,
+    color: '#f59e0b',
+    bg: 'rgba(245,158,11,0.08)',
+    borderColor: 'rgba(245,158,11,0.25)',
+  },
 };
 
 export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [modal, setModal] = useState<ModalOptions & { id: number; resolve: (value: boolean) => void } | null>(null);
+  const [modal, setModal] = useState<
+    (ModalOptions & { id: number; resolve: (value: boolean) => void }) | null
+  >(null);
 
   const showModal = useCallback((options: ModalOptions): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -56,12 +79,12 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (modal) {
       modal.resolve(false);
       setModal(null);
     }
-  };
+  }, [modal]);
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -69,7 +92,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [modal]);
+  }, [modal, handleCancel]);
 
   return (
     <ModalContext.Provider value={{ showModal }}>
@@ -82,12 +105,18 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             onClick={(e) => e.stopPropagation()}
           >
             {/* Icon */}
-            <div style={{
-              width: '48px', height: '48px', borderRadius: 'var(--radius-md)',
-              background: MODAL_CONFIGS[modal.type || 'confirm'].bg,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              marginBottom: '18px',
-            }}>
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: 'var(--radius-md)',
+                background: MODAL_CONFIGS[modal.type || 'confirm'].bg,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '18px',
+              }}
+            >
               {React.createElement(MODAL_CONFIGS[modal.type || 'confirm'].icon, {
                 size: 24,
                 color: MODAL_CONFIGS[modal.type || 'confirm'].color,
@@ -95,18 +124,26 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             </div>
 
             {/* Title */}
-            <h2 style={{
-              fontSize: '18px', fontWeight: 700, margin: '0 0 10px',
-              letterSpacing: '-0.01em',
-            }}>
+            <h2
+              style={{
+                fontSize: '18px',
+                fontWeight: 700,
+                margin: '0 0 10px',
+                letterSpacing: '-0.01em',
+              }}
+            >
               {modal.title}
             </h2>
 
             {/* Message */}
-            <p style={{
-              fontSize: '14px', lineHeight: '1.6', color: 'var(--text-secondary)',
-              margin: '0 0 26px',
-            }}>
+            <p
+              style={{
+                fontSize: '14px',
+                lineHeight: '1.6',
+                color: 'var(--text-secondary)',
+                margin: '0 0 26px',
+              }}
+            >
               {modal.message}
             </p>
 

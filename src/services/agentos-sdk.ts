@@ -217,7 +217,9 @@ let invokeFn: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
  * In Tauri mode: import { invoke } from '@tauri-apps/api/core' and pass it.
  * In browser mode: pass a fetch-based implementation.
  */
-export function initSdk(invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>): void {
+export function initSdk(
+  invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>,
+): void {
   invokeFn = invoke;
 }
 
@@ -236,9 +238,8 @@ export async function autoInit(): Promise<void> {
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       invokeFn = invoke;
-    } catch {
-      // Running in a non-Tauri environment
-      console.warn('AgentOS SDK: Tauri not detected, browser mode available');
+    } catch (e) {
+      console.warn('AgentOS SDK: Tauri not detected, browser mode available:', e);
     }
   }
 }
@@ -248,7 +249,7 @@ function invoke<T>(cmd: string, args: Record<string, unknown> = {}): Promise<T> 
     // Lazy auto-init on first call
     throw new Error(
       'AgentOS SDK not initialized. Call initSdk() or autoInit() first, ' +
-      'or use the invoke wrapper from a Tauri command hook.'
+        'or use the invoke wrapper from a Tauri command hook.',
     );
   }
   return invokeFn<T>(cmd, args);
@@ -262,7 +263,7 @@ export async function getSystemInfo(): Promise<SystemInfo> {
 
 export async function executeCliCommand(
   command: string,
-  args: string[] = []
+  args: string[] = [],
 ): Promise<CliCommandResult> {
   return invoke<CliCommandResult>('execute_cli_command', { command, args });
 }
@@ -283,10 +284,7 @@ export async function restartServices(mode: string = 'dev'): Promise<CliCommandR
   return invoke<CliCommandResult>('restart_services', { mode });
 }
 
-export async function getLogs(
-  service?: string,
-  tail: number = 100
-): Promise<string> {
+export async function getLogs(service?: string, tail: number = 100): Promise<string> {
   return invoke<string>('get_logs', { service, tail });
 }
 
@@ -307,9 +305,13 @@ export async function getAgentDetails(agentId: string): Promise<AgentInfo> {
 export async function registerAgent(
   agentName: string,
   agentType: string,
-  description?: string
+  description?: string,
 ): Promise<AgentInfo> {
-  return invoke<AgentInfo>('register_agent', { agent_name: agentName, agent_type: agentType, description });
+  return invoke<AgentInfo>('register_agent', {
+    agent_name: agentName,
+    agent_type: agentType,
+    description,
+  });
 }
 
 export async function startAgent(agentId: string): Promise<AgentInfo> {
@@ -326,7 +328,7 @@ export async function getAgentConfig(agentId: string): Promise<Record<string, un
 
 export async function updateAgentConfig(
   agentId: string,
-  config: Record<string, unknown>
+  config: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('update_agent_config', { agent_id: agentId, config });
 }
@@ -336,9 +338,13 @@ export async function updateAgentConfig(
 export async function submitTask(
   agentId: string,
   taskDescription: string,
-  priority?: string
+  priority?: string,
 ): Promise<TaskInfo> {
-  return invoke<TaskInfo>('submit_task', { agent_id: agentId, task_description: taskDescription, priority });
+  return invoke<TaskInfo>('submit_task', {
+    agent_id: agentId,
+    task_description: taskDescription,
+    priority,
+  });
 }
 
 export async function getTaskStatus(taskId: string): Promise<TaskInfo> {
@@ -376,7 +382,9 @@ export async function listLlmProviders(): Promise<LLMProviderConfig[]> {
   return raw as unknown as LLMProviderConfig[];
 }
 
-export async function saveLlmProvider(config: Record<string, unknown>): Promise<Record<string, unknown>> {
+export async function saveLlmProvider(
+  config: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('save_llm_provider', { config });
 }
 
@@ -390,24 +398,31 @@ export async function memoryStore(
   memoryType: string,
   content: string,
   source?: string,
-  metadata?: Record<string, unknown>
+  metadata?: Record<string, unknown>,
 ): Promise<MemoryEntry> {
-  return invoke<MemoryEntry>('memory_store', { memory_type: memoryType, content, source, metadata });
+  return invoke<MemoryEntry>('memory_store', {
+    memory_type: memoryType,
+    content,
+    source,
+    metadata,
+  });
 }
 
 export async function memorySearch(
   query: string = '',
   limit: number = 10,
   typeFilter?: string,
-  minRelevance?: number
+  minRelevance?: number,
 ): Promise<MemoryEntry[]> {
-  return invoke<MemoryEntry[]>('memory_search', { query, limit, type_filter: typeFilter, min_relevance: minRelevance });
+  return invoke<MemoryEntry[]>('memory_search', {
+    query,
+    limit,
+    type_filter: typeFilter,
+    min_relevance: minRelevance,
+  });
 }
 
-export async function memoryList(
-  typeFilter?: string,
-  limit: number = 50
-): Promise<MemoryEntry[]> {
+export async function memoryList(typeFilter?: string, limit: number = 50): Promise<MemoryEntry[]> {
   return invoke<MemoryEntry[]>('memory_list', { type_filter: typeFilter, limit });
 }
 
@@ -427,15 +442,12 @@ export async function contextWindowStats(): Promise<ContextWindowStats> {
 
 export async function runCognitiveLoop(
   input: string,
-  tools?: Record<string, unknown>
+  tools?: Record<string, unknown>,
 ): Promise<CognitiveStep[]> {
   return invoke<CognitiveStep[]>('run_cognitive_loop', { input, tools });
 }
 
-export async function callTool(
-  name: string,
-  arguments_: string
-): Promise<Record<string, unknown>> {
+export async function callTool(name: string, arguments_: string): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('call_tool', { name, arguments: arguments_ });
 }
 
@@ -516,15 +528,12 @@ export async function getNetworkInterfaces(): Promise<NetworkInterface[]> {
 export async function checkPort(
   host: string,
   port: number,
-  timeoutMs?: number
+  timeoutMs?: number,
 ): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('check_port', { host, port, timeout_ms: timeoutMs });
 }
 
-export async function ping(
-  host: string,
-  count: number = 4
-): Promise<Record<string, unknown>> {
+export async function ping(host: string, count: number = 4): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('ping', { host, count });
 }
 
@@ -580,14 +589,19 @@ export async function testProtocolConnection(
   protocol: string,
   host: string,
   port: number,
-  options?: Record<string, unknown>
+  options?: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
-  return invoke<Record<string, unknown>>('test_protocol_connection', { protocol, host, port, options });
+  return invoke<Record<string, unknown>>('test_protocol_connection', {
+    protocol,
+    host,
+    port,
+    options,
+  });
 }
 
 export async function sendProtocolMessage(
   protocol: string,
-  message: Record<string, unknown>
+  message: Record<string, unknown>,
 ): Promise<Record<string, unknown>> {
   return invoke<Record<string, unknown>>('send_protocol_message', { protocol, message });
 }

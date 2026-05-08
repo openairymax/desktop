@@ -6,16 +6,9 @@ import {
   CheckCircle2,
   AlertTriangle,
   Info,
-  Zap,
   Server,
-  Users,
-  Brain,
-  Settings as SettingsIcon,
-  ChevronRight,
   Trash2,
-  ExternalLink,
 } from 'lucide-react';
-import { useI18n } from '../i18n';
 
 export interface NotificationItem {
   id: string;
@@ -31,14 +24,44 @@ const NotificationCenter: React.FC = () => {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([
-    { id: '1', type: 'success', title: 'System Ready', message: 'All services are running normally. AgentOS is ready to use.', timestamp: new Date(Date.now() - 5 * 60000), read: false, action: { label: 'View Dashboard', onClick: () => navigate('/') } },
-    { id: '2', type: 'info', title: 'New Feature Available', message: 'AI Model Configuration is now available. Configure your LLM providers.', timestamp: new Date(Date.now() - 15 * 60000), read: false, action: { label: 'Configure Now', onClick: () => navigate('/llm-config') } },
-    { id: '3', type: 'warning', title: 'Memory Usage', message: 'System memory usage is above 80%. Consider stopping unused services.', timestamp: new Date(Date.now() - 30 * 60000), read: true },
-    { id: '4', type: 'system', title: 'Auto-backup Completed', message: 'Configuration backup completed successfully at scheduled time.', timestamp: new Date(Date.now() - 60 * 60000), read: true },
+    {
+      id: '1',
+      type: 'success',
+      title: 'System Ready',
+      message: 'All services are running normally. AgentOS is ready to use.',
+      timestamp: new Date(Date.now() - 5 * 60000),
+      read: false,
+      action: { label: 'View Dashboard', onClick: () => navigate('/') },
+    },
+    {
+      id: '2',
+      type: 'info',
+      title: 'New Feature Available',
+      message: 'AI Model Configuration is now available. Configure your LLM providers.',
+      timestamp: new Date(Date.now() - 15 * 60000),
+      read: false,
+      action: { label: 'Configure Now', onClick: () => navigate('/llm-config') },
+    },
+    {
+      id: '3',
+      type: 'warning',
+      title: 'Memory Usage',
+      message: 'System memory usage is above 80%. Consider stopping unused services.',
+      timestamp: new Date(Date.now() - 30 * 60000),
+      read: true,
+    },
+    {
+      id: '4',
+      type: 'system',
+      title: 'Auto-backup Completed',
+      message: 'Configuration backup completed successfully at scheduled time.',
+      timestamp: new Date(Date.now() - 60 * 60000),
+      read: true,
+    },
   ]);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -51,17 +74,19 @@ const NotificationCenter: React.FC = () => {
   }, [isOpen]);
 
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsOpen(false); };
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
+    };
     if (isOpen) document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isOpen]);
 
   const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
   };
 
   const markAllRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   const clearAll = () => {
@@ -69,26 +94,36 @@ const NotificationCenter: React.FC = () => {
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
   };
 
   const getIcon = (type: NotificationItem['type']) => {
     switch (type) {
-      case 'success': return <CheckCircle2 size={16} color="#22c55e" />;
-      case 'warning': return <AlertTriangle size={16} color="#f59e0b" />;
-      case 'error': return <X size={16} color="#ef4444" />;
-      case 'system': return <Server size={16} color="#6366f1" />;
-      default: return <Info size={16} color="#6366f1" />;
+      case 'success':
+        return <CheckCircle2 size={16} color="#22c55e" />;
+      case 'warning':
+        return <AlertTriangle size={16} color="#f59e0b" />;
+      case 'error':
+        return <X size={16} color="#ef4444" />;
+      case 'system':
+        return <Server size={16} color="#6366f1" />;
+      default:
+        return <Info size={16} color="#6366f1" />;
     }
   };
 
   const getTypeColor = (type: NotificationItem['type']) => {
     switch (type) {
-      case 'success': return '#22c55e';
-      case 'warning': return '#f59e0b';
-      case 'error': return '#ef4444';
-      case 'system': return '#6366f1';
-      default: return '#6366f1';
+      case 'success':
+        return '#22c55e';
+      case 'warning':
+        return '#f59e0b';
+      case 'error':
+        return '#ef4444';
+      case 'system':
+        return '#6366f1';
+      default:
+        return '#6366f1';
     }
   };
 
@@ -110,9 +145,7 @@ const NotificationCenter: React.FC = () => {
         aria-label={`Notifications (${unreadCount} unread)`}
       >
         <Bell size={17} />
-        {unreadCount > 0 && (
-          <span className="notification-badge">{unreadCount}</span>
-        )}
+        {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
       </button>
 
       {/* Dropdown Panel */}
@@ -144,7 +177,9 @@ const NotificationCenter: React.FC = () => {
               <div className="notification-empty">
                 <Bell size={32} opacity={0.3} />
                 <p>No notifications</p>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>You're all caught up!</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  You're all caught up!
+                </p>
               </div>
             ) : (
               notifications.map((notif) => (
@@ -154,7 +189,10 @@ const NotificationCenter: React.FC = () => {
                   onClick={() => markAsRead(notif.id)}
                   style={{ borderLeftColor: getTypeColor(notif.type) }}
                 >
-                  <div className="notification-icon-wrapper" style={{ background: `${getTypeColor(notif.type)}15` }}>
+                  <div
+                    className="notification-icon-wrapper"
+                    style={{ background: `${getTypeColor(notif.type)}15` }}
+                  >
                     {getIcon(notif.type)}
                   </div>
 
@@ -169,7 +207,10 @@ const NotificationCenter: React.FC = () => {
                       {notif.action && (
                         <button
                           className="btn btn-primary btn-sm"
-                          onClick={(e) => { e.stopPropagation(); notif.action!.onClick(); }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            notif.action!.onClick();
+                          }}
                         >
                           {notif.action.label}
                         </button>
@@ -179,7 +220,10 @@ const NotificationCenter: React.FC = () => {
 
                   <button
                     className="icon-btn notification-delete"
-                    onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteNotification(notif.id);
+                    }}
                     title="Delete"
                   >
                     <Trash2 size={12} />

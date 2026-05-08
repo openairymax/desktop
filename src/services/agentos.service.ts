@@ -1,4 +1,5 @@
-const DEFAULT_ENDPOINT = 'http://localhost:18789';
+import { AGENTOS_GATEWAY_URL } from '../constants/endpoints';
+const DEFAULT_ENDPOINT = AGENTOS_GATEWAY_URL;
 const DEFAULT_TIMEOUT = 30000;
 
 interface ServiceConfig {
@@ -220,10 +221,7 @@ function getInt64(obj: Record<string, unknown>, key: string): number {
   return typeof v === 'number' ? v : Number(v ?? 0);
 }
 
-function getMap(
-  obj: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> | undefined {
+function getMap(obj: Record<string, unknown>, key: string): Record<string, unknown> | undefined {
   const v = obj[key];
   if (v && typeof v === 'object' && !Array.isArray(v)) {
     return v as Record<string, unknown>;
@@ -253,7 +251,8 @@ function extractData(resp: unknown): Record<string, unknown> {
     if (d && typeof d === 'string') {
       try {
         return JSON.parse(d);
-      } catch {
+      } catch (e) {
+        console.warn('JSON parse failed, returning raw data:', e);
         return { raw: d };
       }
     }
@@ -405,6 +404,7 @@ class TaskService {
   async wait(taskId: string, timeout?: number): Promise<TaskResult> {
     const start = Date.now();
     const pollInterval = 500;
+    /* eslint-disable-next-line no-constant-condition */
     while (true) {
       const task = await this.get(taskId);
 
@@ -485,7 +485,8 @@ class TaskService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -553,7 +554,11 @@ class MemoryService {
       this.config,
     );
     const data = extractData(resp);
-    const memories = parseList<Memory>({ data } as Record<string, unknown>, 'memories', parseMemory);
+    const memories = parseList<Memory>(
+      { data } as Record<string, unknown>,
+      'memories',
+      parseMemory,
+    );
     return {
       memories,
       total: getInt64(data, 'total') || memories.length,
@@ -562,18 +567,18 @@ class MemoryService {
     };
   }
 
-  async searchByLayer(
-    query: string,
-    layer: MemoryLayer,
-    topK = 10,
-  ): Promise<MemorySearchResult> {
+  async searchByLayer(query: string, layer: MemoryLayer, topK = 10): Promise<MemorySearchResult> {
     const resp = await request<Record<string, unknown>>(
       `/api/v1/memories/search?q=${encodeURIComponent(query)}&layer=${layer}&top_k=${topK}`,
       { method: 'GET' },
       this.config,
     );
     const data = extractData(resp);
-    const memories = parseList<Memory>({ data } as Record<string, unknown>, 'memories', parseMemory);
+    const memories = parseList<Memory>(
+      { data } as Record<string, unknown>,
+      'memories',
+      parseMemory,
+    );
     return {
       memories,
       total: getInt64(data, 'total') || memories.length,
@@ -621,7 +626,8 @@ class MemoryService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -651,7 +657,8 @@ class MemoryService {
       );
       const data = extractData(resp);
       return data as Record<string, number>;
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {};
     }
   }
@@ -664,10 +671,7 @@ class SessionService {
     return this.createWithOptions(userId);
   }
 
-  async createWithOptions(
-    userId: string,
-    metadata?: Record<string, unknown>,
-  ): Promise<Session> {
+  async createWithOptions(userId: string, metadata?: Record<string, unknown>): Promise<Session> {
     validateRequiredString(userId, '用户ID');
     const body: Record<string, unknown> = { user_id: userId };
     if (metadata) body.metadata = metadata;
@@ -773,10 +777,7 @@ class SessionService {
     return parseList<Session>(resp, 'sessions', parseSession);
   }
 
-  async update(
-    sessionId: string,
-    metadata: Record<string, unknown>,
-  ): Promise<Session> {
+  async update(sessionId: string, metadata: Record<string, unknown>): Promise<Session> {
     validateRequiredString(sessionId, '会话ID');
     const resp = await request<Record<string, unknown>>(
       `/api/v1/sessions/${sessionId}`,
@@ -788,11 +789,7 @@ class SessionService {
 
   async refresh(sessionId: string): Promise<void> {
     validateRequiredString(sessionId, '会话ID');
-    await request(
-      `/api/v1/sessions/${sessionId}/refresh`,
-      { method: 'POST' },
-      this.config,
-    );
+    await request(`/api/v1/sessions/${sessionId}/refresh`, { method: 'POST' }, this.config);
   }
 
   async isExpired(sessionId: string): Promise<boolean> {
@@ -809,7 +806,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -823,7 +821,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.listActive()).length;
     }
   }
@@ -837,7 +836,8 @@ class SessionService {
       );
       const data = extractData(resp);
       return getInt64(data, 'cleaned');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return 0;
     }
   }
@@ -867,10 +867,7 @@ class SkillService {
     return parseSkill(extractData(resp));
   }
 
-  async execute(
-    skillId: string,
-    parameters?: Record<string, unknown>,
-  ): Promise<SkillResult> {
+  async execute(skillId: string, parameters?: Record<string, unknown>): Promise<SkillResult> {
     validateRequiredString(skillId, '技能ID');
     const body = parameters ? { parameters } : {};
     const resp = await request<Record<string, unknown>>(
@@ -880,9 +877,10 @@ class SkillService {
     );
     const data = extractData(resp);
     return {
-      success: data['success'] === true || data['success'] === undefined || data['success'] === null,
+      success:
+        data['success'] === true,
       output: data['output'] || data['result'],
-      error: getString(data, 'error') || undefined,
+      error: data['success'] !== true ? (getString(data, 'error') || 'Execution returned without success flag') : (getString(data, 'error') || undefined),
     };
   }
 
@@ -902,7 +900,8 @@ class SkillService {
     );
     const data = extractData(resp);
     return {
-      success: data['success'] === true || data['success'] === undefined || data['success'] === null,
+      success:
+        data['success'] === true || data['success'] === undefined || data['success'] === null,
       output: data['output'] || data['result'],
       error: getString(data, 'error') || undefined,
     };
@@ -910,11 +909,7 @@ class SkillService {
 
   async unload(skillId: string): Promise<void> {
     validateRequiredString(skillId, '技能ID');
-    await request(
-      `/api/v1/skills/${skillId}/unload`,
-      { method: 'POST' },
-      this.config,
-    );
+    await request(`/api/v1/skills/${skillId}/unload`, { method: 'POST' }, this.config);
   }
 
   async list(opts?: ListOptions): Promise<Skill[]> {
@@ -1002,8 +997,9 @@ class SkillService {
       const valid = data['valid'] !== false;
       const errors = (data['errors'] as string[]) || [];
       return { valid, errors };
-    } catch {
-      return { valid: true, errors: [] };
+    } catch (e) {
+      console.warn('Service fallback:', e);
+      return { valid: false, errors: ['Validation request failed: ' + (e instanceof Error ? e.message : String(e))] };
     }
   }
 
@@ -1016,7 +1012,8 @@ class SkillService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.list()).length;
     }
   }
@@ -1030,7 +1027,8 @@ class SkillService {
       );
       const data = extractData(resp);
       return getInt64(data, 'count');
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return (await this.listLoaded()).length;
     }
   }
@@ -1061,13 +1059,14 @@ class SkillService {
       );
       const data = extractData(resp);
       return data as Record<string, number>;
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {};
     }
   }
 }
 
-interface AgentInfo {
+export interface AgentInfo {
   id: string;
   name: string;
   description?: string;
@@ -1195,7 +1194,8 @@ export class AgentOSClient {
         checks: getMap(resp, 'checks'),
         timestamp: parseTime(resp['timestamp']),
       };
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {
         status: 'unreachable',
         version: '',
@@ -1203,6 +1203,10 @@ export class AgentOSClient {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  async rawRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+    return request<T>(path, options, this.config);
   }
 
   async metrics(): Promise<Metrics> {
@@ -1223,13 +1227,22 @@ export class AgentOSClient {
         cpuUsage: getInt64(data, 'cpu_usage') || getInt64(data, 'cpuUsage') || 0,
         memoryUsage: getInt64(data, 'memory_usage') || getInt64(data, 'memoryUsage') || 0,
         requestCount: getInt64(data, 'request_count') || getInt64(data, 'requestCount') || 0,
-        averageLatencyMs: getInt64(data, 'average_latency_ms') || getInt64(data, 'averageLatencyMs') || 0,
+        averageLatencyMs:
+          getInt64(data, 'average_latency_ms') || getInt64(data, 'averageLatencyMs') || 0,
       };
-    } catch {
+    } catch (e) {
+      console.warn('Service fallback:', e);
       return {
-        tasksTotal: 0, tasksCompleted: 0, tasksFailed: 0,
-        memoriesTotal: 0, sessionsActive: 0, skillsLoaded: 0,
-        cpuUsage: 0, memoryUsage: 0, requestCount: 0, averageLatencyMs: 0,
+        tasksTotal: 0,
+        tasksCompleted: 0,
+        tasksFailed: 0,
+        memoriesTotal: 0,
+        sessionsActive: 0,
+        skillsLoaded: 0,
+        cpuUsage: 0,
+        memoryUsage: 0,
+        requestCount: 0,
+        averageLatencyMs: 0,
       };
     }
   }
