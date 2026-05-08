@@ -102,8 +102,10 @@ const TaskManagement: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    let cancelled = false;
+    if (!cancelled) fetchTasks();
+    return () => { cancelled = true; };
+  }, [fetchTasks]);
 
   const loadTasks = () => {
     fetchTasks();

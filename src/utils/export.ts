@@ -1,5 +1,5 @@
 export const exportToCSV = (
-  data: Record<string, any>[],
+  data: Record<string, string | number | boolean | null | undefined>[],
   filename: string,
   columns?: { key: string; label: string }[],
 ) => {
@@ -27,7 +27,7 @@ export const exportToCSV = (
   downloadBlob(blob, `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
 };
 
-export const exportToJSON = (data: any[], filename: string) => {
+export const exportToJSON = (data: unknown[], filename: string) => {
   if (!data) return;
 
   const jsonContent = JSON.stringify(data, null, 2);
@@ -73,10 +73,10 @@ export const formatDuration = (seconds: number): string => {
 };
 
 export const generateId = (): string => {
-  return `${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number,
 ): ((...args: Parameters<T>) => void) => {
@@ -87,7 +87,7 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number,
 ): ((...args: Parameters<T>) => void) => {

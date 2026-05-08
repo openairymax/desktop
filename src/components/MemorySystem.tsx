@@ -179,7 +179,7 @@ const MemorySystem: React.FC = () => {
     )
       return;
     try {
-      await sdk.memoryClear(type as any);
+      await sdk.memoryClear(type);
       if (type) setMemories((prev) => prev.filter((m) => m.type !== type));
       else setMemories([]);
     } catch (error) {
@@ -597,7 +597,7 @@ const MemorySystem: React.FC = () => {
                     >
                       <div
                         style={{
-                          width: `${((mem as any).relevance || 0.8) * 100}%`,
+                          width: `${((mem as MemoryEntry & { relevance?: number }).relevance || 0.8) * 100}%`,
                           height: '100%',
                           background: mt?.color,
                           borderRadius: '3px',

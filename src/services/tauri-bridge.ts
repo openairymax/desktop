@@ -26,7 +26,7 @@ export async function initializeTauri(): Promise<void> {
       setupGatewayInvoke();
     }
   } else {
-    console.info('[Browser] Running in browser mode with gateway invoke');
+    void '[Browser] Running in browser mode with gateway invoke';
     setupGatewayInvoke();
   }
 

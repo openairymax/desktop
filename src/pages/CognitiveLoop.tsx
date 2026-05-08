@@ -14,6 +14,13 @@ import {
 import { useTranslation } from 'react-i18next';
 import { invoke } from '@tauri-apps/api/core';
 
+interface BackendCognitiveStep {
+  phase?: string;
+  thought?: string;
+  content?: string;
+  timestamp?: string;
+}
+
 interface CognitiveStep {
   phase: string;
   content: string;
@@ -102,13 +109,13 @@ const CognitiveLoop: React.FC = () => {
     setSelectedStep(0);
 
     try {
-      const result = await invoke<any[]>('run_cognitive_loop', {
+      const result = await invoke<BackendCognitiveStep[]>('run_cognitive_loop', {
         input: input,
         tools: null,
       });
 
       if (Array.isArray(result) && result.length > 0) {
-        const backendSteps: CognitiveStep[] = result.map((step: any, idx: number) => ({
+        const backendSteps: CognitiveStep[] = result.map((step, idx) => ({
           phase: step.phase || `step_${idx}`,
           content: step.thought || step.content || '',
           status: 'completed' as const,

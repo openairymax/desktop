@@ -13,7 +13,9 @@ pub struct LLMProviderConfig {
     pub timeout_seconds: u64,
 }
 
-fn default_timeout() -> u64 { 120 }
+fn default_timeout() -> u64 {
+    120
+}
 
 impl LLMProviderConfig {
     pub fn openai(api_key: Option<String>, model: Option<String>) -> Self {
@@ -54,18 +56,33 @@ impl LLMProviderConfig {
 
     #[allow(dead_code)]
     pub fn from_json(value: &serde_json::Value) -> Option<Self> {
-        let provider_type = value.get("type")
+        let provider_type = value
+            .get("type")
             .or_else(|| value.get("provider_type"))
             .and_then(|v| v.as_str())
             .unwrap_or("openai");
         Some(Self {
             id: value.get("id")?.as_str()?.to_string(),
-            name: value.get("name").and_then(|v| v.as_str()).unwrap_or_default().to_string(),
+            name: value
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
             provider_type: provider_type.to_string(),
             base_url: value.get("base_url")?.as_str()?.to_string(),
-            api_key: value.get("api_key").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            model: value.get("model").and_then(|v| v.as_str()).unwrap_or("gpt-4o").to_string(),
-            timeout_seconds: value.get("timeout_seconds").and_then(|v| v.as_u64()).unwrap_or(120),
+            api_key: value
+                .get("api_key")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            model: value
+                .get("model")
+                .and_then(|v| v.as_str())
+                .unwrap_or("gpt-4o")
+                .to_string(),
+            timeout_seconds: value
+                .get("timeout_seconds")
+                .and_then(|v| v.as_u64())
+                .unwrap_or(120),
         })
     }
 }
@@ -177,7 +194,10 @@ impl LLMClient {
             .map_err(|e| format!("OpenAI API request failed: {}", e))?;
 
         let status = resp.status();
-        let response_text = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let response_text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("OpenAI API error {}: {}", status, response_text));
@@ -230,7 +250,10 @@ impl LLMClient {
             .map_err(|e| format!("Anthropic API request failed: {}", e))?;
 
         let status = resp.status();
-        let response_text = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let response_text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Anthropic API error {}: {}", status, response_text));
@@ -261,7 +284,10 @@ impl LLMClient {
             .map_err(|e| format!("Ollama API request failed: {}", e))?;
 
         let status = resp.status();
-        let response_text = resp.text().await.map_err(|e| format!("Failed to read response: {}", e))?;
+        let response_text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read response: {}", e))?;
 
         if !status.is_success() {
             return Err(format!("Ollama API error {}: {}", status, response_text));
@@ -300,15 +326,21 @@ impl LLMClient {
             .unwrap_or("stop")
             .to_string();
 
-        let usage = json.get("usage").map(|u| UsageInfo {
-            prompt_tokens: u.get("prompt_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-            completion_tokens: u.get("completion_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-            total_tokens: u.get("total_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-        }).unwrap_or(UsageInfo {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0,
-        });
+        let usage = json
+            .get("usage")
+            .map(|u| UsageInfo {
+                prompt_tokens: u.get("prompt_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
+                completion_tokens: u
+                    .get("completion_tokens")
+                    .and_then(|t| t.as_u64())
+                    .unwrap_or(0) as u32,
+                total_tokens: u.get("total_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
+            })
+            .unwrap_or(UsageInfo {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            });
 
         Ok(ChatResponse {
             id: json
@@ -333,7 +365,10 @@ impl LLMClient {
         let content_block = json
             .get("content")
             .and_then(|c| c.as_array())
-            .and_then(|arr| arr.iter().find(|b| b.get("type").and_then(|t| t.as_str()) == Some("text")))
+            .and_then(|arr| {
+                arr.iter()
+                    .find(|b| b.get("type").and_then(|t| t.as_str()) == Some("text"))
+            })
             .ok_or_else(|| "No text content in Anthropic response".to_string())?;
 
         let content = content_block
@@ -342,15 +377,19 @@ impl LLMClient {
             .unwrap_or("")
             .to_string();
 
-        let usage = json.get("usage").map(|u| UsageInfo {
-            prompt_tokens: u.get("input_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-            completion_tokens: u.get("output_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-            total_tokens: 0,
-        }).unwrap_or(UsageInfo {
-            prompt_tokens: 0,
-            completion_tokens: 0,
-            total_tokens: 0,
-        });
+        let usage = json
+            .get("usage")
+            .map(|u| UsageInfo {
+                prompt_tokens: u.get("input_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
+                completion_tokens: u.get("output_tokens").and_then(|t| t.as_u64()).unwrap_or(0)
+                    as u32,
+                total_tokens: 0,
+            })
+            .unwrap_or(UsageInfo {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            });
 
         Ok(ChatResponse {
             id: json
@@ -367,7 +406,10 @@ impl LLMClient {
         })
     }
 
-    pub async fn test_connection(&self, config: &LLMProviderConfig) -> Result<ConnectionTestResult, String> {
+    pub async fn test_connection(
+        &self,
+        config: &LLMProviderConfig,
+    ) -> Result<ConnectionTestResult, String> {
         let start = std::time::Instant::now();
 
         let test_request = ChatRequest {

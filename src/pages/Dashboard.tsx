@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+
+interface ChromePerformanceMemory {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+}
+
+interface ChromePerformance extends Performance {
+  memory?: ChromePerformanceMemory;
+}
 import {
   Cpu,
   MemoryStick,
@@ -116,7 +126,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchHealth();
     fetchMetrics();
-  }, []);
+  }, [fetchHealth, fetchMetrics]);
 
   useEffect(() => {
     const updateStats = () => {
@@ -156,15 +166,15 @@ const Dashboard: React.FC = () => {
           value:
             memPct > 0
               ? `${memPct}%`
-              : `${Math.round((performance as any)?.memory?.usedJSHeapSize / 1024 / 1024 || 0)} MB`,
+              : `${Math.round(((performance as ChromePerformance)?.memory?.usedJSHeapSize ?? 0) / 1024 / 1024)} MB`,
           sub: memPct > 0 ? '后端内存占用' : '浏览器堆',
           icon: <MemoryStick size={20} />,
           color: memPct > 80 ? '#f59e0b' : '#10b981',
           progress:
             memPct ||
             Math.round(
-              ((performance as any)?.memory?.usedJSHeapSize /
-                (performance as any)?.memory?.jsHeapSizeLimit || 0) * 100,
+              (((performance as ChromePerformance)?.memory?.usedJSHeapSize ?? 0) /
+                ((performance as ChromePerformance)?.memory?.jsHeapSizeLimit ?? 1)) * 100,
             ),
         },
         {

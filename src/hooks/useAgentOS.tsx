@@ -13,6 +13,7 @@ import {
   SessionStatus,
   Skill,
   SkillResult,
+  AgentInfo,
   ListOptions,
 } from '../services/agentos.service';
 
@@ -613,7 +614,7 @@ export function useSkills() {
 
 export function useAgents() {
   const { client } = useAgentOS();
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

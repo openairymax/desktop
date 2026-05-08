@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface ShortcutConfig {
@@ -44,7 +44,7 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
 export function useNavigationShortcuts() {
   const navigate = useNavigate();
 
-  const routes: Record<string, string> = {
+  const routes = useMemo<Record<string, string>>(() => ({
     '1': '/',
     '2': '/agents',
     '3': '/tasks',
@@ -55,7 +55,7 @@ export function useNavigationShortcuts() {
     '8': '/tools',
     '9': '/system-monitor',
     '0': '/settings',
-  };
+  }), []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -83,5 +83,5 @@ export function useNavigationShortcuts() {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [navigate]);
+  }, [navigate, routes]);
 }

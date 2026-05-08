@@ -1,7 +1,7 @@
-use std::process::Command;
-use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::process::Command;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CliCommandResult {
@@ -67,8 +67,7 @@ impl CliConfig {
             }
         }
 
-        let current_dir = std::env::current_dir()
-            .context("Failed to get current directory")?;
+        let current_dir = std::env::current_dir().context("Failed to get current directory")?;
 
         for parent in current_dir.ancestors() {
             let docker_compose = parent.join("docker").join("docker-compose.yml");
@@ -136,10 +135,7 @@ pub fn execute_command(
     };
 
     if result.success {
-        log::info!(
-            "Command completed successfully in {}ms",
-            result.duration_ms
-        );
+        log::info!("Command completed successfully in {}ms", result.duration_ms);
     } else {
         log::warn!(
             "Command failed with exit code {} in {}ms: {}",

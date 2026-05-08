@@ -81,17 +81,19 @@ const MemoryEvolution: React.FC = () => {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchMemories();
+    let cancelled = false;
+    if (!cancelled) fetchMemories();
+    return () => { cancelled = true; };
   }, [fetchMemories]);
 
   useEffect(() => {
     if (apiMemories && apiMemories.length > 0) {
-      const mapped: Memory[] = apiMemories.map((m: any) => ({
-        id: m.id || m.memory_id || '',
-        content: m.content || m.text || '',
-        layer: (m.layer || m.memory_layer || 'L1') as MemoryLayer,
-        createdAt: m.created_at || m.createdAt || new Date().toISOString(),
-        score: m.score || m.relevance || undefined,
+      const mapped: Memory[] = apiMemories.map((m) => ({
+        id: m.id,
+        content: m.content,
+        layer: m.layer,
+        createdAt: m.createdAt,
+        score: m.score,
       }));
       setMemories(mapped);
     }
