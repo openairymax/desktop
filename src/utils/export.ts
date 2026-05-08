@@ -1,27 +1,33 @@
-export const exportToCSV = (data: Record<string, any>[], filename: string, columns?: { key: string; label: string }[]) => {
+export const exportToCSV = (
+  data: Record<string, string | number | boolean | null | undefined>[],
+  filename: string,
+  columns?: { key: string; label: string }[],
+) => {
   if (!data || data.length === 0) return;
 
-  const keys = columns ? columns.map(c => c.key) : Object.keys(data[0]);
-  const labels = columns ? columns.map(c => c.label) : keys;
+  const keys = columns ? columns.map((c) => c.key) : Object.keys(data[0]);
+  const labels = columns ? columns.map((c) => c.label) : keys;
 
   const csvContent = [
     labels.join(','),
-    ...data.map(row =>
-      keys.map(key => {
-        const value = row[key];
-        if (typeof value === 'string' && value.includes(',')) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value ?? '';
-      }).join(',')
-    )
+    ...data.map((row) =>
+      keys
+        .map((key) => {
+          const value = row[key];
+          if (typeof value === 'string' && value.includes(',')) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value ?? '';
+        })
+        .join(','),
+    ),
   ].join('\n');
 
   const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
   downloadBlob(blob, `${filename}_${new Date().toISOString().slice(0, 10)}.csv`);
 };
 
-export const exportToJSON = (data: any[], filename: string) => {
+export const exportToJSON = (data: unknown[], filename: string) => {
   if (!data) return;
 
   const jsonContent = JSON.stringify(data, null, 2);
@@ -44,7 +50,8 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch {
+  } catch (e) {
+    console.warn('Clipboard write failed:', e);
     return false;
   }
 };
@@ -66,12 +73,12 @@ export const formatDuration = (seconds: number): string => {
 };
 
 export const generateId = (): string => {
-  return `${Date.now().toString(36)}_${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 11)}`;
 };
 
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
-  wait: number
+  wait: number,
 ): ((...args: Parameters<T>) => void) => {
   let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
@@ -80,9 +87,9 @@ export const debounce = <T extends (...args: any[]) => any>(
   };
 };
 
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
-  limit: number
+  limit: number,
 ): ((...args: Parameters<T>) => void) => {
   let inThrottle: boolean;
   return (...args: Parameters<T>) => {

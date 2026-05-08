@@ -9,10 +9,13 @@ pub struct BackendConfig {
     pub api_key: Option<String>,
 }
 
+const DEFAULT_GATEWAY_HOST: &str = "localhost";
+const DEFAULT_GATEWAY_PORT: u16 = 18789;
+
 impl Default for BackendConfig {
     fn default() -> Self {
         Self {
-            gateway_url: "http://localhost:18789".to_string(),
+            gateway_url: format!("http://{}:{}", DEFAULT_GATEWAY_HOST, DEFAULT_GATEWAY_PORT),
             timeout_seconds: 30,
             api_key: None,
         }
@@ -38,6 +41,7 @@ impl BackendClient {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn update_config(&self, config: BackendConfig) {
         let mut current = self.config.write().await;
         *current = config;
@@ -47,9 +51,12 @@ impl BackendClient {
         self.config.read().await.gateway_url.clone()
     }
 
+    #[allow(dead_code)]
     pub async fn health_check(&self) -> Result<HealthResponse, String> {
         let url = format!("{}/health", self.get_gateway_url().await);
-        let resp = self.http.get(&url)
+        let resp = self
+            .http
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Health check failed: {}", e))?;
@@ -63,20 +70,27 @@ impl BackendClient {
             .map_err(|e| format!("Failed to parse health response: {}", e))
     }
 
+    #[allow(dead_code)]
     pub async fn list_services(&self) -> Result<Vec<ServiceEntry>, String> {
         let url = format!("{}/api/v1/services", self.get_gateway_url().await);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
-        let result: ServicesResponse = resp.json()
+        let result: ServicesResponse = resp
+            .json()
             .await
             .map_err(|e| format!("Failed to parse services response: {}", e))?;
 
         Ok(result.services)
     }
 
+    #[allow(dead_code)]
     pub async fn get_service(&self, name: &str) -> Result<ServiceEntry, String> {
         let url = format!("{}/api/v1/services/{}", self.get_gateway_url().await, name);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
         resp.json::<ServiceEntry>()
             .await
@@ -85,9 +99,12 @@ impl BackendClient {
 
     pub async fn list_agents(&self) -> Result<Vec<AgentEntry>, String> {
         let url = format!("{}/api/v1/agents", self.get_gateway_url().await);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
-        let result: AgentsResponse = resp.json()
+        let result: AgentsResponse = resp
+            .json()
             .await
             .map_err(|e| format!("Failed to parse agents response: {}", e))?;
 
@@ -98,7 +115,9 @@ impl BackendClient {
         let url = format!("{}/api/v1/agents", self.get_gateway_url().await);
         let body = serde_json::to_value(config)
             .map_err(|e| format!("Failed to serialize agent config: {}", e))?;
-        let resp = self.send_authenticated_request(reqwest::Method::POST, &url, Some(body)).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::POST, &url, Some(body))
+            .await?;
 
         resp.json::<AgentEntry>()
             .await
@@ -109,7 +128,9 @@ impl BackendClient {
         let url = format!("{}/api/v1/tasks", self.get_gateway_url().await);
         let body = serde_json::to_value(request)
             .map_err(|e| format!("Failed to serialize task request: {}", e))?;
-        let resp = self.send_authenticated_request(reqwest::Method::POST, &url, Some(body)).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::POST, &url, Some(body))
+            .await?;
 
         resp.json::<TaskEntry>()
             .await
@@ -118,9 +139,12 @@ impl BackendClient {
 
     pub async fn list_tasks(&self) -> Result<Vec<TaskEntry>, String> {
         let url = format!("{}/api/v1/tasks", self.get_gateway_url().await);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
-        let result: TasksResponse = resp.json()
+        let result: TasksResponse = resp
+            .json()
             .await
             .map_err(|e| format!("Failed to parse tasks response: {}", e))?;
 
@@ -129,7 +153,9 @@ impl BackendClient {
 
     pub async fn get_task(&self, task_id: &str) -> Result<TaskEntry, String> {
         let url = format!("{}/api/v1/tasks/{}", self.get_gateway_url().await, task_id);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
         resp.json::<TaskEntry>()
             .await
@@ -137,25 +163,38 @@ impl BackendClient {
     }
 
     pub async fn cancel_task(&self, task_id: &str) -> Result<(), String> {
-        let url = format!("{}/api/v1/tasks/{}/cancel", self.get_gateway_url().await, task_id);
-        let _resp = self.send_authenticated_request(reqwest::Method::POST, &url, None).await?;
+        let url = format!(
+            "{}/api/v1/tasks/{}/cancel",
+            self.get_gateway_url().await,
+            task_id
+        );
+        let _resp = self
+            .send_authenticated_request(reqwest::Method::POST, &url, None)
+            .await?;
         Ok(())
     }
 
     pub async fn get_metrics(&self) -> Result<serde_json::Value, String> {
         let url = format!("{}/metrics", self.get_gateway_url().await);
-        let resp = self.http.get(&url)
+        let resp = self
+            .http
+            .get(&url)
             .send()
             .await
             .map_err(|e| format!("Metrics request failed: {}", e))?;
 
-        let text = resp.text().await.map_err(|e| format!("Failed to read metrics: {}", e))?;
+        let text = resp
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read metrics: {}", e))?;
         serde_json::from_str(&text).map_err(|e| format!("Failed to parse metrics: {}", e))
     }
 
     pub async fn get_config(&self, key: &str) -> Result<ConfigEntry, String> {
         let url = format!("{}/api/v1/config/{}", self.get_gateway_url().await, key);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
         resp.json::<ConfigEntry>()
             .await
@@ -165,20 +204,28 @@ impl BackendClient {
     pub async fn set_config(&self, key: &str, value: &str) -> Result<ConfigEntry, String> {
         let url = format!("{}/api/v1/config/{}", self.get_gateway_url().await, key);
         let body = serde_json::json!({"value": value});
-        let resp = self.send_authenticated_request(reqwest::Method::PUT, &url, Some(body)).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::PUT, &url, Some(body))
+            .await?;
 
         resp.json::<ConfigEntry>()
             .await
             .map_err(|e| format!("Failed to parse config response: {}", e))
     }
 
-    pub async fn test_protocol_connection(&self, protocol: &str, endpoint: &str) -> Result<ProtocolTestResult, String> {
+    pub async fn test_protocol_connection(
+        &self,
+        protocol: &str,
+        endpoint: &str,
+    ) -> Result<ProtocolTestResult, String> {
         let url = format!("{}/api/v1/protocols/test", self.get_gateway_url().await);
         let body = serde_json::json!({
             "protocol": protocol,
             "endpoint": endpoint
         });
-        let resp = self.send_authenticated_request(reqwest::Method::POST, &url, Some(body)).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::POST, &url, Some(body))
+            .await?;
 
         resp.json::<ProtocolTestResult>()
             .await
@@ -187,16 +234,23 @@ impl BackendClient {
 
     pub async fn list_protocol_adapters(&self) -> Result<Vec<ProtocolAdapter>, String> {
         let url = format!("{}/api/v1/protocols/adapters", self.get_gateway_url().await);
-        let resp = self.send_authenticated_request(reqwest::Method::GET, &url, None).await?;
+        let resp = self
+            .send_authenticated_request(reqwest::Method::GET, &url, None)
+            .await?;
 
-        let result: ProtocolAdaptersResponse = resp.json()
+        let result: ProtocolAdaptersResponse = resp
+            .json()
             .await
             .map_err(|e| format!("Failed to parse adapters response: {}", e))?;
 
         Ok(result.adapters)
     }
 
-    pub async fn send_jsonrpc(&self, method: &str, params: serde_json::Value) -> Result<serde_json::Value, String> {
+    pub async fn send_jsonrpc(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
         let url = format!("{}/jsonrpc", self.get_gateway_url().await);
         let body = serde_json::json!({
             "jsonrpc": "2.0",
@@ -205,8 +259,11 @@ impl BackendClient {
             "params": params
         });
 
-        let resp = self.send_authenticated_request(reqwest::Method::POST, &url, Some(body)).await?;
-        let result: serde_json::Value = resp.json()
+        let resp = self
+            .send_authenticated_request(reqwest::Method::POST, &url, Some(body))
+            .await?;
+        let result: serde_json::Value = resp
+            .json()
             .await
             .map_err(|e| format!("Failed to parse JSON-RPC response: {}", e))?;
 
@@ -214,7 +271,10 @@ impl BackendClient {
             return Err(format!("JSON-RPC error: {}", error));
         }
 
-        Ok(result.get("result").cloned().unwrap_or(serde_json::Value::Null))
+        Ok(result
+            .get("result")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null))
     }
 
     async fn send_authenticated_request(
@@ -234,7 +294,10 @@ impl BackendClient {
             req = req.json(&body);
         }
 
-        let resp = req.send().await.map_err(|e| format!("Request failed: {}", e))?;
+        let resp = req
+            .send()
+            .await
+            .map_err(|e| format!("Request failed: {}", e))?;
 
         if resp.status() == reqwest::StatusCode::UNAUTHORIZED {
             return Err("Authentication required. Please configure API key.".to_string());
@@ -251,6 +314,7 @@ impl BackendClient {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct HealthResponse {
     pub status: String,
     pub version: String,
@@ -259,6 +323,7 @@ pub struct HealthResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[allow(dead_code)]
 pub struct ServiceEntry {
     pub name: String,
     pub status: String,
@@ -269,6 +334,7 @@ pub struct ServiceEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct ServicesResponse {
     services: Vec<ServiceEntry>,
 }
@@ -342,6 +408,7 @@ pub struct ConfigEntry {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 pub struct ProtocolTestResult {
     pub protocol: String,
     pub endpoint: String,

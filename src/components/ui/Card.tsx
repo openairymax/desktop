@@ -63,19 +63,25 @@ export const Card: React.FC<CardProps> = ({
     },
   };
 
-  const hoverEffect = isHovered ? {
-    transform: 'translateY(-2px)',
-    boxShadow: 'var(--shadow-lg)',
-    borderColor: 'var(--primary-color)',
-  } : {};
+  const hoverEffect = isHovered
+    ? {
+        transform: 'translateY(-2px)',
+        boxShadow: 'var(--shadow-lg)',
+        borderColor: 'var(--primary-color)',
+      }
+    : {};
 
   return (
     <motion.div
       initial={hover ? { opacity: 0, y: 8 } : undefined}
-      whileHover={hover ? {
-        transform: 'translateY(-4px)',
-        boxShadow: 'var(--shadow-lg)',
-      } : undefined}
+      whileHover={
+        hover
+          ? {
+              transform: 'translateY(-4px)',
+              boxShadow: 'var(--shadow-lg)',
+            }
+          : undefined
+      }
       transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] as const }}
       className={className}
       style={{
@@ -99,68 +105,72 @@ export const Card: React.FC<CardProps> = ({
       }}
     >
       {(title || subtitle || headerAction) && (
-        <div style={{
-          padding: '16px 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-        }}>
+        <div
+          style={{
+            padding: '16px 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {icon && (
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: 'var(--radius-md)',
-                background: 'linear-gradient(135deg, var(--primary-light), var(--bg-tertiary))',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--primary-color)',
-                flexShrink: 0,
-              }}>
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'linear-gradient(135deg, var(--primary-light), var(--bg-tertiary))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'var(--primary-color)',
+                  flexShrink: 0,
+                }}
+              >
                 {icon}
               </div>
             )}
             <div>
               {title && (
-                <h3 style={{
-                  margin: 0,
-                  fontSize: 'var(--font-size-lg)',
-                  fontWeight: 'var(--font-weight-semibold)',
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.01em',
-                }}>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'var(--font-weight-semibold)',
+                    color: 'var(--text-primary)',
+                    letterSpacing: '-0.01em',
+                  }}
+                >
                   {title}
                 </h3>
               )}
               {subtitle && (
-                <p style={{
-                  margin: '2px 0 0 0',
-                  fontSize: 'var(--font-size-sm)',
-                  color: 'var(--text-muted)',
-                }}>
+                <p
+                  style={{
+                    margin: '2px 0 0 0',
+                    fontSize: 'var(--font-size-sm)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
                   {subtitle}
                 </p>
               )}
             </div>
           </div>
-          {headerAction && (
-            <div style={{ flexShrink: 0 }}>
-              {headerAction}
-            </div>
-          )}
+          {headerAction && <div style={{ flexShrink: 0 }}>{headerAction}</div>}
         </div>
       )}
-      <div style={{ padding: '20px' }}>
-        {children}
-      </div>
+      <div style={{ padding: '20px' }}>{children}</div>
       {footer && (
-        <div style={{
-          padding: '12px 20px',
-          borderTop: '1px solid var(--border-subtle)',
-          backgroundColor: 'var(--bg-tertiary)',
-        }}>
+        <div
+          style={{
+            padding: '12px 20px',
+            borderTop: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-tertiary)',
+          }}
+        >
           {footer}
         </div>
       )}

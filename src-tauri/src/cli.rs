@@ -1,7 +1,7 @@
-use std::process::Command;
-use std::time::{Duration, Instant};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::process::Command;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CliCommandResult {
@@ -29,13 +29,14 @@ impl Default for CliConfig {
             project_root: None,
             docker_compose_path: None,
             timeout_seconds: 300,
-            gateway_url: Some("http://localhost:18789".to_string()),
+            gateway_url: Some(format!("http://localhost:{}", 18789)),
             api_key: None,
         }
     }
 }
 
 impl CliConfig {
+    #[allow(dead_code)]
     pub fn detect_agentos_cli(&self) -> Result<String> {
         if let Some(ref path) = self.agentos_cli_path {
             if std::path::Path::new(path).exists() {
@@ -66,8 +67,7 @@ impl CliConfig {
             }
         }
 
-        let current_dir = std::env::current_dir()
-            .context("Failed to get current directory")?;
+        let current_dir = std::env::current_dir().context("Failed to get current directory")?;
 
         for parent in current_dir.ancestors() {
             let docker_compose = parent.join("docker").join("docker-compose.yml");
@@ -94,7 +94,7 @@ pub fn execute_command(
     program: &str,
     args: &[&str],
     working_dir: Option<&str>,
-    timeout_secs: u64,
+    _timeout_secs: u64,
 ) -> Result<CliCommandResult> {
     let start = Instant::now();
 
@@ -135,10 +135,7 @@ pub fn execute_command(
     };
 
     if result.success {
-        log::info!(
-            "Command completed successfully in {}ms",
-            result.duration_ms
-        );
+        log::info!("Command completed successfully in {}ms", result.duration_ms);
     } else {
         log::warn!(
             "Command failed with exit code {} in {}ms: {}",
@@ -151,6 +148,7 @@ pub fn execute_command(
     Ok(result)
 }
 
+#[allow(dead_code)]
 pub async fn execute_command_async(
     program: &str,
     args: Vec<String>,

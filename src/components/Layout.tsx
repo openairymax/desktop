@@ -7,10 +7,33 @@ import ConnectionIndicator from './ConnectionIndicator';
 import NotificationCenter from './NotificationCenter';
 import { useNavigationShortcuts } from '../hooks/useKeyboardShortcuts';
 import {
-  LayoutDashboard, Server, Bot, ListTodo, Settings as SettingsIcon,
-  FileText, Terminal, Cpu, Brain, Wrench, MessageSquare, Globe,
-  Menu, X, ChevronLeft, ChevronRight, Sun, Moon, Bell, Sparkles, Eye, BarChart3,
-  Search, Minus, Square, Maximize2, Command, Shield, Database, Grid, Activity, Layers
+  LayoutDashboard,
+  Server,
+  Bot,
+  ListTodo,
+  Settings as SettingsIcon,
+  Terminal,
+  Brain,
+  Wrench,
+  MessageSquare,
+  Menu,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  Moon,
+  Sparkles,
+  Eye,
+  BarChart3,
+  Search,
+  Minus,
+  Square,
+  Maximize2,
+  Shield,
+  Database,
+  Grid,
+  Activity,
+  Layers,
 } from 'lucide-react';
 
 declare global {
@@ -29,23 +52,101 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: 'dashboard', path: '/', icon: <LayoutDashboard size={18} />, label: '仪表盘', category: 'core' },
+  {
+    key: 'dashboard',
+    path: '/',
+    icon: <LayoutDashboard size={18} />,
+    label: '仪表盘',
+    category: 'core',
+  },
   { key: 'agents', path: '/agents', icon: <Bot size={18} />, label: '智能体', category: 'core' },
   { key: 'tasks', path: '/tasks', icon: <ListTodo size={18} />, label: '任务', category: 'core' },
-  { key: 'sessions', path: '/sessions', icon: <Layers size={18} />, label: '会话', category: 'core' },
-  { key: 'ai-chat', path: '/ai-chat', icon: <MessageSquare size={18} />, label: 'AI 助手', category: 'core' },
+  {
+    key: 'sessions',
+    path: '/sessions',
+    icon: <Layers size={18} />,
+    label: '会话',
+    category: 'core',
+  },
+  {
+    key: 'ai-chat',
+    path: '/ai-chat',
+    icon: <MessageSquare size={18} />,
+    label: 'AI 助手',
+    category: 'core',
+  },
   { key: 'skills', path: '/skills', icon: <Wrench size={18} />, label: '技能', category: 'core' },
   { key: 'tools', path: '/tools', icon: <Grid size={18} />, label: '工具', category: 'core' },
-  { key: 'model-config', path: '/model-config', icon: <Brain size={18} />, label: '模型配置', category: 'ai' },
-  { key: 'cognitive-loop', path: '/cognitive-loop', icon: <Eye size={18} />, label: '认知循环', category: 'ai' },
-  { key: 'memory', path: '/memory-evolution', icon: <Database size={18} />, label: '记忆系统', category: 'ai' },
-  { key: 'open-lab', path: '/open-lab', icon: <Sparkles size={18} />, label: '应用市场', category: 'ai' },
-  { key: 'services', path: '/services', icon: <Server size={18} />, label: '服务网关', category: 'system' },
-  { key: 'security', path: '/security', icon: <Shield size={18} />, label: '安全中心', category: 'system' },
-  { key: 'system-monitor', path: '/system-monitor', icon: <BarChart3 size={18} />, label: '系统监控', category: 'system' },
-  { key: 'telemetry', path: '/telemetry', icon: <Activity size={18} />, label: '遥测', category: 'system' },
-  { key: 'logs-terminal', path: '/logs-terminal', icon: <Terminal size={18} />, label: '日志终端', category: 'system' },
-  { key: 'settings', path: '/settings', icon: <SettingsIcon size={18} />, label: '系统设置', category: 'system' },
+  {
+    key: 'model-config',
+    path: '/model-config',
+    icon: <Brain size={18} />,
+    label: '模型配置',
+    category: 'ai',
+  },
+  {
+    key: 'cognitive-loop',
+    path: '/cognitive-loop',
+    icon: <Eye size={18} />,
+    label: '认知循环',
+    category: 'ai',
+  },
+  {
+    key: 'memory',
+    path: '/memory-evolution',
+    icon: <Database size={18} />,
+    label: '记忆系统',
+    category: 'ai',
+  },
+  {
+    key: 'open-lab',
+    path: '/open-lab',
+    icon: <Sparkles size={18} />,
+    label: '应用市场',
+    category: 'ai',
+  },
+  {
+    key: 'services',
+    path: '/services',
+    icon: <Server size={18} />,
+    label: '服务网关',
+    category: 'system',
+  },
+  {
+    key: 'security',
+    path: '/security',
+    icon: <Shield size={18} />,
+    label: '安全中心',
+    category: 'system',
+  },
+  {
+    key: 'system-monitor',
+    path: '/system-monitor',
+    icon: <BarChart3 size={18} />,
+    label: '系统监控',
+    category: 'system',
+  },
+  {
+    key: 'telemetry',
+    path: '/telemetry',
+    icon: <Activity size={18} />,
+    label: '遥测',
+    category: 'system',
+  },
+  {
+    key: 'logs-terminal',
+    path: '/logs-terminal',
+    icon: <Terminal size={18} />,
+    label: '日志终端',
+    category: 'system',
+  },
+  {
+    key: 'settings',
+    path: '/settings',
+    icon: <SettingsIcon size={18} />,
+    label: '系统设置',
+    category: 'system',
+  },
 ];
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -67,7 +168,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     localStorage.setItem('theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  const toggleDark = () => setDarkMode(prev => !prev);
+  const toggleDark = () => setDarkMode((prev) => !prev);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -77,7 +178,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        setSearchOpen(prev => !prev);
+        setSearchOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handler);
@@ -86,7 +187,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleMinimize = () => {
     if (window.__TAURI__) {
-      import('@tauri-apps/api/window').then(m => m.getCurrentWindow().minimize());
+      import('@tauri-apps/api/window').then((m) => m.getCurrentWindow().minimize());
     }
   };
 
@@ -102,7 +203,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const handleClose = () => {
     if (window.__TAURI__) {
-      import('@tauri-apps/api/window').then(m => m.getCurrentWindow().hide());
+      import('@tauri-apps/api/window').then((m) => m.getCurrentWindow().hide());
     } else {
       window.close();
     }
@@ -158,29 +259,33 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const renderNavSection = (category: string, title: string) => (
     <div style={{ marginBottom: '16px' }}>
       {!sidebarCollapsed && (
-        <div style={{
-          fontSize: '10px',
-          fontWeight: '600',
-          color: 'var(--text-muted)',
-          padding: '0 14px',
-          marginBottom: '6px',
-          textTransform: 'uppercase',
-          letterSpacing: '0.08em',
-        }}>
+        <div
+          style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            color: 'var(--text-muted)',
+            padding: '0 14px',
+            marginBottom: '6px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+          }}
+        >
           {title}
         </div>
       )}
-      {NAV_ITEMS.filter(item => item.category === category).map(renderNavItem)}
+      {NAV_ITEMS.filter((item) => item.category === category).map(renderNavItem)}
     </div>
   );
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100vh',
-      overflow: 'hidden',
-      backgroundColor: 'var(--bg-primary)',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        height: '100vh',
+        overflow: 'hidden',
+        backgroundColor: 'var(--bg-primary)',
+      }}
+    >
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -214,15 +319,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           flexShrink: 0,
         }}
       >
-        <div style={{
-          height: '56px',
-          display: 'flex',
-          alignItems: 'center',
-          padding: sidebarCollapsed ? '0 12px' : '0 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          justifyContent: sidebarCollapsed ? 'center' : 'space-between',
-          flexShrink: 0,
-        }}>
+        <div
+          style={{
+            height: '56px',
+            display: 'flex',
+            alignItems: 'center',
+            padding: sidebarCollapsed ? '0 12px' : '0 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            justifyContent: sidebarCollapsed ? 'center' : 'space-between',
+            flexShrink: 0,
+          }}
+        >
           <motion.span
             style={{
               fontSize: '18px',
@@ -264,22 +371,26 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </button>
         </div>
 
-        <nav style={{
-          flex: 1,
-          padding: '12px 8px',
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}>
+        <nav
+          style={{
+            flex: 1,
+            padding: '12px 8px',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+          }}
+        >
           {renderNavSection('core', '核心功能')}
           {renderNavSection('ai', 'AI 能力')}
           {renderNavSection('system', '系统工具')}
         </nav>
 
-        <div style={{
-          padding: '12px 8px',
-          borderTop: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}>
+        <div
+          style={{
+            padding: '12px 8px',
+            borderTop: '1px solid var(--border-subtle)',
+            flexShrink: 0,
+          }}
+        >
           <button
             onClick={toggleDark}
             style={{
@@ -313,128 +424,236 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </motion.aside>
 
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        backgroundColor: 'var(--bg-primary)',
-        overflow: 'hidden',
-        minWidth: 0,
-      }}>
-        <header style={{
-          height: '48px',
-          backgroundColor: 'var(--bg-secondary)',
+      <div
+        style={{
+          flex: 1,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 20px',
-          borderBottom: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}>
+          flexDirection: 'column',
+          backgroundColor: 'var(--bg-primary)',
+          overflow: 'hidden',
+          minWidth: 0,
+        }}
+      >
+        <header
+          style={{
+            height: '48px',
+            backgroundColor: 'var(--bg-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+            borderBottom: '1px solid var(--border-subtle)',
+            flexShrink: 0,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => setMobileOpen(true)}
-            style={{
-              display: window.__TAURI__ ? 'none' : undefined,
-            }}
-          >
-            <Menu size={18} />
-          </button>
-          <h2 style={{ fontSize: '14px', fontWeight: '500', color: 'var(--text-primary)', margin: 0 }}>
-            {NAV_ITEMS.find(n => n.path === location.pathname)?.label || '仪表盘'}
-          </h2>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Search Trigger */}
-          <button
-            onClick={() => setSearchOpen(true)}
-            title="全局搜索 (Ctrl+K)"
-            style={{
-              width: '34px', height: '34px', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', borderRadius: '8px', border: '1px solid var(--border-color)',
-              background: 'transparent', color: 'var(--text-secondary)',
-              cursor: 'pointer', position: 'relative', transition: 'all 150ms ease',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'; e.currentTarget.style.borderColor = 'var(--primary-color)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
-          >
-            <Search size={15} />
-            <kbd style={{
-              position: 'absolute', bottom: '-2px', right: '-4px',
-              padding: '1px 5px', borderRadius: '3px', fontSize: '9px',
-              border: '1px solid var(--border-subtle)', color: 'var(--text-muted)',
-              fontFamily: 'monospace', lineHeight: 1, pointerEvents: 'none',
-            }}>⌘K</kbd>
-          </button>
-
-          <NotificationCenter />
-
-          {/* Window Controls (Tauri only) */}
-          {window.__TAURI__ && (
-            <>
-              <button onClick={handleMinimize} title="最小化" style={{
-                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer',
-                border: 'none', background: 'transparent', transition: 'all 100ms ease',
-              }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                <Minus size={14} />
-              </button>
-              <button onClick={handleMaximize} title={isMaximized ? '还原' : '最大化'} style={{
-                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer',
-                border: 'none', background: 'transparent', transition: 'all 100ms ease',
-              }} onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
-                {isMaximized ? <Square size={12} /> : <Maximize2 size={13} />}
-              </button>
-              <button onClick={handleClose} title="关闭到托盘" style={{
-                width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer',
-                border: 'none', background: 'transparent', transition: 'all 100ms ease',
-              }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--error-light)'; e.currentTarget.style.color = 'var(--error-color)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}>
-                <X size={14} />
-              </button>
-            </>
-          )}
-
-          {!window.__TAURI__ && (
-            <>
-              <button
-                onClick={toggleDark}
-                style={{
-                  width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  borderRadius: '6px', color: 'var(--text-secondary)', cursor: 'pointer',
-                  border: 'none', background: 'transparent', position: 'relative', transition: 'all 150ms ease',
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-              >
-                {darkMode ? <Sun size={15} /> : <Moon size={15} />}
-              </button>
-              <div style={{
-                width: '30px', height: '30px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: 'white', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
-                transition: 'transform 150ms ease',
+            <button
+              onClick={() => setMobileOpen(true)}
+              style={{
+                display: window.__TAURI__ ? 'none' : undefined,
               }}
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              <Menu size={18} />
+            </button>
+            <h2
+              style={{
+                fontSize: '14px',
+                fontWeight: '500',
+                color: 'var(--text-primary)',
+                margin: 0,
+              }}
+            >
+              {NAV_ITEMS.find((n) => n.path === location.pathname)?.label || '仪表盘'}
+            </h2>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Search Trigger */}
+            <button
+              onClick={() => setSearchOpen(true)}
+              title="全局搜索 (Ctrl+K)"
+              style={{
+                width: '34px',
+                height: '34px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                background: 'transparent',
+                color: 'var(--text-secondary)',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'all 150ms ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
+                e.currentTarget.style.borderColor = 'var(--primary-color)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.borderColor = 'var(--border-subtle)';
+              }}
+            >
+              <Search size={15} />
+              <kbd
+                style={{
+                  position: 'absolute',
+                  bottom: '-2px',
+                  right: '-4px',
+                  padding: '1px 5px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  border: '1px solid var(--border-subtle)',
+                  color: 'var(--text-muted)',
+                  fontFamily: 'monospace',
+                  lineHeight: 1,
+                  pointerEvents: 'none',
+                }}
               >
-                U
-              </div>
-            </>
-          )}
-        </div>
+                ⌘K
+              </kbd>
+            </button>
+
+            <NotificationCenter />
+
+            {/* Window Controls (Tauri only) */}
+            {window.__TAURI__ && (
+              <>
+                <button
+                  onClick={handleMinimize}
+                  title="最小化"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'transparent',
+                    transition: 'all 100ms ease',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')
+                  }
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <Minus size={14} />
+                </button>
+                <button
+                  onClick={handleMaximize}
+                  title={isMaximized ? '还原' : '最大化'}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'transparent',
+                    transition: 'all 100ms ease',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')
+                  }
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {isMaximized ? <Square size={12} /> : <Maximize2 size={13} />}
+                </button>
+                <button
+                  onClick={handleClose}
+                  title="关闭到托盘"
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'transparent',
+                    transition: 'all 100ms ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--error-light)';
+                    e.currentTarget.style.color = 'var(--error-color)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                >
+                  <X size={14} />
+                </button>
+              </>
+            )}
+
+            {!window.__TAURI__ && (
+              <>
+                <button
+                  onClick={toggleDark}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: '6px',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    border: 'none',
+                    background: 'transparent',
+                    position: 'relative',
+                    transition: 'all 150ms ease',
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)')
+                  }
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+                <div
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    transition: 'transform 150ms ease',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.05)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  U
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          backgroundColor: 'var(--bg-primary)',
-          padding: '24px',
-        }}>
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            backgroundColor: 'var(--bg-primary)',
+            padding: '24px',
+          }}
+        >
           <ErrorBoundary>
             <motion.div
               key={location.pathname}
@@ -447,18 +666,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           </ErrorBoundary>
         </div>
 
-        <footer style={{
-          height: '28px',
-          backgroundColor: 'var(--bg-secondary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 20px',
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          borderTop: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}>
+        <footer
+          style={{
+            height: '28px',
+            backgroundColor: 'var(--bg-secondary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '0 20px',
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            borderTop: '1px solid var(--border-subtle)',
+            flexShrink: 0,
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <ConnectionIndicator compact showLabel />
             <span style={{ color: 'var(--text-muted)' }}>Airymax AgentOS v0.0.5</span>

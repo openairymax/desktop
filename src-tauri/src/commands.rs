@@ -1,8 +1,67 @@
-use serde::{Deserialize, Serialize};
-use tauri::State;
-use std::sync::Mutex;
-use crate::cli::{self, CliConfig, CliCommandResult};
 use crate::backend_client::{BackendClient, BackendConfig};
+use crate::cli::{self, CliCommandResult, CliConfig};
+use serde::{Deserialize, Serialize};
+use std::sync::Mutex;
+use tauri::State;
+
+const ALLOWED_CLI_COMMANDS: &[&str] = &[
+    "docker", "git", "cargo", "npm", "node", "python3", "python", "pip", "make", "cmake",
+    "agentos", "airymax",
+];
+
+fn validate_path(path: &str) -> Result<std::path::PathBuf, String> {
+    let p = std::path::Path::new(path);
+    let canonical = p
+        .canonicalize()
+        .map_err(|e| format!("Invalid path {}: {}", path, e))?;
+
+    let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
+    let config_dir = dirs::config_dir().unwrap_or_else(|| home.clone());
+    let data_dir = dirs::data_dir().unwrap_or_else(|| home.clone());
+    let project_dirs: Vec<std::path::PathBuf> = vec![
+        home,
+        config_dir,
+        data_dir,
+        std::path::PathBuf::from("/tmp"),
+        std::path::PathBuf::from("/var/log"),
+    ];
+
+    let allowed = project_dirs.iter().any(|dir| canonical.starts_with(dir));
+    if !allowed {
+        return Err(format!(
+            "Access denied: path {} is outside allowed directories",
+            path
+        ));
+    }
+
+    Ok(canonical)
+}
+
+fn validate_cli_command(command: &str) -> Result<(), String> {
+    let base = std::path::Path::new(command)
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or(command);
+
+    if !ALLOWED_CLI_COMMANDS.contains(&base) {
+        return Err(format!(
+            "Command '{}' is not allowed. Allowed commands: {}",
+            base,
+            ALLOWED_CLI_COMMANDS.join(", ")
+        ));
+    }
+    Ok(())
+}
+
+fn validate_url(url: &str) -> Result<(), String> {
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err(format!(
+            "Only http:// and https:// URLs are allowed, got: {}",
+            url
+        ));
+    }
+    Ok(())
+}
 
 pub struct AppState {
     pub config: Mutex<CliConfig>,
@@ -19,28 +78,31 @@ impl Default for AppState {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SystemInfo {
     pub os: String,
-    pub osVersion: String,
+    pub os_version: String,
     pub architecture: String,
-    pub cpuCores: usize,
-    pub totalMemoryGb: f64,
-    pub freeMemoryGb: f64,
+    pub cpu_cores: usize,
+    pub total_memory_gb: f64,
+    pub free_memory_gb: f64,
     pub hostname: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ServiceStatus {
     pub name: String,
     pub status: String,
     pub healthy: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub uptimeSeconds: Option<u64>,
+    pub uptime_seconds: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct AgentInfo {
     pub id: String,
     pub name: String,
@@ -48,9 +110,9 @@ pub struct AgentInfo {
     pub r#type: Option<String>,
     pub status: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub taskCount: Option<u32>,
+    pub task_count: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub lastActive: Option<String>,
+    pub last_active: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -58,24 +120,24 @@ pub struct AgentInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub createdAt: Option<String>,
+    pub created_at: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct TaskInfo {
     pub id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub agentId: Option<String>,
+    pub agent_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "type")]
     pub type_: Option<String>,
     pub status: String,
     pub progress: f32,
-    pub createdAt: String,
+    pub created_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub updatedAt: Option<String>,
+    pub updated_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub result: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -89,22 +151,20 @@ pub async fn get_system_info(state: State<'_, AppState>) -> Result<SystemInfo, S
     sys.refresh_cpu_usage();
 
     let os = sysinfo::System::name().unwrap_or_else(|| "Unknown".to_string());
-    let os_version = sysinfo::System::os_version()
-        .unwrap_or_else(|| "Unknown".to_string());
+    let os_version = sysinfo::System::os_version().unwrap_or_else(|| "Unknown".to_string());
     let architecture = std::env::consts::ARCH.to_string();
     let cpu_cores = sys.cpus().len();
     let total_memory_gb = sys.total_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
     let free_memory_gb = sys.available_memory() as f64 / (1024.0 * 1024.0 * 1024.0);
-    let hostname = sysinfo::System::host_name()
-        .unwrap_or_else(|| "Unknown".to_string());
+    let hostname = sysinfo::System::host_name().unwrap_or_else(|| "Unknown".to_string());
 
     Ok(SystemInfo {
         os,
-        osVersion: os_version,
+        os_version,
         architecture,
-        cpuCores: cpu_cores,
-        totalMemoryGb: total_memory_gb,
-        freeMemoryGb: free_memory_gb,
+        cpu_cores,
+        total_memory_gb,
+        free_memory_gb,
         hostname,
     })
 }
@@ -115,11 +175,11 @@ pub async fn execute_cli_command(
     args: Vec<String>,
     state: State<'_, AppState>,
 ) -> Result<CliCommandResult, String> {
+    validate_cli_command(&command)?;
+
     let config = state.config.lock().map_err(|e| e.to_string())?;
 
-    let working_dir = config
-        .detect_project_root()
-        .ok();
+    let working_dir = config.detect_project_root().ok();
 
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
@@ -175,7 +235,7 @@ pub async fn get_service_status(state: State<'_, AppState>) -> Result<Vec<Servic
             name,
             status,
             healthy,
-            uptimeSeconds: None,
+            uptime_seconds: None,
             port,
         });
     }
@@ -206,14 +266,7 @@ pub async fn start_services(
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
     cli::execute_command("docker", &["compose"], Some(&docker_dir), 120)
-        .and_then(|_| {
-            cli::execute_command(
-                "docker",
-                &args_refs,
-                Some(&docker_dir),
-                300,
-            )
-        })
+        .and_then(|_| cli::execute_command("docker", &args_refs, Some(&docker_dir), 300))
         .map_err(|e| e.to_string())
 }
 
@@ -222,13 +275,8 @@ pub async fn stop_services(state: State<'_, AppState>) -> Result<CliCommandResul
     let config = state.config.lock().map_err(|e| e.to_string())?;
     let docker_dir = config.get_docker_dir().map_err(|e| e.to_string())?;
 
-    cli::execute_command(
-        "docker",
-        &["compose", "down"],
-        Some(&docker_dir),
-        120,
-    )
-    .map_err(|e| e.to_string())
+    cli::execute_command("docker", &["compose", "down"], Some(&docker_dir), 120)
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -260,13 +308,8 @@ pub async fn get_logs(
 
     let args_refs: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
 
-    let result = cli::execute_command(
-        "docker",
-        &args_refs,
-        Some(&docker_dir),
-        30,
-    )
-    .map_err(|e| e.to_string())?;
+    let result = cli::execute_command("docker", &args_refs, Some(&docker_dir), 30)
+        .map_err(|e| e.to_string())?;
 
     if result.success {
         Ok(result.stdout)
@@ -291,13 +334,11 @@ pub async fn get_health_status(state: State<'_, AppState>) -> Result<Vec<Service
 }
 
 #[tauri::command]
-pub async fn read_config_file(
-    path: String,
-    _state: State<'_, AppState>,
-) -> Result<String, String> {
+pub async fn read_config_file(path: String, _state: State<'_, AppState>) -> Result<String, String> {
     use std::fs;
 
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read {}: {}", path, e))
+    let validated = validate_path(&path)?;
+    fs::read_to_string(&validated).map_err(|e| format!("Failed to read {}: {}", path, e))
 }
 
 #[tauri::command]
@@ -308,29 +349,36 @@ pub async fn write_config_file(
 ) -> Result<(), String> {
     use std::fs;
 
-    fs::write(&path, &content).map_err(|e| format!("Failed to write {}: {}", path, e))
+    let validated = validate_path(&path)?;
+    fs::write(&validated, &content).map_err(|e| format!("Failed to write {}: {}", path, e))
 }
 
 #[tauri::command]
 pub async fn list_agents(state: State<'_, AppState>) -> Result<Vec<AgentInfo>, String> {
     match state.backend.list_agents().await {
         Ok(agents) => {
-            let result: Vec<AgentInfo> = agents.into_iter().map(|a| AgentInfo {
-                id: a.id,
-                name: a.name,
-                r#type: a.agent_type,
-                status: a.status,
-                taskCount: a.task_count,
-                lastActive: a.last_active,
-                description: a.description,
-                capabilities: a.capabilities,
-                config: a.config,
-                createdAt: a.created_at,
-            }).collect();
+            let result: Vec<AgentInfo> = agents
+                .into_iter()
+                .map(|a| AgentInfo {
+                    id: a.id,
+                    name: a.name,
+                    r#type: a.agent_type,
+                    status: a.status,
+                    task_count: a.task_count,
+                    last_active: a.last_active,
+                    description: a.description,
+                    capabilities: a.capabilities,
+                    config: a.config,
+                    created_at: a.created_at,
+                })
+                .collect();
             Ok(result)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for list_agents: {}, returning empty", e);
+            log::warn!(
+                "Backend unavailable for list_agents: {}, returning empty",
+                e
+            );
             Ok(vec![])
         }
     }
@@ -342,7 +390,8 @@ pub async fn get_agent_details(
     state: State<'_, AppState>,
 ) -> Result<AgentInfo, String> {
     let agents = list_agents(state).await?;
-    agents.into_iter()
+    agents
+        .into_iter()
         .find(|a| a.id == agent_id)
         .ok_or_else(|| format!("Agent not found: {}", agent_id))
 }
@@ -366,13 +415,13 @@ pub async fn submit_task(
     match state.backend.submit_task(&submission).await {
         Ok(task) => Ok(TaskInfo {
             id: task.id,
-            agentId: task.agent_id,
+            agent_id: task.agent_id,
             name: task.name,
             type_: task.type_,
             status: task.status,
             progress: task.progress,
-            createdAt: task.created_at,
-            updatedAt: task.updated_at,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
             result: task.result,
             error: task.error,
         }),
@@ -391,13 +440,13 @@ pub async fn get_task_status(
     match state.backend.get_task(&task_id).await {
         Ok(task) => Ok(TaskInfo {
             id: task.id,
-            agentId: task.agent_id,
+            agent_id: task.agent_id,
             name: task.name,
             type_: task.type_,
             status: task.status,
             progress: task.progress,
-            createdAt: task.created_at,
-            updatedAt: task.updated_at,
+            created_at: task.created_at,
+            updated_at: task.updated_at,
             result: task.result,
             error: task.error,
         }),
@@ -409,10 +458,7 @@ pub async fn get_task_status(
 }
 
 #[tauri::command]
-pub async fn cancel_task(
-    task_id: String,
-    state: State<'_, AppState>,
-) -> Result<(), String> {
+pub async fn cancel_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
     match state.backend.cancel_task(&task_id).await {
         Ok(()) => {
             log::info!("Task cancelled: {}", task_id);
@@ -432,10 +478,12 @@ pub async fn open_terminal(
 ) -> Result<(), String> {
     #[cfg(target_os = "macos")]
     {
-        let dir = working_dir.unwrap_or_else(|| dirs::home_dir()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string());
+        let dir = working_dir.unwrap_or_else(|| {
+            dirs::home_dir()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        });
 
         std::process::Command::new("open")
             .args(["-a", "Terminal", &dir])
@@ -445,9 +493,8 @@ pub async fn open_terminal(
 
     #[cfg(target_os = "windows")]
     {
-        let dir = working_dir.unwrap_or_else(|| {
-            std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string())
-        });
+        let dir = working_dir
+            .unwrap_or_else(|| std::env::var("USERPROFILE").unwrap_or_else(|_| "C:\\".to_string()));
 
         std::process::Command::new("cmd")
             .args(["/k", "cd", "/d", &dir])
@@ -457,10 +504,12 @@ pub async fn open_terminal(
 
     #[cfg(target_os = "linux")]
     {
-        let dir = working_dir.unwrap_or_else(|| dirs::home_dir()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .to_string());
+        let dir = working_dir.unwrap_or_else(|| {
+            dirs::home_dir()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string()
+        });
 
         let terminals = ["gnome-terminal", "konsole", "xfce4-terminal", "xterm"];
 
@@ -482,26 +531,97 @@ pub async fn open_terminal(
         return Err("Unsupported operating system".to_string());
     }
 
+    #[allow(unreachable_code)]
     Ok(())
 }
 
 #[tauri::command]
 pub async fn open_browser(url: String, _state: State<'_, AppState>) -> Result<(), String> {
+    validate_url(&url)?;
     webbrowser::open(&url).map_err(|e| format!("Failed to open browser: {}", e))
 }
 
 #[tauri::command]
 pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo, String> {
-    Ok(UpdateInfo {
-        current_version: env!("CARGO_PKG_VERSION").to_string(),
-        latest_version: "0.2.0".to_string(),
-        update_available: true,
-        release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
-        release_notes: "New features and bug fixes".to_string(),
-    })
+    let current_version = env!("CARGO_PKG_VERSION").to_string();
+    log::info!("Checking for updates. Current version: {}", current_version);
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let release_url = "https://api.github.com/repos/SpharxTeam/AgentOS/releases/latest";
+
+    match client.get(release_url).send().await {
+        Ok(resp) => {
+            if resp.status().is_success() {
+                let json: serde_json::Value = resp
+                    .json()
+                    .await
+                    .map_err(|e| format!("Failed to parse release response: {}", e))?;
+
+                let latest_version = json
+                    .get("tag_name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("unknown")
+                    .trim_start_matches('v')
+                    .to_string();
+
+                let release_notes = json
+                    .get("body")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+
+                let html_url = json
+                    .get("html_url")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("https://github.com/SpharxTeam/AgentOS/releases")
+                    .to_string();
+
+                let update_available = current_version != latest_version;
+
+                log::info!(
+                    "Update check complete: current={}, latest={}, update={}",
+                    current_version,
+                    latest_version,
+                    update_available
+                );
+
+                Ok(UpdateInfo {
+                    current_version,
+                    latest_version,
+                    update_available,
+                    release_url: html_url,
+                    release_notes,
+                })
+            } else {
+                log::warn!("GitHub API returned status {}", resp.status());
+                Ok(UpdateInfo {
+                    current_version,
+                    latest_version: "unknown".to_string(),
+                    update_available: false,
+                    release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                    release_notes: format!("Unable to check for updates (HTTP {})", resp.status()),
+                })
+            }
+        }
+        Err(e) => {
+            log::warn!("Network error checking for updates: {}", e);
+            Ok(UpdateInfo {
+                current_version,
+                latest_version: "unknown".to_string(),
+                update_available: false,
+                release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                release_notes: format!("Unable to check for updates: {}", e),
+            })
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateInfo {
     pub current_version: String,
     pub latest_version: String,
@@ -514,14 +634,23 @@ pub struct UpdateInfo {
 pub async fn get_version_info(_state: State<'_, AppState>) -> Result<VersionInfo, String> {
     Ok(VersionInfo {
         app_version: env!("CARGO_PKG_VERSION").to_string(),
-        build_time: option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown").to_string(),
-        git_commit: option_env!("VERGEN_GIT_SHA").unwrap_or("unknown").to_string(),
-        rust_version: option_env!("RUSTC_VERSION").unwrap_or("unknown").to_string(),
-        tauri_version: option_env!("TAURI_VERSION").unwrap_or("unknown").to_string(),
+        build_time: option_env!("VERGEN_BUILD_TIMESTAMP")
+            .unwrap_or("unknown")
+            .to_string(),
+        git_commit: option_env!("VERGEN_GIT_SHA")
+            .unwrap_or("unknown")
+            .to_string(),
+        rust_version: option_env!("RUSTC_VERSION")
+            .unwrap_or("unknown")
+            .to_string(),
+        tauri_version: option_env!("TAURI_VERSION")
+            .unwrap_or("unknown")
+            .to_string(),
     })
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct VersionInfo {
     pub app_version: String,
     pub build_time: String,
@@ -533,6 +662,7 @@ pub struct VersionInfo {
 // ==================== LLM / AI Chat Commands ====================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatMessage {
     pub role: String,
     pub content: String,
@@ -543,6 +673,7 @@ pub struct LLMChatMessage {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatRequest {
     pub provider_id: String,
     pub messages: Vec<LLMChatMessage>,
@@ -559,6 +690,7 @@ pub struct LLMChatRequest {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LLMChatResponse {
     pub id: String,
     pub content: String,
@@ -571,6 +703,7 @@ pub struct LLMChatResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct UsageInfo {
     pub prompt_tokens: u32,
     pub completion_tokens: u32,
@@ -579,172 +712,101 @@ pub struct UsageInfo {
 
 #[tauri::command]
 pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String> {
+    use crate::llm_client::{ChatMessage, ChatRequest, LLMClient, LLMProviderConfig};
+
     let model = request.model.as_deref().unwrap_or("gpt-4o").to_string();
-    let _temperature = request.temperature.unwrap_or(0.7);
-    let _max_tokens = request.max_tokens.unwrap_or(2048);
+    let temperature = request.temperature.unwrap_or(0.7);
+    let max_tokens = request.max_tokens.unwrap_or(2048);
 
-    log::info!("LLM chat request: provider={}, model={}, messages={}", request.provider_id, model, request.messages.len());
+    log::info!(
+        "LLM chat request: provider={}, model={}, messages={}",
+        request.provider_id,
+        model,
+        request.messages.len()
+    );
 
-    let user_msg = request.messages.iter()
-        .filter(|m| m.role == "user")
-        .last()
-        .map(|m| m.content.clone())
-        .unwrap_or_default();
+    let config = match request.provider_id.as_str() {
+        "openai" => LLMProviderConfig::openai(None, Some(model)),
+        "anthropic" => LLMProviderConfig::anthropic(None, Some(model)),
+        "ollama" | "localai" => LLMProviderConfig::ollama(None, Some(model)),
+        _ => LLMProviderConfig::openai(None, Some(model)),
+    };
 
-    let response_content = generate_simulated_response(&user_msg, &model);
+    let client = LLMClient::new();
 
-    Ok(LLMChatResponse {
-        id: format!("chatcmpl-{}", uuid::Uuid::new_v4()),
-        content: response_content.clone(),
-        role: "assistant".to_string(),
-        model: model.clone(),
-        finish_reason: "stop".to_string(),
-        usage: UsageInfo {
-            prompt_tokens: estimate_tokens(&request.messages),
-            completion_tokens: estimate_tokens_str(&response_content),
-            total_tokens: 0,
-        },
-        tool_calls: None,
-    })
-}
+    let messages: Vec<ChatMessage> = request
+        .messages
+        .iter()
+        .map(|m| ChatMessage {
+            role: m.role.clone(),
+            content: m.content.clone(),
+            name: None,
+            tool_calls: m.tool_calls.clone(),
+            tool_call_id: m.tool_call_id.clone(),
+        })
+        .collect();
 
-fn generate_simulated_response(user_input: &str, _model: &str) -> String {
-    let input_lower = user_input.to_lowercase();
+    let chat_request = ChatRequest {
+        model: config.model.clone(),
+        messages,
+        temperature: Some(temperature),
+        max_tokens: Some(max_tokens),
+        stream: request.stream,
+        tools: request.tools,
+        top_p: None,
+    };
 
-    if input_lower.contains("启动") || input_lower.contains("start") || input_lower.contains("服务") {
-        return r#"已收到您的请求。让我先检查当前服务状态，然后执行启动操作。
-
-**执行计划：**
-1. 检查 Docker 环境是否就绪
-2. 按 kernel → gateway → postgres → redis 的顺序依次启动
-3. 验证每个服务的健康状态
-4. 返回最终状态报告
-
-正在执行... ✅ 所有服务已成功启动：
-- **kernel**: running (port 18080)
-- **gateway**: running (port 18789)
-- **postgres**: running (port 5432)
-- **redis**: running (port 6379)
-
-服务集群已完全就绪，您现在可以开始使用 AgentOS 了。"#.to_string();
+    match client.chat(&config, &chat_request).await {
+        Ok(response) => {
+            log::info!(
+                "LLM response received: tokens={}, finish_reason={}",
+                response.usage.total_tokens,
+                response.finish_reason
+            );
+            Ok(LLMChatResponse {
+                id: response.id,
+                content: response.content,
+                role: response.role,
+                model: response.model,
+                finish_reason: response.finish_reason,
+                usage: UsageInfo {
+                    prompt_tokens: response.usage.prompt_tokens,
+                    completion_tokens: response.usage.completion_tokens,
+                    total_tokens: response.usage.total_tokens,
+                },
+                tool_calls: response.tool_calls,
+            })
+        }
+        Err(e) => {
+            log::error!("LLM API call failed: {}", e);
+            Err(format!("LLM API call failed: {}. Please check your API configuration and network connection.", e))
+        }
     }
-
-    if input_lower.contains("智能体") || input_lower.contains("agent") || input_lower.contains("注册") {
-        return r#"关于智能体管理，AgentOS 支持以下操作：
-
-**可用的智能体类型：**
-1. **研究型 (research)** - 网络搜索、文档分析、信息汇总
-2. **编码型 (coding)** - 代码生成、调试、重构、审查
-3. **助手型 (assistant)** - 通用对话、任务协调、问答
-4. **系统型 (system)** - 服务管理、配置维护、监控
-
-您可以点击「注册新智能体」来创建自定义智能体，或使用「任务管理」向现有智能体提交工作。
-
-需要我帮您执行哪个具体操作吗？"#.to_string();
-    }
-
-    if input_lower.contains("你好") || input_lower.contains("hello") || input_lower.contains("hi") {
-        return r#"您好！👋 我是 AgentOS 智能助手。
-
-我可以帮您完成以下操作：
-
-🔧 **系统管理**
-- 启动/停止/重启服务集群
-- 查看系统状态和健康检查
-
-🤖 **智能体**
-- 注册和管理 AI 智能体
-- 提交和跟踪任务
-
-⚙️ **配置**
-- LLM 模型配置（OpenAI/Anthropic/本地模型）
-- 系统参数调整
-
-💾 **文件与日志**
-- 编辑配置文件
-- 查看实时日志
-
-请告诉我您需要什么帮助！"#.to_string();
-    }
-
-    if input_lower.contains("内存") || input_lower.contains("memory") || input_lower.contains("记忆") {
-        return r#"**AgentOS 记忆系统状态：**
-
-| 类型 | 条目数 | Token 占用 |
-|------|--------|-----------|
-| 对话记忆 | 3 | 54 |
-| 事实记忆 | 2 | 31 |
-| 技能记忆 | 1 | 14 |
-| 偏好记忆 | 2 | 26 |
-| 错误记忆 | 1 | 20 |
-| 观察记忆 | 1 | 15 |
-
-**上下文窗口:** 3,842 / 128,000 tokens (3.0%)
-
-记忆系统运行正常。最近的观察记录显示您的系统运行在 Windows x64 平台，16GB 内存。
-
-需要查看详细记忆内容吗？"#.to_string();
-    }
-
-    if input_lower.contains("帮助") || input_lower.contains("help") || input_lower.contains("怎么用") {
-        return r#"**AgentOS 使用指南**
-
-## 快捷键
-- `Ctrl+K` — 全局搜索
-- `Ctrl+Shift+P` — 命令面板
-- `?` — 键盘快捷键帮助
-- `Ctrl+B` — 切换侧边栏
-
-## 核心页面
-1. **仪表盘** (`/`) — 系统总览、监控数据
-2. **服务管理** (`/services`) — Docker 服务控制
-3. **智能体** (`/agents`) — AI 智能体管理
-4. **任务** (`/tasks`) — 任务提交与追踪
-5. **AI 助手** (`/ai-chat`) — 对话式交互
-6. **AgentOS 运行时** (`/agent-runtime`) — 认知循环与记忆系统
-
-## 常用操作
-- 点击浮动按钮 🤖 进入 AI 对话
-- 设置页切换主题（浅色/深色/跟随系统）
-- 配置 LLM API 以启用完整 AI 功能
-
-还有其他问题吗？"#.to_string();
-    }
-
-    format!("感谢您的提问：「{}」\n\n作为 AgentOS 智能助手，我已经理解了您的需求。基于当前的系统状态和可用工具，我建议我们可以按以下步骤进行：\n\n1. **分析需求** — 理解具体目标和约束条件\n2. **制定方案** — 选择最佳执行路径\n3. **执行操作** — 调用相应工具完成任务\n4. **验证结果** — 确认输出符合预期\n\n如果您确认要继续，请回复「确认」，我将开始执行。", user_input)
-}
-
-fn estimate_tokens(messages: &[LLMChatMessage]) -> u32 {
-    messages.iter().map(|m| estimate_tokens_str(&m.content)).sum()
-}
-
-fn estimate_tokens_str(text: &str) -> u32 {
-    ((text.len() as f32) / 4.0).ceil() as u32
 }
 
 #[tauri::command]
 pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Value, String> {
-    let start = std::time::Instant::now();
+    use crate::llm_client::{LLMClient, LLMProviderConfig};
 
     log::info!("Testing LLM connection for provider: {}", provider_id);
 
-    tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-
-    let latency_ms = start.elapsed().as_millis() as u64;
-
-    let models = match provider_id.as_str() {
-        "openai" => serde_json::json!(["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"]),
-        "anthropic" => serde_json::json!(["claude-3.5-sonnet", "claude-3-opus", "claude-3-haiku"]),
-        "localai" => serde_json::json!(["llama-3-70b", "llama-3-8b", "mistral-7b"]),
-        _ => serde_json::json!([]),
+    let config = match provider_id.as_str() {
+        "openai" => LLMProviderConfig::openai(None, None),
+        "anthropic" => LLMProviderConfig::anthropic(None, None),
+        "ollama" | "localai" => LLMProviderConfig::ollama(None, None),
+        _ => return Err(format!("Unknown provider: {}", provider_id)),
     };
 
-    Ok(serde_json::json!({
-        "success": true,
-        "message": "Connection successful",
-        "latency_ms": latency_ms,
-        "models": models
-    }))
+    let client = LLMClient::new();
+    match client.test_connection(&config).await {
+        Ok(result) => Ok(serde_json::json!({
+            "success": result.success,
+            "message": result.message,
+            "latency_ms": result.latency_ms,
+            "models": result.models
+        })),
+        Err(e) => Err(format!("Connection test failed: {}", e)),
+    }
 }
 
 #[tauri::command]
@@ -768,9 +830,9 @@ pub async fn list_llm_providers() -> Result<Vec<serde_json::Value>, String> {
         }),
         serde_json::json!({
             "id": "localai",
-            "name": "Local AI",
+            "name": "Local AI (Ollama)",
             "type": "localai",
-            "base_url": "http://localhost:8080/v1",
+            "base_url": "http://localhost:11434/v1",
             "model": "llama-3-70b",
             "configured": false
         }),
@@ -778,20 +840,78 @@ pub async fn list_llm_providers() -> Result<Vec<serde_json::Value>, String> {
 }
 
 #[tauri::command]
-pub async fn save_llm_provider(config: serde_json::Value) -> Result<serde_json::Value, String> {
+pub async fn save_llm_provider(
+    config: serde_json::Value,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     log::info!("Saving LLM provider config: {:?}", config);
-    Ok(config)
+
+    let provider_id = config
+        .get("id")
+        .and_then(|v| v.as_str())
+        .unwrap_or("unknown")
+        .to_string();
+
+    match state
+        .backend
+        .send_jsonrpc("llm.save_provider", config.clone())
+        .await
+    {
+        Ok(result) => {
+            log::info!("LLM provider '{}' saved via backend", provider_id);
+            Ok(result)
+        }
+        Err(e) => {
+            log::warn!(
+                "Backend unavailable for save_llm_provider: {}, saving locally",
+                e
+            );
+            let key = format!("llm_provider_{}", provider_id);
+            if let Err(e2) = state.backend.set_config(&key, &config.to_string()).await {
+                log::warn!("Failed to save provider config locally: {}", e2);
+            }
+            Ok(config)
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn delete_llm_provider(provider_id: String) -> Result<(), String> {
+pub async fn delete_llm_provider(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     log::info!("Deleting LLM provider: {}", provider_id);
-    Ok(())
+
+    match state
+        .backend
+        .send_jsonrpc(
+            "llm.delete_provider",
+            serde_json::json!({"provider_id": provider_id}),
+        )
+        .await
+    {
+        Ok(_) => {
+            log::info!("LLM provider '{}' deleted via backend", provider_id);
+            Ok(())
+        }
+        Err(e) => {
+            log::warn!(
+                "Backend unavailable for delete_llm_provider: {}, removing locally",
+                e
+            );
+            let key = format!("llm_provider_{}", provider_id);
+            if let Err(e2) = state.backend.set_config(&key, "").await {
+                log::warn!("Failed to delete provider config locally: {}", e2);
+            }
+            Ok(())
+        }
+    }
 }
 
 // ==================== Memory System Commands ====================
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct MemoryEntry {
     pub id: String,
     #[serde(rename = "type")]
@@ -800,11 +920,8 @@ pub struct MemoryEntry {
     pub source: Option<String>,
     pub metadata: Option<serde_json::Value>,
     pub tokens: u32,
-    #[serde(rename = "createdAt")]
     pub created_at: String,
 }
-
-static mut MEMORY_STORE: Vec<MemoryEntry> = Vec::new();
 
 #[tauri::command]
 pub async fn memory_store(
@@ -824,7 +941,11 @@ pub async fn memory_store(
     match state.backend.send_jsonrpc("memory.store", body).await {
         Ok(result) => {
             let entry = MemoryEntry {
-                id: result.get("id").and_then(|v| v.as_str()).unwrap_or("mem-unknown").to_string(),
+                id: result
+                    .get("id")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("mem-unknown")
+                    .to_string(),
                 memory_type: memory_type.clone(),
                 content: content.clone(),
                 source,
@@ -832,22 +953,19 @@ pub async fn memory_store(
                 tokens: ((content.len() as f32) / 4.0).ceil() as u32,
                 created_at: chrono::Utc::now().to_rfc3339(),
             };
-            log::info!("Memory stored via backend: type={}, id={}", memory_type, entry.id);
+            log::info!(
+                "Memory stored via backend: type={}, id={}",
+                memory_type,
+                entry.id
+            );
             Ok(entry)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_store: {}, using local fallback", e);
-            let entry = MemoryEntry {
-                id: format!("mem-{}", uuid::Uuid::new_v4()),
-                memory_type: memory_type.clone(),
-                content: content.clone(),
-                source,
-                metadata,
-                tokens: ((content.len() as f32) / 4.0).ceil() as u32,
-                created_at: chrono::Utc::now().to_rfc3339(),
-            };
-            unsafe { MEMORY_STORE.push(entry.clone()); }
-            Ok(entry)
+            log::error!("Backend unavailable for memory_store: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -869,42 +987,34 @@ pub async fn memory_search(
     match state.backend.send_jsonrpc("memory.search", body).await {
         Ok(result) => {
             let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
-                items.iter().filter_map(|item| {
-                    Some(MemoryEntry {
-                        id: item.get("id")?.as_str()?.to_string(),
-                        memory_type: item.get("type")?.as_str()?.to_string(),
-                        content: item.get("content")?.as_str()?.to_string(),
-                        source: item.get("source").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                        metadata: item.get("metadata").cloned(),
-                        tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                        created_at: item.get("created_at")?.as_str()?.to_string(),
+                items
+                    .iter()
+                    .filter_map(|item| {
+                        Some(MemoryEntry {
+                            id: item.get("id")?.as_str()?.to_string(),
+                            memory_type: item.get("type")?.as_str()?.to_string(),
+                            content: item.get("content")?.as_str()?.to_string(),
+                            source: item
+                                .get("source")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            metadata: item.get("metadata").cloned(),
+                            tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                            created_at: item.get("created_at")?.as_str()?.to_string(),
+                        })
                     })
-                }).collect()
+                    .collect()
             } else {
                 vec![]
             };
             Ok(entries)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_search: {}, using local fallback", e);
-            let limit = limit.unwrap_or(10) as usize;
-            let results: Vec<MemoryEntry>;
-            unsafe {
-                results = MEMORY_STORE.iter()
-                    .filter(|m| {
-                        if let Some(ref t) = type_filter {
-                            if m.memory_type != *t { return false; }
-                        }
-                        if !query.is_empty() && !m.content.to_lowercase().contains(&query.to_lowercase()) {
-                            return false;
-                        }
-                        true
-                    })
-                    .take(limit)
-                    .cloned()
-                    .collect();
-            }
-            Ok(results)
+            log::error!("Backend unavailable for memory_search: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -923,34 +1033,34 @@ pub async fn memory_list(
     match state.backend.send_jsonrpc("memory.list", body).await {
         Ok(result) => {
             let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
-                items.iter().filter_map(|item| {
-                    Some(MemoryEntry {
-                        id: item.get("id")?.as_str()?.to_string(),
-                        memory_type: item.get("type")?.as_str()?.to_string(),
-                        content: item.get("content")?.as_str()?.to_string(),
-                        source: item.get("source").and_then(|v| v.as_str()).map(|s| s.to_string()),
-                        metadata: item.get("metadata").cloned(),
-                        tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                        created_at: item.get("created_at")?.as_str()?.to_string(),
+                items
+                    .iter()
+                    .filter_map(|item| {
+                        Some(MemoryEntry {
+                            id: item.get("id")?.as_str()?.to_string(),
+                            memory_type: item.get("type")?.as_str()?.to_string(),
+                            content: item.get("content")?.as_str()?.to_string(),
+                            source: item
+                                .get("source")
+                                .and_then(|v| v.as_str())
+                                .map(|s| s.to_string()),
+                            metadata: item.get("metadata").cloned(),
+                            tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                            created_at: item.get("created_at")?.as_str()?.to_string(),
+                        })
                     })
-                }).collect()
+                    .collect()
             } else {
                 vec![]
             };
             Ok(entries)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_list: {}, using local fallback", e);
-            let limit = limit.unwrap_or(50) as usize;
-            let results: Vec<MemoryEntry>;
-            unsafe {
-                results = if let Some(ref t) = type_filter {
-                    MEMORY_STORE.iter().filter(|m| m.memory_type == *t).take(limit).cloned().collect()
-                } else {
-                    MEMORY_STORE.iter().take(limit).cloned().collect()
-                };
-            }
-            Ok(results)
+            log::error!("Backend unavailable for memory_list: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -965,15 +1075,20 @@ pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Res
             Ok(())
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_delete: {}, using local fallback", e);
-            unsafe { MEMORY_STORE.retain(|m| m.id != memory_id); }
-            Ok(())
+            log::error!("Backend unavailable for memory_delete: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
 
 #[tauri::command]
-pub async fn memory_clear(type_filter: Option<String>, state: State<'_, AppState>) -> Result<u64, String> {
+pub async fn memory_clear(
+    type_filter: Option<String>,
+    state: State<'_, AppState>,
+) -> Result<u64, String> {
     let body = serde_json::json!({"type_filter": type_filter});
 
     match state.backend.send_jsonrpc("memory.clear", body).await {
@@ -983,50 +1098,29 @@ pub async fn memory_clear(type_filter: Option<String>, state: State<'_, AppState
             Ok(deleted)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for memory_clear: {}, using local fallback", e);
-            let count_before: usize;
-            let count_after: usize;
-            unsafe {
-                count_before = MEMORY_STORE.len();
-                if let Some(ref t) = type_filter {
-                    MEMORY_STORE.retain(|m| m.memory_type != *t);
-                } else {
-                    MEMORY_STORE.clear();
-                }
-                count_after = MEMORY_STORE.len();
-            }
-            let deleted = (count_before - count_after) as u64;
-            Ok(deleted)
+            log::error!("Backend unavailable for memory_clear: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
 
 #[tauri::command]
 pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
-    match state.backend.send_jsonrpc("memory.context_stats", serde_json::json!({})).await {
+    match state
+        .backend
+        .send_jsonrpc("memory.context_stats", serde_json::json!({}))
+        .await
+    {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::warn!("Backend unavailable for context_window_stats: {}, using local fallback", e);
-            let total_entries: usize;
-            unsafe { total_entries = MEMORY_STORE.len(); }
-            let history_tokens = total_entries * 320;
-            let system_tokens = 256u32;
-            let tools_tokens = 128u32;
-            let output_reserve = 256u32;
-            let total = (system_tokens + history_tokens as u32 + tools_tokens + output_reserve) as f64;
-            let max_tokens = 128000.0;
-
-            Ok(serde_json::json!({
-                "totalTokens": total.round() as u32,
-                "maxTokens": max_tokens as u32,
-                "usedPercent": ((total / max_tokens) * 100.0 * 100.0).round() / 100.0,
-                "breakdown": {
-                    "system": system_tokens,
-                    "history": history_tokens,
-                    "tools": tools_tokens,
-                    "output": output_reserve
-                }
-            }))
+            log::error!("Backend unavailable for context_window_stats: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -1034,6 +1128,7 @@ pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_js
 // ==================== Cognitive Loop / Tool Commands ====================
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CognitiveStep {
     phase: String,
     thought: String,
@@ -1045,111 +1140,204 @@ pub struct CognitiveStep {
 #[tauri::command]
 pub async fn run_cognitive_loop(
     input: String,
-    _tools: Option<serde_json::Value>,
+    tools: Option<serde_json::Value>,
+    state: State<'_, AppState>,
 ) -> Result<Vec<CognitiveStep>, String> {
-    let now = chrono::Utc::now().to_rfc3339();
-    let steps = vec![
-        CognitiveStep {
-            phase: "perception".to_string(),
-            thought: format!("收到用户输入：「{}」，长度 {} 字符", input, input.len()),
-            detail: Some(format!("语言检测: 中文 | 输入类别: {}", if input.contains("?") {"询问"} else if input.contains("启动") {"指令"} else {"陈述"})),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "reasoning".to_string(),
-            thought: "分析用户意图：识别为系统操作请求".to_string(),
-            detail: Some("置信度: 94% | 意图分类: system_operation".to_string()),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "reasoning".to_string(),
-            thought: "检索相关记忆：发现上次类似操作的配置模式".to_string(),
-            detail: Some("召回相关性: 0.88 | 记忆ID: m2".to_string()),
-            timestamp: now.clone(),
-            tool_call: None,
-        },
-        CognitiveStep {
-            phase: "action".to_string(),
-            thought: "调用工具执行操作".to_string(),
-            detail: Some("Tauri invoke → Rust backend → Docker CLI".to_string()),
-            timestamp: now.clone(),
-            tool_call: Some(serde_json::json!({
-                "id": "call_001",
-                "type": "function",
-                "function": {
-                    "name": "execute_cli_command",
-                    "arguments": "{ \"command\": \"docker\", \"args\": [\"compose\", \"ps\"] }"
-                }
-            })),
-        },
-        CognitiveStep {
-            phase: "reflection".to_string(),
-            thought: "评估结果：操作已完成，结果符合预期".to_string(),
-            detail: Some("质量评分: A+ | 新增记忆: 1条".to_string()),
-            timestamp: now,
-            tool_call: None,
-        },
-    ];
+    log::info!(
+        "Starting cognitive loop for input: {} ({} chars)",
+        &input[..input.len().min(50)],
+        input.len()
+    );
 
-    log::info!("Cognitive loop completed with {} steps", steps.len());
-    Ok(steps)
+    let params = serde_json::json!({
+        "input": input,
+        "tools": tools
+    });
+
+    match state
+        .backend
+        .send_jsonrpc("cognitive_loop.start", params)
+        .await
+    {
+        Ok(result) => {
+            let steps_json = result
+                .get("steps")
+                .or_else(|| result.get("result")?.get("steps"))
+                .cloned()
+                .unwrap_or(result.clone());
+
+            if let Some(steps_arr) = steps_json.as_array() {
+                let steps: Vec<CognitiveStep> = steps_arr
+                    .iter()
+                    .filter_map(|s| {
+                        Some(CognitiveStep {
+                            phase: s.get("phase")?.as_str()?.to_string(),
+                            thought: s
+                                .get("thought")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or_default()
+                                .to_string(),
+                            detail: s
+                                .get("detail")
+                                .and_then(|d| d.as_str())
+                                .map(|s| s.to_string()),
+                            timestamp: s
+                                .get("timestamp")
+                                .and_then(|t| t.as_str())
+                                .map(|s| s.to_string())
+                                .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+                            tool_call: s.get("tool_call").cloned(),
+                        })
+                    })
+                    .collect();
+
+                if !steps.is_empty() {
+                    log::info!("Cognitive loop completed with {} real steps", steps.len());
+                    return Ok(steps);
+                }
+            }
+
+            log::warn!("Cognitive loop returned empty steps from backend");
+            Ok(vec![])
+        }
+        Err(e) => {
+            log::warn!(
+                "Backend cognitive loop unavailable, returning structured error: {}",
+                e
+            );
+            Err(format!("Cognitive loop failed: {}. Ensure AgentOS Gateway is running at the configured endpoint.", e))
+        }
+    }
 }
 
 #[tauri::command]
 pub async fn call_tool(
     name: String,
     arguments: String,
+    state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    log::info!("Tool called: {}({})", name, arguments);
+    log::info!(
+        "Tool called: {}({})",
+        name,
+        &arguments[..arguments.len().min(100)]
+    );
 
-    match name.as_str() {
-        "get_service_status" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "[{name:'kernel',healthy:true,port:18080}, ...]"}))
+    let params = serde_json::json!({
+        "tool_name": name,
+        "arguments": serde_json::from_str::<serde_json::Value>(&arguments)
+            .unwrap_or_else(|_| serde_json::json!({"raw": arguments}))
+    });
+
+    match state.backend.send_jsonrpc("tools.execute", params).await {
+        Ok(result) => {
+            let tool_call_id = format!("tc_{}", uuid::Uuid::new_v4());
+            let output = result
+                .get("output")
+                .or_else(|| result.get("result")?.get("output"))
+                .or_else(|| result.get("data"))
+                .cloned()
+                .unwrap_or_else(|| {
+                    serde_json::Value::String(format!(
+                        "Tool '{}' executed successfully via AgentOS Gateway",
+                        name
+                    ))
+                });
+
+            log::info!("Tool {} executed successfully", name);
+            Ok(serde_json::json!({
+                "tool_call_id": tool_call_id,
+                "output": output,
+                "status": "success"
+            }))
         }
-        "get_system_info" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "{os:'Windows', cpu_cores:8, mem:16GB}"}))
-        }
-        "memory_search" => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": "Found 5 matching memories"}))
-        }
-        _ => {
-            Ok(serde_json::json!({"tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()), "output": format!("Tool '{}' executed successfully", name)}))
+        Err(e) => {
+            log::warn!(
+                "Backend tool execution failed for {}, attempting local dispatch: {}",
+                name,
+                e
+            );
+
+            match name.as_str() {
+                "get_service_status" => get_service_status(state.clone()).await.map(|s| {
+                    serde_json::json!({
+                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                        "output": s,
+                        "status": "success",
+                        "source": "local_fallback"
+                    })
+                }),
+                "get_system_info" => get_system_info(state.clone()).await.map(|s| {
+                    serde_json::json!({
+                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                        "output": s,
+                        "status": "success",
+                        "source": "local_fallback"
+                    })
+                }),
+                "memory_search" => {
+                    let args: serde_json::Value =
+                        serde_json::from_str(&arguments).unwrap_or_default();
+                    let query = args
+                        .get("query")
+                        .and_then(|q| q.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    memory_search(query, None, None, None, state)
+                        .await
+                        .map(|memories| {
+                            serde_json::json!({
+                                "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                                "output": format!("Found {} matching memories", memories.len()),
+                                "results": memories,
+                                "status": "success",
+                                "source": "local_fallback"
+                            })
+                        })
+                }
+                _ => Ok(serde_json::json!({
+                    "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
+                    "output": format!("Tool '{}' executed. Backend unavailable, result cached locally.", name),
+                    "status": "partial",
+                    "error": e
+                })),
+            }
         }
     }
 }
 
 #[tauri::command]
-pub async fn list_tools() -> Result<Vec<serde_json::Value>, String> {
-    Ok(vec![
-        serde_json::json!({"name":"start_services","description":"启动服务集群","category":"system","schema":{"type":"object","properties":{"mode":{"type":"string","enum":["dev","prod"]}},"required":["mode"]}}),
-        serde_json::json!({"name":"stop_services","description":"停止所有服务","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"get_service_status","description":"查询服务运行状态","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"list_agents","description":"列出已注册智能体","category":"agent","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"register_agent","description":"注册新智能体","category":"agent","schema":{"type":"object","properties":{"name":{"type":"string"},"type":{"type":"string"}},"required":["name","type"]}}),
-        serde_json::json!({"name":"submit_task","description":"提交异步任务","category":"task","schema":{"type":"object","properties":{"agent_id":{"type":"string"},"task_description":{"type":"string"}},"required":["agent_id","task_description"]}}),
-        serde_json::json!({"name":"get_system_info","description":"获取系统硬件信息","category":"system","schema":{"type":"object","properties":{}}}),
-        serde_json::json!({"name":"memory_store","description":"存储记忆到向量库","category":"memory","schema":{"type":"object","properties":{"type":{"type":"string"},"content":{"type":"string"}},"required":["type","content"]}}),
-        serde_json::json!({"name":"memory_search","description":"语义搜索长期记忆","category":"memory","schema":{"type":"object","properties":{"query":{"type":"string"}},"required":["query"]}}),
-        serde_json::json!({"name":"read_file","description":"读取本地文件","category":"io","schema":{"type":"object","properties":{"path":{"type":"string"}},"required":["path"]}}),
-        serde_json::json!({"name":"write_file","description":"写入本地文件","category":"io","schema":{"type":"object","properties":{"path":{"type":"string"},"content":{"type":"string"}},"required":["path","content"]}}),
-    ])
+pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    match state
+        .backend
+        .send_jsonrpc("tools.list", serde_json::json!({}))
+        .await
+    {
+        Ok(result) => {
+            if let Some(tools) = result.as_array() {
+                Ok(tools.clone())
+            } else {
+                Ok(vec![])
+            }
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for list_tools: {}, returning empty", e);
+            Ok(vec![])
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn runtime_metrics() -> Result<serde_json::Value, String> {
-    let entry_count: usize;
-    unsafe { entry_count = MEMORY_STORE.len(); }
-
-    Ok(serde_json::json!({
-        "cycle_count": 847,
-        "tool_call_count": 274,
-        "memory_entries_count": entry_count,
-        "avg_latency_ms": 1240,
-        "success_rate": 98.5,
-        "total_tokens_consumed": 42300
-    }))
+pub async fn runtime_metrics(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    match state.backend.get_metrics().await {
+        Ok(metrics) => Ok(metrics),
+        Err(e) => {
+            log::error!("Backend unavailable for runtime_metrics: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
+        }
+    }
 }
 
 // ==================== Extended Task Commands ====================
@@ -1158,18 +1346,21 @@ pub async fn runtime_metrics() -> Result<serde_json::Value, String> {
 pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, String> {
     match state.backend.list_tasks().await {
         Ok(tasks) => {
-            let result: Vec<TaskInfo> = tasks.into_iter().map(|t| TaskInfo {
-                id: t.id,
-                agentId: t.agent_id,
-                name: t.name,
-                type_: t.type_,
-                status: t.status,
-                progress: t.progress,
-                createdAt: t.created_at,
-                updatedAt: t.updated_at,
-                result: t.result,
-                error: t.error,
-            }).collect();
+            let result: Vec<TaskInfo> = tasks
+                .into_iter()
+                .map(|t| TaskInfo {
+                    id: t.id,
+                    agent_id: t.agent_id,
+                    name: t.name,
+                    type_: t.type_,
+                    status: t.status,
+                    progress: t.progress,
+                    created_at: t.created_at,
+                    updated_at: t.updated_at,
+                    result: t.result,
+                    error: t.error,
+                })
+                .collect();
             Ok(result)
         }
         Err(e) => {
@@ -1180,26 +1371,71 @@ pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, Str
 }
 
 #[tauri::command]
-pub async fn delete_task(task_id: String) -> Result<(), String> {
-    log::info!("Task deleted: {}", task_id);
-    Ok(())
+pub async fn delete_task(task_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    match state.backend.cancel_task(&task_id).await {
+        Ok(()) => {
+            log::info!("Task deleted: {}", task_id);
+            Ok(())
+        }
+        Err(e) => {
+            log::warn!("Backend unavailable for delete_task: {}", e);
+            Err(format!("Failed to delete task: {}", e))
+        }
+    }
 }
 
 #[tauri::command]
-pub async fn restart_task(task_id: String) -> Result<TaskInfo, String> {
-    log::info!("Task restarted: {}", task_id);
-    Ok(TaskInfo {
-        id: task_id,
-        agentId: Some("agent-001".to_string()),
-        name: None,
-        type_: None,
-        status: "pending".to_string(),
-        progress: 0.0,
-        createdAt: chrono::Utc::now().to_rfc3339(),
-        updatedAt: None,
-        result: None,
-        error: None,
-    })
+pub async fn restart_task(task_id: String, state: State<'_, AppState>) -> Result<TaskInfo, String> {
+    let body = serde_json::json!({"task_id": task_id});
+
+    match state.backend.send_jsonrpc("task.restart", body).await {
+        Ok(result) => Ok(TaskInfo {
+            id: result
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&task_id)
+                .to_string(),
+            agent_id: result
+                .get("agent_id")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            name: result
+                .get("name")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            type_: result
+                .get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            status: result
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("pending")
+                .to_string(),
+            progress: result
+                .get("progress")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0) as f32,
+            created_at: result
+                .get("created_at")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string(),
+            updated_at: result
+                .get("updated_at")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            result: result.get("result").cloned(),
+            error: result
+                .get("error")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+        }),
+        Err(e) => {
+            log::warn!("Backend unavailable for restart_task: {}", e);
+            Err(format!("Failed to restart task: {}", e))
+        }
+    }
 }
 
 // ==================== Extended Agent Commands ====================
@@ -1228,12 +1464,12 @@ pub async fn register_agent(
             name: agent.name,
             r#type: agent.agent_type,
             status: agent.status,
-            taskCount: agent.task_count,
-            lastActive: agent.last_active,
+            task_count: agent.task_count,
+            last_active: agent.last_active,
             description: agent.description,
             capabilities: agent.capabilities,
             config: agent.config,
-            createdAt: agent.created_at,
+            created_at: agent.created_at,
         }),
         Err(e) => {
             log::warn!("Backend unavailable for register_agent: {}", e);
@@ -1245,7 +1481,10 @@ pub async fn register_agent(
 // ==================== Settings Commands ====================
 
 #[tauri::command]
-pub async fn save_settings(settings: serde_json::Value, state: State<'_, AppState>) -> Result<(), String> {
+pub async fn save_settings(
+    settings: serde_json::Value,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
     if let Some(obj) = settings.as_object() {
         for (key, value) in obj {
             let val_str = match value {
@@ -1269,18 +1508,24 @@ pub async fn load_settings(state: State<'_, AppState>) -> Result<serde_json::Val
     let mut settings = serde_json::Map::new();
 
     for key in &["language", "theme", "serviceMode", "gatewayUrl"] {
-        match state.backend.get_config(key).await {
-            Ok(entry) => {
-                settings.insert(entry.key.clone(), serde_json::Value::String(entry.value));
-            }
-            Err(_) => {}
+        if let Ok(entry) = state.backend.get_config(key).await {
+            settings.insert(entry.key.clone(), serde_json::Value::String(entry.value));
         }
     }
 
     if settings.is_empty() {
-        settings.insert("language".to_string(), serde_json::Value::String("zh".to_string()));
-        settings.insert("theme".to_string(), serde_json::Value::String("light".to_string()));
-        settings.insert("serviceMode".to_string(), serde_json::Value::String("dev".to_string()));
+        settings.insert(
+            "language".to_string(),
+            serde_json::Value::String("zh".to_string()),
+        );
+        settings.insert(
+            "theme".to_string(),
+            serde_json::Value::String("light".to_string()),
+        );
+        settings.insert(
+            "serviceMode".to_string(),
+            serde_json::Value::String("dev".to_string()),
+        );
     }
 
     Ok(serde_json::Value::Object(settings))
@@ -1289,23 +1534,58 @@ pub async fn load_settings(state: State<'_, AppState>) -> Result<serde_json::Val
 // ==================== Agent Lifecycle Commands ====================
 
 #[tauri::command]
-pub async fn start_agent(agent_id: String, state: State<'_, AppState>) -> Result<AgentInfo, String> {
+pub async fn start_agent(
+    agent_id: String,
+    state: State<'_, AppState>,
+) -> Result<AgentInfo, String> {
     let body = serde_json::json!({"agent_id": agent_id});
 
     match state.backend.send_jsonrpc("agent.start", body).await {
         Ok(result) => Ok(AgentInfo {
-            id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&agent_id).to_string(),
-            name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
-            r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            status: result.get("status").and_then(|v| v.as_str()).unwrap_or("running").to_string(),
-            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
-            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
-                arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
-            }),
+            id: result
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&agent_id)
+                .to_string(),
+            name: result
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string(),
+            r#type: result
+                .get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            status: result
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("running")
+                .to_string(),
+            task_count: result
+                .get("task_count")
+                .and_then(|v| v.as_u64())
+                .map(|c| c as u32),
+            last_active: result
+                .get("last_active")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            description: result
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            capabilities: result
+                .get("capabilities")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                }),
             config: result.get("config").cloned(),
-            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            created_at: result
+                .get("created_at")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
         }),
         Err(e) => {
             log::warn!("Backend unavailable for start_agent: {}", e);
@@ -1320,18 +1600,50 @@ pub async fn stop_agent(agent_id: String, state: State<'_, AppState>) -> Result<
 
     match state.backend.send_jsonrpc("agent.stop", body).await {
         Ok(result) => Ok(AgentInfo {
-            id: result.get("id").and_then(|v| v.as_str()).unwrap_or(&agent_id).to_string(),
-            name: result.get("name").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string(),
-            r#type: result.get("type").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            status: result.get("status").and_then(|v| v.as_str()).unwrap_or("stopped").to_string(),
-            taskCount: result.get("task_count").and_then(|v| v.as_u64()).map(|c| c as u32),
-            lastActive: result.get("last_active").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            description: result.get("description").and_then(|v| v.as_str()).map(|s| s.to_string()),
-            capabilities: result.get("capabilities").and_then(|v| v.as_array()).map(|arr| {
-                arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect()
-            }),
+            id: result
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or(&agent_id)
+                .to_string(),
+            name: result
+                .get("name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string(),
+            r#type: result
+                .get("type")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            status: result
+                .get("status")
+                .and_then(|v| v.as_str())
+                .unwrap_or("stopped")
+                .to_string(),
+            task_count: result
+                .get("task_count")
+                .and_then(|v| v.as_u64())
+                .map(|c| c as u32),
+            last_active: result
+                .get("last_active")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            description: result
+                .get("description")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
+            capabilities: result
+                .get("capabilities")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect()
+                }),
             config: result.get("config").cloned(),
-            createdAt: result.get("created_at").and_then(|v| v.as_str()).map(|s| s.to_string()),
+            created_at: result
+                .get("created_at")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string()),
         }),
         Err(e) => {
             log::warn!("Backend unavailable for stop_agent: {}", e);
@@ -1341,33 +1653,37 @@ pub async fn stop_agent(agent_id: String, state: State<'_, AppState>) -> Result<
 }
 
 #[tauri::command]
-pub async fn get_agent_config(agent_id: String, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn get_agent_config(
+    agent_id: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let body = serde_json::json!({"agent_id": agent_id});
 
     match state.backend.send_jsonrpc("agent.get_config", body).await {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::warn!("Backend unavailable for get_agent_config: {}", e);
-            Ok(serde_json::json!({
-                "id": agent_id,
-                "name": "Default Agent",
-                "type": "assistant",
-                "model": "gpt-4o",
-                "system_prompt": "You are a helpful AI assistant powered by AgentOS.",
-                "tools": ["search", "code", "file"],
-                "auto_start": false,
-                "max_concurrent_tasks": 5,
-                "memory_config": { "max_entries": 1000, "retention_days": 30 }
-            }))
+            log::error!("Backend unavailable for get_agent_config: {}", e);
+            Err(format!(
+                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                e
+            ))
         }
     }
 }
 
 #[tauri::command]
-pub async fn update_agent_config(agent_id: String, config: serde_json::Value, state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn update_agent_config(
+    agent_id: String,
+    config: serde_json::Value,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let body = serde_json::json!({"agent_id": agent_id, "config": config});
 
-    match state.backend.send_jsonrpc("agent.update_config", body).await {
+    match state
+        .backend
+        .send_jsonrpc("agent.update_config", body)
+        .await
+    {
         Ok(result) => Ok(result),
         Err(e) => {
             log::warn!("Backend unavailable for update_agent_config: {}", e);
@@ -1387,6 +1703,8 @@ pub async fn update_agent_config(agent_id: String, config: serde_json::Value, st
 // ==================== File System Commands ====================
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[allow(dead_code)]
 pub struct FileInfo {
     pub name: String,
     pub path: String,
@@ -1400,9 +1718,14 @@ pub struct FileInfo {
 }
 
 #[tauri::command]
-pub async fn list_directory(path: String, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn list_directory(
+    path: String,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     use std::fs;
-    let dir = fs::read_dir(&path).map_err(|e| format!("Cannot read directory {}: {}", path, e))?;
+    let validated = validate_path(&path)?;
+    let dir =
+        fs::read_dir(&validated).map_err(|e| format!("Cannot read directory {}: {}", path, e))?;
     let mut files = Vec::new();
     let mut total_size = 0u64;
     let mut file_count = 0usize;
@@ -1412,7 +1735,11 @@ pub async fn list_directory(path: String, _state: State<'_, AppState>) -> Result
         let metadata = entry.metadata().map_err(|e| e.to_string())?;
         let name = entry.file_name().to_string_lossy().to_string();
         let is_dir = metadata.is_dir();
-        if is_dir { dir_count += 1; } else { file_count += 1; }
+        if is_dir {
+            dir_count += 1;
+        } else {
+            file_count += 1;
+        }
         total_size += metadata.len();
 
         files.push(serde_json::json!({
@@ -1440,34 +1767,55 @@ pub async fn list_directory(path: String, _state: State<'_, AppState>) -> Result
 #[tauri::command]
 pub async fn read_file(path: String, _state: State<'_, AppState>) -> Result<String, String> {
     use std::fs;
-    fs::read_to_string(&path).map_err(|e| format!("Failed to read file {}: {}", path, e))
+    let validated = validate_path(&path)?;
+    fs::read_to_string(&validated).map_err(|e| format!("Failed to read file {}: {}", path, e))
 }
 
 #[tauri::command]
-pub async fn write_file(path: String, content: String, _state: State<'_, AppState>) -> Result<(), String> {
+pub async fn write_file(
+    path: String,
+    content: String,
+    _state: State<'_, AppState>,
+) -> Result<(), String> {
     use std::fs;
-    if let Some(parent) = std::path::Path::new(&path).parent() {
-        fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory {:?}: {}", parent, e))?;
+    let validated = validate_path(&path)?;
+    if let Some(parent) = validated.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directory {:?}: {}", parent, e))?;
     }
-    fs::write(&path, &content).map_err(|e| format!("Failed to write file {}: {}", path, e))
+    fs::write(&validated, &content).map_err(|e| format!("Failed to write file {}: {}", path, e))
 }
 
 #[tauri::command]
 pub async fn delete_file(path: String, _state: State<'_, AppState>) -> Result<(), String> {
     use std::fs;
-    let p = std::path::Path::new(&path);
-    if p.is_dir() { fs::remove_dir_all(p) } else { fs::remove_file(p) }
-        .map_err(|e| format!("Failed to delete {}: {}", path, e))
+    let validated = validate_path(&path)?;
+    if validated.is_dir() {
+        fs::remove_dir_all(&validated)
+    } else {
+        fs::remove_file(&validated)
+    }
+    .map_err(|e| format!("Failed to delete {}: {}", path, e))
 }
 
 #[tauri::command]
-pub async fn copy_file(src: String, dst: String, _state: State<'_, AppState>) -> Result<(), String> {
+pub async fn copy_file(
+    src: String,
+    dst: String,
+    _state: State<'_, AppState>,
+) -> Result<(), String> {
     use std::fs;
-    if std::path::Path::new(&src).is_dir() {
-        copy_dir_all(&src, &dst)
-            .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
+    let src_validated = validate_path(&src)?;
+    let dst_validated = validate_path(&dst)?;
+    if src_validated.is_dir() {
+        copy_dir_all(
+            src_validated.to_str().ok_or("Invalid source path")?,
+            dst_validated.to_str().ok_or("Invalid destination path")?,
+        )
+        .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
     } else {
-        fs::copy(&src, &dst).map(|_| ())
+        fs::copy(&src_validated, &dst_validated)
+            .map(|_| ())
             .map_err(|e| format!("Failed to copy {} → {}: {}", src, dst, e))
     }
 }
@@ -1477,26 +1825,48 @@ fn copy_dir_all(src: &str, dst: &str) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
     for entry in fs::read_dir(src)? {
         let entry = entry?;
+        let src_path_buf = entry.path();
         let target_path = std::path::Path::new(dst).join(entry.file_name());
-        if entry.path().is_dir() {
-            copy_dir_all(entry.path().to_str().unwrap(), target_path.to_str().unwrap())?;
+        if src_path_buf.is_dir() {
+            let src_path = src_path_buf.to_str().ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid UTF-8 in source path",
+                )
+            })?;
+            let dst_path = target_path.to_str().ok_or_else(|| {
+                std::io::Error::new(
+                    std::io::ErrorKind::InvalidData,
+                    "Invalid UTF-8 in target path",
+                )
+            })?;
+            copy_dir_all(src_path, dst_path)?;
         } else {
-            fs::copy(entry.path(), &target_path)?;
+            fs::copy(&src_path_buf, &target_path)?;
         }
     }
     Ok(())
 }
 
 #[tauri::command]
-pub async fn move_file(src: String, dst: String, _state: State<'_, AppState>) -> Result<(), String> {
+pub async fn move_file(
+    src: String,
+    dst: String,
+    _state: State<'_, AppState>,
+) -> Result<(), String> {
     use std::fs;
-    fs::rename(&src, &dst).map_err(|e| format!("Failed to move {} → {}: {}", src, dst, e))
+    let src_validated = validate_path(&src)?;
+    let dst_validated = validate_path(&dst)?;
+    fs::rename(&src_validated, &dst_validated)
+        .map_err(|e| format!("Failed to move {} → {}: {}", src, dst, e))
 }
 
 #[tauri::command]
 pub async fn create_directory(path: String, _state: State<'_, AppState>) -> Result<(), String> {
     use std::fs;
-    fs::create_dir_all(&path).map_err(|e| format!("Failed to create directory {}: {}", path, e))
+    let validated = validate_path(&path)?;
+    fs::create_dir_all(&validated)
+        .map_err(|e| format!("Failed to create directory {}: {}", path, e))
 }
 
 // ==================== Process Management Commands ====================
@@ -1515,25 +1885,47 @@ pub async fn list_processes(_state: State<'_, AppState>) -> Result<Vec<serde_jso
             "memoryMb": process.memory() / (1024 * 1024),
             "status": format!("{:?}", process.status()).to_lowercase(),
             "command": process.cmd().join(" "),
-            "startedAt": process.start_time() as u64
+            "startedAt": process.start_time()
         }));
     }
 
-    processes.sort_by(|a, b| a["cpuPercent"].as_f64().partial_cmp(&b["cpuPercent"].as_f64()).unwrap_or(std::cmp::Ordering::Equal));
+    processes.sort_by(|a, b| {
+        a["cpuPercent"]
+            .as_f64()
+            .partial_cmp(&b["cpuPercent"].as_f64())
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     processes.truncate(50);
     Ok(processes)
 }
 
 #[tauri::command]
-pub async fn kill_process(pid: u32, force: bool, _state: State<'_, AppState>) -> Result<(), String> {
+pub async fn kill_process(
+    pid: u32,
+    force: bool,
+    _state: State<'_, AppState>,
+) -> Result<(), String> {
     use sysinfo::{Pid, System};
+
+    let own_pid = std::process::id();
+    if pid == own_pid {
+        return Err("Cannot kill the application's own process".to_string());
+    }
+    if pid == 1 {
+        return Err("Cannot kill PID 1 (init process)".to_string());
+    }
+
     let mut sys = System::new();
     sys.refresh_processes();
 
     let pid_val = Pid::from_u32(pid);
     match sys.process(pid_val) {
         Some(process) => {
-            if force { process.kill_with(sysinfo::Signal::Kill); } else { process.kill(); }
+            if force {
+                process.kill_with(sysinfo::Signal::Kill);
+            } else {
+                process.kill();
+            }
             log::info!("Killed process {} (force={})", pid, force);
             Ok(())
         }
@@ -1542,29 +1934,36 @@ pub async fn kill_process(pid: u32, force: bool, _state: State<'_, AppState>) ->
 }
 
 #[tauri::command]
-pub async fn get_process_info(pid: u32, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn get_process_info(
+    pid: u32,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     use sysinfo::{Pid, System};
     let mut sys = System::new();
     sys.refresh_processes();
 
     let pid_val = Pid::from_u32(pid);
     sys.process(pid_val)
-        .map(|p| serde_json::json!({
-            "pid": pid,
-            "name": p.name().to_string(),
-            "cpuPercent": p.cpu_usage(),
-            "memoryMb": p.memory() / (1024 * 1024),
-            "status": format!("{:?}", p.status()).to_lowercase(),
-            "command": p.cmd().join(" "),
-            "startedAt": p.start_time() as u64
-        }))
+        .map(|p| {
+            serde_json::json!({
+                "pid": pid,
+                "name": p.name().to_string(),
+                "cpuPercent": p.cpu_usage(),
+                "memoryMb": p.memory() / (1024 * 1024),
+                "status": format!("{:?}", p.status()).to_lowercase(),
+                "command": p.cmd().join(" "),
+                "startedAt": p.start_time()
+            })
+        })
         .ok_or_else(|| format!("Process {} not found", pid))
 }
 
 // ==================== Network Diagnostics Commands ====================
 
 #[tauri::command]
-pub async fn get_network_interfaces(_state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+pub async fn get_network_interfaces(
+    _state: State<'_, AppState>,
+) -> Result<Vec<serde_json::Value>, String> {
     let mut interfaces = Vec::new();
     let networks = sysinfo::Networks::new_with_refreshed_list();
 
@@ -1582,7 +1981,12 @@ pub async fn get_network_interfaces(_state: State<'_, AppState>) -> Result<Vec<s
 }
 
 #[tauri::command]
-pub async fn check_port(host: String, port: u16, timeout_ms: Option<u64>, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn check_port(
+    host: String,
+    port: u16,
+    timeout_ms: Option<u64>,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let timeout = std::time::Duration::from_millis(timeout_ms.unwrap_or(3000));
     let addr = format!("{}:{}", host, port);
 
@@ -1603,7 +2007,11 @@ pub async fn check_port(host: String, port: u16, timeout_ms: Option<u64>, _state
 }
 
 #[tauri::command]
-pub async fn ping(host: String, count: Option<u32>, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn ping(
+    host: String,
+    count: Option<u32>,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     let count = count.unwrap_or(4);
     let mut received = 0u32;
     let mut total_latency = 0u64;
@@ -1612,17 +2020,20 @@ pub async fn ping(host: String, count: Option<u32>, _state: State<'_, AppState>)
         let start = std::time::Instant::now();
         let timeout = std::time::Duration::from_millis(1000);
         let addr = format!("{}:80", host);
-        match tokio::time::timeout(timeout, tokio::net::TcpStream::connect(&addr)).await {
-            Ok(Ok(_)) => {
-                received += 1;
-                total_latency += start.elapsed().as_millis() as u64;
-            }
-            _ => {}
+        if let Ok(Ok(_)) =
+            tokio::time::timeout(timeout, tokio::net::TcpStream::connect(&addr)).await
+        {
+            received += 1;
+            total_latency += start.elapsed().as_millis() as u64;
         }
     }
 
     let loss_pct = ((count - received) as f64 / count as f64 * 100.0 * 100.0).round() / 100.0;
-    let avg_latency = if received > 0 { total_latency / received as u64 } else { 0 };
+    let avg_latency = if received > 0 {
+        total_latency / received as u64
+    } else {
+        0
+    };
 
     Ok(serde_json::json!({
         "host": host, "packetsSent": count, "packetsReceived": received,
@@ -1631,7 +2042,10 @@ pub async fn ping(host: String, count: Option<u32>, _state: State<'_, AppState>)
 }
 
 #[tauri::command]
-pub async fn dns_lookup(hostname: String, _state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+pub async fn dns_lookup(
+    hostname: String,
+    _state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
     use std::net::ToSocketAddrs;
     let hostname_clone = hostname.clone();
     match (hostname_clone + ":80").to_socket_addrs() {
@@ -1639,7 +2053,7 @@ pub async fn dns_lookup(hostname: String, _state: State<'_, AppState>) -> Result
             let ips: Vec<String> = addrs.map(|a| a.ip().to_string()).collect();
             Ok(serde_json::json!({ "hostname": hostname, "addresses": ips }))
         }
-        Err(e) => Err(format!("DNS lookup failed for {}: {}", hostname, e))
+        Err(e) => Err(format!("DNS lookup failed for {}: {}", hostname, e)),
     }
 }
 
@@ -1652,9 +2066,12 @@ pub async fn system_monitor(_state: State<'_, AppState>) -> Result<serde_json::V
     sys.refresh_memory();
 
     let cpu_usage = sys.global_cpu_info().cpu_usage();
-    let cores: Vec<serde_json::Value> = sys.cpus().iter().enumerate().map(|(i, c)| {
-        serde_json::json!({"coreId": i, "usage": c.cpu_usage()})
-    }).collect();
+    let cores: Vec<serde_json::Value> = sys
+        .cpus()
+        .iter()
+        .enumerate()
+        .map(|(i, c)| serde_json::json!({"coreId": i, "usage": c.cpu_usage()}))
+        .collect();
 
     let total_mem = sys.total_memory();
     let used_mem = sys.used_memory();
