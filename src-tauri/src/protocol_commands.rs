@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use tauri::State;
 use crate::backend_client::{BackendClient, ProtocolAdapter};
 use crate::commands::AppState;
+use serde::{Deserialize, Serialize};
+use tauri::State;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProtocolInfo {
@@ -44,9 +44,7 @@ pub struct ProtocolResponse {
 }
 
 #[tauri::command]
-pub async fn list_protocols(
-    state: State<'_, AppState>,
-) -> Result<Vec<ProtocolInfo>, String> {
+pub async fn list_protocols(state: State<'_, AppState>) -> Result<Vec<ProtocolInfo>, String> {
     let client = get_backend_client(&state)?;
 
     match client.list_protocol_adapters().await {
@@ -54,9 +52,7 @@ pub async fn list_protocols(
             let protocols = adapters.into_iter().map(|a| adapter_to_info(&a)).collect();
             Ok(protocols)
         }
-        Err(_) => {
-            Ok(get_default_protocols())
-        }
+        Err(_) => Ok(get_default_protocols()),
     }
 }
 
@@ -68,7 +64,10 @@ pub async fn test_protocol_connection(
 ) -> Result<ProtocolConnectionTest, String> {
     let client = get_backend_client(&state)?;
 
-    match client.test_protocol_connection(&protocol_id, &endpoint).await {
+    match client
+        .test_protocol_connection(&protocol_id, &endpoint)
+        .await
+    {
         Ok(result) => Ok(ProtocolConnectionTest {
             protocol_id: result.protocol,
             endpoint: result.endpoint,
@@ -107,9 +106,7 @@ pub async fn send_protocol_message(
     let start = std::time::Instant::now();
 
     let result = match message.protocol.as_str() {
-        "jsonrpc" | "json-rpc" => {
-            client.send_jsonrpc(&message.method, message.params).await
-        }
+        "jsonrpc" | "json-rpc" => client.send_jsonrpc(&message.method, message.params).await,
         "mcp" => {
             let params = serde_json::json!({
                 "protocol": "mcp",
@@ -213,7 +210,10 @@ pub async fn get_protocol_capabilities(
 fn get_backend_client(state: &AppState) -> Result<BackendClient, String> {
     let config = state.config.lock().map_err(|e| e.to_string())?;
     Ok(BackendClient::new(crate::backend_client::BackendConfig {
-        gateway_url: config.gateway_url.clone().unwrap_or_else(|| format!("http://localhost:{}", 18789)),
+        gateway_url: config
+            .gateway_url
+            .clone()
+            .unwrap_or_else(|| format!("http://localhost:{}", 18789)),
         timeout_seconds: config.timeout_seconds,
         api_key: config.api_key.clone(),
     }))
@@ -249,7 +249,11 @@ fn get_default_protocols() -> Vec<ProtocolInfo> {
             version: "2.0".to_string(),
             status: "active".to_string(),
             endpoint: "/jsonrpc".to_string(),
-            capabilities: vec!["agent.list".to_string(), "task.submit".to_string(), "config.get".to_string()],
+            capabilities: vec![
+                "agent.list".to_string(),
+                "task.submit".to_string(),
+                "config.get".to_string(),
+            ],
             color: "#4CAF50".to_string(),
             icon: "⚡".to_string(),
         },
@@ -260,7 +264,11 @@ fn get_default_protocols() -> Vec<ProtocolInfo> {
             version: "1.0".to_string(),
             status: "active".to_string(),
             endpoint: "/mcp".to_string(),
-            capabilities: vec!["tools/list".to_string(), "tools/call".to_string(), "resources/list".to_string()],
+            capabilities: vec![
+                "tools/list".to_string(),
+                "tools/call".to_string(),
+                "resources/list".to_string(),
+            ],
             color: "#4CAF50".to_string(),
             icon: "🔌".to_string(),
         },
@@ -271,7 +279,11 @@ fn get_default_protocols() -> Vec<ProtocolInfo> {
             version: "0.3.0".to_string(),
             status: "active".to_string(),
             endpoint: "/a2a".to_string(),
-            capabilities: vec!["agent/discover".to_string(), "task/create".to_string(), "message/send".to_string()],
+            capabilities: vec![
+                "agent/discover".to_string(),
+                "task/create".to_string(),
+                "message/send".to_string(),
+            ],
             color: "#2196F3".to_string(),
             icon: "🤝".to_string(),
         },
@@ -282,7 +294,10 @@ fn get_default_protocols() -> Vec<ProtocolInfo> {
             version: "1.0".to_string(),
             status: "active".to_string(),
             endpoint: "/v1".to_string(),
-            capabilities: vec!["chat.completions.create".to_string(), "models.list".to_string()],
+            capabilities: vec![
+                "chat.completions.create".to_string(),
+                "models.list".to_string(),
+            ],
             color: "#FF9800".to_string(),
             icon: "🧠".to_string(),
         },

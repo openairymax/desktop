@@ -133,24 +133,23 @@ const CognitiveLoop: React.FC = () => {
 
         if (step.toolCall) {
           const toolId = `tc-${Date.now()}-${i}`;
+          const tcFn = (step.toolCall as { function?: { name?: string; arguments?: unknown } })
+            .function;
           setTools((prev) => [
             ...prev,
             {
               id: toolId,
-              name: (step.toolCall as Record<string, any>).function?.name || 'unknown',
+              name: tcFn?.name || 'unknown',
               status: 'running',
-              input: JSON.stringify(
-                (step.toolCall as Record<string, any>).function?.arguments || '',
-              ),
+              input: JSON.stringify(tcFn?.arguments || ''),
             },
           ]);
           setActiveThoughtIdx(i);
 
           try {
-            const tc = step.toolCall as Record<string, any>;
             const result = await sdk.callTool(
-              tc.function?.name || 'unknown',
-              JSON.stringify(tc.function?.arguments || {}),
+              tcFn?.name || 'unknown',
+              JSON.stringify(tcFn?.arguments || {}),
             );
             setTools((prev) =>
               prev.map((t) =>

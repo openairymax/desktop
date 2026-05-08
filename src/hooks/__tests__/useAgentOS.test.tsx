@@ -285,7 +285,7 @@ describe('useMemory Hook', () => {
 
     let memory;
     await act(async () => {
-      memory = await result.current.writeMemory('Test memory', 'L1' as any);
+      memory = await result.current.writeMemory('Test memory', 'L1' as 'L1' | 'L2' | 'L3' | 'L4');
     });
 
     expect(memory).not.toBeNull();

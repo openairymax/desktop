@@ -64,6 +64,17 @@ const PROVIDER_TEMPLATES = {
 
 type TabKey = 'providers' | 'system' | 'env';
 
+interface SystemParams {
+  maxConcurrentTasks: number;
+  taskTimeoutSec: number;
+  memoryMaxEntries: number;
+  logLevel: string;
+  enableDualThinking: boolean;
+  defaultModel: string;
+}
+
+type NumericParamKey = 'maxConcurrentTasks' | 'taskTimeoutSec' | 'memoryMaxEntries';
+
 const ModelConfig: React.FC = () => {
   const { t } = useTranslation();
   const { client } = useAgentOS();
@@ -82,7 +93,7 @@ const ModelConfig: React.FC = () => {
   const [testResults, setTestResults] = useState<
     Record<string, { success: boolean; message: string; latency?: number }>
   >({});
-  const [systemParams, setSystemParams] = useState({
+  const [systemParams, setSystemParams] = useState<SystemParams>({
     maxConcurrentTasks: 8,
     taskTimeoutSec: 300,
     memoryMaxEntries: 10000,
@@ -97,10 +108,11 @@ const ModelConfig: React.FC = () => {
     try {
       if (client) {
         try {
-          const configResp = await (client as any).request({
-            path: '/api/v1/config',
-            method: 'GET',
-          });
+          const configResp = await client.rawRequest<{
+            providers?: LLMProviderConfig[];
+            systemParams?: Record<string, string | number | boolean>;
+            envVars?: Array<{ key: string; value: string }>;
+          }>('/api/v1/config', { method: 'GET' });
           if (configResp?.providers) setProviders(configResp.providers);
           if (configResp?.systemParams)
             setSystemParams((prev) => ({ ...prev, ...configResp.systemParams }));
@@ -133,7 +145,9 @@ const ModelConfig: React.FC = () => {
   }, [client]);
 
   useEffect(() => {
-    loadAllData();
+    let cancelled = false;
+    if (!cancelled) loadAllData();
+    return () => { cancelled = true; };
   }, [loadAllData]);
 
   const saveAll = async () => {
@@ -141,10 +155,9 @@ const ModelConfig: React.FC = () => {
     localStorage.setItem('agentos-llm-providers', JSON.stringify(providers));
     if (client) {
       try {
-        await (client as any).request({
-          path: '/api/v1/config',
+        await client.rawRequest('/api/v1/config', {
           method: 'PUT',
-          body: { providers, systemParams, envVars },
+          body: JSON.stringify({ providers, systemParams, envVars }),
         });
       } catch (e) {
         console.warn('Backend config save failed, saved locally only:', e);
@@ -551,29 +564,31 @@ const ModelConfig: React.FC = () => {
               系统运行参数
             </h3>
 
-            {[
-              {
-                key: 'maxConcurrentTasks',
-                label: '最大并发任务数',
-                type: 'number',
-                min: 1,
-                max: 32,
-              },
-              {
-                key: 'taskTimeoutSec',
-                label: '任务超时时间（秒）',
-                type: 'number',
-                min: 30,
-                max: 3600,
-              },
-              {
-                key: 'memoryMaxEntries',
-                label: '记忆最大条目数',
-                type: 'number',
-                min: 100,
-                max: 100000,
-              },
-            ].map((field) => (
+            {(
+              [
+                {
+                  key: 'maxConcurrentTasks' as NumericParamKey,
+                  label: '最大并发任务数',
+                  type: 'number',
+                  min: 1,
+                  max: 32,
+                },
+                {
+                  key: 'taskTimeoutSec' as NumericParamKey,
+                  label: '任务超时时间（秒）',
+                  type: 'number',
+                  min: 30,
+                  max: 3600,
+                },
+                {
+                  key: 'memoryMaxEntries' as NumericParamKey,
+                  label: '记忆最大条目数',
+                  type: 'number',
+                  min: 100,
+                  max: 100000,
+                },
+              ] as const
+            ).map((field) => (
               <div key={field.key} style={{ marginBottom: '16px' }}>
                 <label
                   style={{
@@ -588,7 +603,7 @@ const ModelConfig: React.FC = () => {
                 </label>
                 <input
                   type="number"
-                  value={(systemParams as any)[field.key]}
+                  value={systemParams[field.key]}
                   onChange={(e) =>
                     setSystemParams((prev) => ({
                       ...prev,

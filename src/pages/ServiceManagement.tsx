@@ -62,7 +62,9 @@ const ServiceManagement: React.FC = () => {
   const [checkingId, setCheckingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchHealth();
+    let cancelled = false;
+    if (!cancelled) fetchHealth();
+    return () => { cancelled = true; };
   }, [fetchHealth]);
 
   useEffect(() => {

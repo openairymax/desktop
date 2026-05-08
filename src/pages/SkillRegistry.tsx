@@ -14,6 +14,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSkills } from '../hooks/useAgentOS';
+import type { Skill } from '../services/agentos.service';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   active: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '活跃' },
@@ -38,17 +39,19 @@ const SkillRegistry: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showExecuteModal, setShowExecuteModal] = useState(false);
-  const [selectedSkill, setSelectedSkill] = useState<any>(null);
+  const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [execParams, setExecParams] = useState('{}');
 
   useEffect(() => {
-    fetchSkills();
-  }, []);
+    let cancelled = false;
+    if (!cancelled) fetchSkills();
+    return () => { cancelled = true; };
+  }, [fetchSkills]);
 
-  const filteredSkills = skills.filter((s: any) => {
+  const filteredSkills = skills.filter((s: Skill) => {
     const name = s.name || '';
     const desc = s.description || '';
     const matchesSearch =
@@ -61,8 +64,8 @@ const SkillRegistry: React.FC = () => {
 
   const stats = {
     total: skills.length,
-    active: skills.filter((s: any) => s.status === 'active' || s.status === 'loaded').length,
-    inactive: skills.filter((s: any) => s.status === 'inactive').length,
+    active: skills.filter((s: Skill) => s.status === 'active').length,
+    inactive: skills.filter((s: Skill) => s.status === 'inactive').length,
   };
 
   const handleRegister = async () => {
@@ -122,7 +125,7 @@ const SkillRegistry: React.FC = () => {
     }
   };
 
-  const openExecute = (skill: any) => {
+  const openExecute = (skill: Skill) => {
     setSelectedSkill(skill);
     setExecParams('{}');
     setShowExecuteModal(true);
@@ -467,7 +470,7 @@ const SkillRegistry: React.FC = () => {
           }}
         >
           <AnimatePresence>
-            {filteredSkills.map((skill: any, index: number) => {
+            {filteredSkills.map((skill: Skill, index: number) => {
               const statusCfg = STATUS_CONFIG[skill.status] || STATUS_CONFIG.inactive;
               return (
                 <motion.div
@@ -593,7 +596,7 @@ const SkillRegistry: React.FC = () => {
                       <Play size={14} />
                       {t('toolManager.execute')}
                     </button>
-                    {skill.status === 'active' || skill.status === 'loaded' ? (
+                    {skill.status === 'active' ? (
                       <button
                         onClick={() => handleUnload(skill.id)}
                         disabled={actionLoading === `unload-${skill.id}`}

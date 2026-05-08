@@ -62,7 +62,7 @@ const AIChat: React.FC<{
 
     try {
       if (agents.length > 0) {
-        const targetAgent = agents.find((a: any) => a.status === 'running') || agents[0];
+        const targetAgent = agents.find((a: { status: string }) => a.status === 'running') || agents[0];
         await invokeAgent(targetAgent.id, userMsg.content);
         const assistantMsg: ChatMessage = {
           id: `msg-${Date.now()}-resp`,

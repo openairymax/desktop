@@ -64,7 +64,7 @@ const ConnectionIndicator: React.FC<ConnectionIndicatorProps> = ({
   const status = connection.status;
   const config = STATUS_CONFIG[status];
   const [reconnecting, setReconnecting] = useState(false);
-  const [lastChecked, setLastChecked] = useState<Date | null>(null);
+  const [_lastChecked, setLastChecked] = useState<Date | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {

@@ -166,7 +166,7 @@ export const OperationFeedbackProvider: React.FC<OperationFeedbackProviderProps>
   }, []);
 
   const addFeedback = useCallback((props: OperationFeedbackProps) => {
-    const id = `feedback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const id = `feedback-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     setFeedbacks((prev) => [
       ...prev,
       { id, props: { ...props, onClose: () => removeFeedback(id) } },

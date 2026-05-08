@@ -79,14 +79,16 @@ const AgentManagement: React.FC = () => {
   const [invokeInput, setInvokeInput] = useState('');
 
   useEffect(() => {
-    fetchAgents();
-  }, []);
+    let cancelled = false;
+    if (!cancelled) fetchAgents();
+    return () => { cancelled = true; };
+  }, [fetchAgents]);
 
   useEffect(() => {
     if (apiAgents && apiAgents.length > 0) {
-      const mapped: Agent[] = apiAgents.map((a: any) => ({
-        id: a.id || a.agent_id || '',
-        name: a.name || a.agent_id || 'Unknown',
+      const mapped: Agent[] = apiAgents.map((a) => ({
+        id: a.id,
+        name: a.name || 'Unknown',
         status:
           a.status === 'active'
             ? 'running'
@@ -95,10 +97,10 @@ const AgentManagement: React.FC = () => {
               : a.status === 'stopped'
                 ? 'stopped'
                 : 'error',
-        description: a.description || a.spec || undefined,
-        model: a.model || undefined,
-        createdAt: a.created_at || a.createdAt || new Date().toISOString(),
-        metadata: a.metadata || a.capabilities || undefined,
+        description: a.description || undefined,
+        model: undefined,
+        createdAt: a.createdAt || new Date().toISOString(),
+        metadata: a.metadata || undefined,
       }));
       setAgents(mapped);
     }

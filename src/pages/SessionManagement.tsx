@@ -31,7 +31,7 @@ interface DisplaySession {
   description: string;
 }
 
-function toDisplaySession(s: Session, t: (...args: any[]) => string): DisplaySession {
+function toDisplaySession(s: Session, t: (key: string, opts?: Record<string, unknown>) => string): DisplaySession {
   return {
     id: s.id,
     name:
@@ -80,13 +80,15 @@ export default function SessionManagement() {
   const [newSession, setNewSession] = useState({ name: '', agent: 'auto', description: '' });
 
   useEffect(() => {
-    if (connection.status === 'connected') {
+    let cancelled = false;
+    if (!cancelled && connection.status === 'connected') {
       fetchSessions();
       fetchAgents();
     }
+    return () => { cancelled = true; };
   }, [connection.status, fetchSessions, fetchAgents]);
 
-  const displaySessions: DisplaySession[] = apiSessions.map((s) => toDisplaySession(s, t as any));
+  const displaySessions: DisplaySession[] = apiSessions.map((s) => toDisplaySession(s, t));
 
   const filtered = displaySessions.filter((s) => {
     const matchSearch =
@@ -452,8 +454,8 @@ export default function SessionManagement() {
                     {[
                       ...DEFAULT_AGENTS,
                       ...agents.map((a) => ({
-                        id: a.agent_id || a.id,
-                        name: a.name || a.agent_id || a.id,
+                        id: a.id,
+                        name: a.name || a.id,
                       })),
                     ].map((a) => (
                       <option key={a.id} value={a.id}>

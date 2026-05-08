@@ -878,9 +878,9 @@ class SkillService {
     const data = extractData(resp);
     return {
       success:
-        data['success'] === true || data['success'] === undefined || data['success'] === null,
+        data['success'] === true,
       output: data['output'] || data['result'],
-      error: getString(data, 'error') || undefined,
+      error: data['success'] !== true ? (getString(data, 'error') || 'Execution returned without success flag') : (getString(data, 'error') || undefined),
     };
   }
 
@@ -999,7 +999,7 @@ class SkillService {
       return { valid, errors };
     } catch (e) {
       console.warn('Service fallback:', e);
-      return { valid: true, errors: [] };
+      return { valid: false, errors: ['Validation request failed: ' + (e instanceof Error ? e.message : String(e))] };
     }
   }
 
@@ -1066,7 +1066,7 @@ class SkillService {
   }
 }
 
-interface AgentInfo {
+export interface AgentInfo {
   id: string;
   name: string;
   description?: string;
@@ -1203,6 +1203,10 @@ export class AgentOSClient {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  async rawRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+    return request<T>(path, options, this.config);
   }
 
   async metrics(): Promise<Metrics> {

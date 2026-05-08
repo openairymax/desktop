@@ -61,7 +61,9 @@ const SystemMonitor: React.FC = () => {
   }, [t]);
 
   const updateBrowserMetrics = useCallback(() => {
-    const perf = performance as any;
+    const perf = performance as Performance & {
+      memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number };
+    };
     const memPct = perf.memory
       ? Math.round((perf.memory.usedJSHeapSize / perf.memory.jsHeapSizeLimit) * 100)
       : 45;
@@ -192,13 +194,18 @@ const SystemMonitor: React.FC = () => {
   }, [t, formatUptime, updateBrowserMetrics]);
 
   useEffect(() => {
-    fetchSystemData();
+    let cancelled = false;
+    if (!cancelled) fetchSystemData();
+    return () => { cancelled = true; };
   }, [fetchSystemData]);
 
   useEffect(() => {
     if (refreshing) return;
-    const iv = setInterval(fetchSystemData, 5000);
-    return () => clearInterval(iv);
+    let cancelled = false;
+    const iv = setInterval(() => {
+      if (!cancelled) fetchSystemData();
+    }, 5000);
+    return () => { cancelled = true; clearInterval(iv); };
   }, [refreshing, fetchSystemData]);
 
   const handleRefresh = async () => {
@@ -650,11 +657,13 @@ const SystemMonitor: React.FC = () => {
                 [t('systemMonitorExtended.currentTimestamp'), `${performance.now().toFixed(2)} ms`],
                 [
                   t('systemMonitorExtended.connectionType'),
-                  (navigator as any)?.connection?.effectiveType || '--',
+                  (navigator as Navigator & { connection?: { effectiveType?: string } })?.connection?.effectiveType || '--',
                 ],
                 [
                   t('systemMonitorExtended.deviceMemory'),
-                  (navigator as any)?.deviceMemory ? `${(navigator as any).deviceMemory} GB` : '--',
+                  (navigator as Navigator & { deviceMemory?: number })?.deviceMemory
+                    ? `${(navigator as Navigator & { deviceMemory?: number }).deviceMemory} GB`
+                    : '--',
                 ],
               ].map(([k, v]) => (
                 <React.Fragment key={k}>

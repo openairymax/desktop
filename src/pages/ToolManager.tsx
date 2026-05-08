@@ -13,11 +13,9 @@ import {
   Database,
   Globe,
   FileText,
-  Settings,
   Zap,
   Eye,
   X,
-  Copy,
   Terminal,
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -84,28 +82,36 @@ const ToolManager: React.FC = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
     const loadTools = async () => {
       try {
         const result = await invoke<Tool[]>('list_tools');
-        if (Array.isArray(result) && result.length > 0) {
-          setTools(result);
-        } else {
+        if (!cancelled) {
+          if (Array.isArray(result) && result.length > 0) {
+            setTools(result);
+          } else {
+            const stored = localStorage.getItem('agentos-tools');
+            if (stored) {
+              setTools(JSON.parse(stored));
+            }
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.warn('Backend tools unavailable, using local storage:', error);
           const stored = localStorage.getItem('agentos-tools');
           if (stored) {
             setTools(JSON.parse(stored));
           }
         }
-      } catch (error) {
-        console.warn('Backend tools unavailable, using local storage:', error);
-        const stored = localStorage.getItem('agentos-tools');
-        if (stored) {
-          setTools(JSON.parse(stored));
-        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
     loadTools();
+    return () => { cancelled = true; };
   }, []);
 
   const saveTools = (updated: Tool[]) => {
@@ -169,7 +175,7 @@ const ToolManager: React.FC = () => {
     if (!selectedTool) return;
     setActionLoading('exec');
     try {
-      await invoke<any>('call_tool', {
+      await invoke<unknown>('call_tool', {
         name: selectedTool.name,
         arguments: executeParams || '{}',
       });
