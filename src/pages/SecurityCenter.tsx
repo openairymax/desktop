@@ -134,27 +134,43 @@ const SecurityCenter: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'policies' | 'logs'>('policies');
   const [policies, setPolicies] = useState<SecurityPolicy[]>(() => {
-    const saved = localStorage.getItem('agentos-security-policies');
-    return saved ? JSON.parse(saved) : defaultPolicies;
+    try {
+      const saved = localStorage.getItem('agentos-security-policies');
+      return saved ? JSON.parse(saved) : defaultPolicies;
+    } catch {
+      return defaultPolicies;
+    }
   });
   const [logs, _setLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem('agentos-audit-logs');
-    return saved ? JSON.parse(saved) : defaultLogs;
+    try {
+      const saved = localStorage.getItem('agentos-audit-logs');
+      return saved ? JSON.parse(saved) : defaultLogs;
+    } catch {
+      return defaultLogs;
+    }
   });
   const [filterResult, setFilterResult] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('agentos-security-policies', JSON.stringify(policies));
+    try {
+      localStorage.setItem('agentos-security-policies', JSON.stringify(policies));
+    } catch (error) {
+      console.error('Failed to save security policies to localStorage:', error);
+    }
   }, [policies]);
 
   useEffect(() => {
-    localStorage.setItem('agentos-audit-logs', JSON.stringify(logs));
+    try {
+      localStorage.setItem('agentos-audit-logs', JSON.stringify(logs));
+    } catch (error) {
+      console.error('Failed to save audit logs to localStorage:', error);
+    }
   }, [logs]);
 
   const togglePolicy = (id: string) => {
-    setPolicies((prev) =>
-      prev.map((p) => {
+    setPolicies((prev: SecurityPolicy[]) =>
+      prev.map((p: SecurityPolicy) => {
         if (p.id === id) {
           return { ...p, status: p.status === 'enabled' ? 'disabled' : 'enabled' };
         }
@@ -163,7 +179,7 @@ const SecurityCenter: React.FC = () => {
     );
   };
 
-  const filteredLogs = logs.filter((log) => {
+  const filteredLogs = logs.filter((log: AuditLog) => {
     const matchResult = filterResult === 'all' || log.result === filterResult;
     const matchSearch =
       !searchQuery ||
@@ -245,6 +261,10 @@ const SecurityCenter: React.FC = () => {
         }}
       >
         <button
+          id="policies-tab"
+          role="tab"
+          aria-selected={activeTab === 'policies'}
+          aria-controls="policies-panel"
           onClick={() => setActiveTab('policies')}
           style={{
             display: 'flex',
@@ -265,6 +285,10 @@ const SecurityCenter: React.FC = () => {
           {t('security.securityPolicies')}
         </button>
         <button
+          id="logs-tab"
+          role="tab"
+          aria-selected={activeTab === 'logs'}
+          aria-controls="logs-panel"
           onClick={() => setActiveTab('logs')}
           style={{
             display: 'flex',
@@ -283,7 +307,7 @@ const SecurityCenter: React.FC = () => {
         >
           <FileText size={16} />
           审计日志
-          {logs.filter((l) => l.result === 'denied' || l.result === 'error').length > 0 && (
+          {logs.filter((l: AuditLog) => l.result === 'denied' || l.result === 'error').length > 0 && (
             <span
               style={{
                 background: 'rgba(255,255,255,0.3)',
@@ -292,7 +316,7 @@ const SecurityCenter: React.FC = () => {
                 fontSize: '11px',
               }}
             >
-              {logs.filter((l) => l.result === 'denied' || l.result === 'error').length}
+              {logs.filter((l: AuditLog) => l.result === 'denied' || l.result === 'error').length}
             </span>
           )}
         </button>
@@ -300,6 +324,9 @@ const SecurityCenter: React.FC = () => {
 
       {activeTab === 'policies' && (
         <motion.div
+          id="policies-panel"
+          role="tabpanel"
+          aria-labelledby="policies-tab"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
@@ -369,6 +396,7 @@ const SecurityCenter: React.FC = () => {
                   </div>
                   <button
                     onClick={() => togglePolicy(policy.id)}
+                    aria-label={`${policy.status === 'enabled' ? '禁用' : '启用'} ${policy.name} 策略`}
                     style={{
                       padding: '6px 12px',
                       borderRadius: '6px',
@@ -478,6 +506,9 @@ const SecurityCenter: React.FC = () => {
 
       {activeTab === 'logs' && (
         <motion.div
+          id="logs-panel"
+          role="tabpanel"
+          aria-labelledby="logs-tab"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
@@ -499,6 +530,7 @@ const SecurityCenter: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索日志..."
+                aria-label={t('security.searchLogs')}
                 style={{
                   width: '100%',
                   padding: '10px 12px 10px 36px',
@@ -516,6 +548,8 @@ const SecurityCenter: React.FC = () => {
                 <button
                   key={result}
                   onClick={() => setFilterResult(result)}
+                  aria-label={`按${result === 'all' ? '全部' : result === 'success' ? '成功' : result === 'denied' ? '拒绝' : '错误'}结果筛选`}
+                  aria-pressed={filterResult === result}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
@@ -540,7 +574,7 @@ const SecurityCenter: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div role="log" aria-label={t('security.auditLogs')} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {filteredLogs.map((log) => (
               <div
                 key={log.id}

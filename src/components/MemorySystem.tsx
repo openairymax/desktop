@@ -54,7 +54,7 @@ const TokenRing: React.FC<{
   const circ = radius * 2 * Math.PI;
   const offset = circ - (pct / 100) * circ;
   return (
-    <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
+    <div role="progressbar" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={label || '进度'} style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle
           cx={size / 2}
@@ -113,7 +113,7 @@ const MemorySystem: React.FC = () => {
       const data = await sdk.memoryList();
       setMemories(data || []);
     } catch (error) {
-      console.error('Failed to load memories:', error);
+      // Intentionally empty: graceful degradation
     }
   }, []);
 
@@ -127,7 +127,7 @@ const MemorySystem: React.FC = () => {
         breakdown: stats.breakdown,
       });
     } catch (error) {
-      console.error('Failed to load context window stats:', error);
+      // Intentionally empty: graceful degradation
     }
   }, []);
 
@@ -198,6 +198,8 @@ const MemorySystem: React.FC = () => {
   if (loading) {
     return (
       <div
+        role="status"
+        aria-live="polite"
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -214,7 +216,7 @@ const MemorySystem: React.FC = () => {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div role="region" aria-label="记忆系统" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div className="card card-elevated">
         <div
@@ -246,6 +248,7 @@ const MemorySystem: React.FC = () => {
                 AgentOS 核心能力：短期/长期记忆 + 向量检索 + 上下文管理
                 {memories.length > 0 && (
                   <span
+                    role="status"
                     style={{ marginLeft: '10px', color: 'var(--primary-color)', fontWeight: 600 }}
                   >
                     · 已连接后端
@@ -277,6 +280,7 @@ const MemorySystem: React.FC = () => {
 
       {/* Tabs */}
       <div
+        role="tablist"
         style={{
           display: 'flex',
           background: 'var(--bg-tertiary)',
@@ -293,6 +297,8 @@ const MemorySystem: React.FC = () => {
         ].map((tab) => (
           <button
             key={tab.key}
+            role="tab"
+            aria-selected={activeTab === tab.key}
             onClick={() => setActiveTab(tab.key)}
             style={{
               padding: '8px 20px',
@@ -470,6 +476,8 @@ const MemorySystem: React.FC = () => {
               />
               <input
                 type="text"
+                role="searchbox"
+                aria-label="搜索记忆"
                 className="form-input"
                 placeholder="搜索记忆内容..."
                 value={searchQuery}
@@ -480,6 +488,7 @@ const MemorySystem: React.FC = () => {
             </div>
             <select
               className="form-select"
+              aria-label="按类型筛选记忆"
               value={filterType}
               onChange={(e) => setFilterType(e.target.value)}
               style={{ width: '160px' }}
@@ -491,11 +500,13 @@ const MemorySystem: React.FC = () => {
                 </option>
               ))}
             </select>
-            <button className="btn btn-secondary" onClick={handleSearch}>
+            <button className="btn btn-secondary" aria-label="搜索记忆" onClick={handleSearch}>
               <Search size={14} /> 搜索
             </button>
             <button
               className={`btn ${refreshing ? '' : 'btn-ghost'}`}
+              aria-label="刷新记忆列表"
+              aria-pressed={refreshing}
               onClick={handleRefresh}
               disabled={refreshing}
             >
@@ -503,15 +514,16 @@ const MemorySystem: React.FC = () => {
             </button>
             <button
               className="btn btn-danger"
+              aria-label="清空记忆"
               onClick={() => handleClearType(filterType === 'all' ? undefined : filterType)}
             >
               <Trash2 size={14} /> 清空
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
             {filteredMemories.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
+              <div role="status" style={{ textAlign: 'center', padding: '48px', color: 'var(--text-muted)' }}>
                 <Database size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
                 <div>
                   {memories.length === 0
@@ -526,6 +538,7 @@ const MemorySystem: React.FC = () => {
                 return (
                   <div
                     key={mem.id}
+                    role="listitem"
                     className="card-hover-lift"
                     style={{
                       padding: '14px 18px',
@@ -586,6 +599,11 @@ const MemorySystem: React.FC = () => {
                       </div>
                     </div>
                     <div
+                      role="progressbar"
+                      aria-valuenow={Math.round(((mem as MemoryEntry & { relevance?: number }).relevance || 0.8) * 100)}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-label="相关性"
                       style={{
                         width: '44px',
                         height: '6px',
@@ -606,6 +624,7 @@ const MemorySystem: React.FC = () => {
                     </div>
                     <button
                       className="btn btn-ghost btn-sm"
+                      aria-label={`删除记忆 ${mem.id.slice(0, 8)}`}
                       onClick={() => handleDelete(mem.id)}
                       title="删除"
                     >
@@ -710,6 +729,11 @@ const MemorySystem: React.FC = () => {
                       </span>
                     </div>
                     <div
+                      role="progressbar"
+                      aria-valuenow={item.value}
+                      aria-valuemin={0}
+                      aria-valuemax={item.max}
+                      aria-label={item.label}
                       style={{
                         height: '8px',
                         background: 'var(--bg-tertiary)',

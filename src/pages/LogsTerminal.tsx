@@ -266,6 +266,8 @@ const LogsTerminal: React.FC = () => {
 
   return (
     <div
+      role="region"
+      aria-label="日志终端"
       style={{
         height: isFullscreen ? 'calc(100vh - 48px)' : 'calc(100vh - 140px)',
         display: 'flex',
@@ -289,15 +291,16 @@ const LogsTerminal: React.FC = () => {
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
             查看运行日志和执行命令
             {connection.status === 'connected' && (
-              <span style={{ color: 'var(--success)', marginLeft: '8px' }}>● 已连接</span>
+              <span role="status" style={{ color: 'var(--success)', marginLeft: '8px' }}>● 已连接</span>
             )}
             {connection.status !== 'connected' && (
-              <span style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>○ 未连接</span>
+              <span role="status" style={{ color: 'var(--text-muted)', marginLeft: '8px' }}>○ 未连接</span>
             )}
           </p>
         </div>
         <button
           onClick={() => setIsFullscreen(!isFullscreen)}
+          aria-label={isFullscreen ? '退出全屏' : '全屏'}
           style={{
             padding: '6px 10px',
             borderRadius: '6px',
@@ -335,6 +338,8 @@ const LogsTerminal: React.FC = () => {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
+            aria-pressed={activeTab === tab.key}
+            aria-label={tab.label}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -385,6 +390,8 @@ const LogsTerminal: React.FC = () => {
                 }}
               />
               <input
+                role="searchbox"
+                aria-label="搜索日志"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索日志..."
@@ -405,6 +412,7 @@ const LogsTerminal: React.FC = () => {
               />
             </div>
             <select
+              aria-label="日志级别筛选"
               value={filterLevel}
               onChange={(e) => setFilterLevel(e.target.value)}
               style={{
@@ -427,6 +435,7 @@ const LogsTerminal: React.FC = () => {
             </select>
             <button
               onClick={handleRefresh}
+              aria-label="刷新日志"
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
@@ -446,6 +455,7 @@ const LogsTerminal: React.FC = () => {
             </button>
             <button
               onClick={handleClear}
+              aria-label="清空日志"
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
@@ -484,6 +494,9 @@ const LogsTerminal: React.FC = () => {
 
           <div
             ref={logContainerRef}
+            role="log"
+            aria-live="polite"
+            aria-label="日志输出"
             style={{
               flex: 1,
               overflowY: 'auto',
@@ -497,7 +510,7 @@ const LogsTerminal: React.FC = () => {
             }}
           >
             {filteredLogs.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+              <div role="status" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
                 <FileText size={28} style={{ marginBottom: '8px' }} />
                 <p>暂无日志记录</p>
                 <p style={{ fontSize: '11px' }}>连接后端后，系统事件将自动记录</p>
@@ -561,6 +574,7 @@ const LogsTerminal: React.FC = () => {
           </div>
 
           <div
+            role="status"
             style={{
               display: 'flex',
               justifyContent: 'space-between',
@@ -647,6 +661,8 @@ const LogsTerminal: React.FC = () => {
             <button
               type="button"
               onClick={toggleRun}
+              aria-label={running ? '停止终端会话' : '启动终端会话'}
+              aria-pressed={running}
               style={{
                 width: '36px',
                 height: '36px',
@@ -678,6 +694,7 @@ const LogsTerminal: React.FC = () => {
                 ❯
               </span>
               <input
+                aria-label="终端命令输入"
                 value={terminalInput}
                 onChange={(e) => setTerminalInput(e.target.value)}
                 placeholder="输入命令..."
@@ -702,6 +719,7 @@ const LogsTerminal: React.FC = () => {
             </div>
             <button
               type="submit"
+              aria-label="执行命令"
               style={{
                 padding: '10px 18px',
                 borderRadius: '8px',

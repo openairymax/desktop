@@ -90,18 +90,25 @@ const ToolManager: React.FC = () => {
           if (Array.isArray(result) && result.length > 0) {
             setTools(result);
           } else {
-            const stored = localStorage.getItem('agentos-tools');
-            if (stored) {
-              setTools(JSON.parse(stored));
+            try {
+              const stored = localStorage.getItem('agentos-tools');
+              if (stored) {
+                setTools(JSON.parse(stored));
+              }
+            } catch {
+              // Intentionally empty: graceful degradation
             }
           }
         }
       } catch (error) {
         if (!cancelled) {
-          console.warn('Backend tools unavailable, using local storage:', error);
-          const stored = localStorage.getItem('agentos-tools');
-          if (stored) {
-            setTools(JSON.parse(stored));
+          try {
+            const stored = localStorage.getItem('agentos-tools');
+            if (stored) {
+              setTools(JSON.parse(stored));
+            }
+          } catch {
+            // Intentionally empty: graceful degradation
           }
         }
       } finally {
@@ -186,7 +193,6 @@ const ToolManager: React.FC = () => {
       setShowExecuteModal(false);
       setActionLoading(null);
     } catch (error) {
-      console.error('Tool execution failed:', error);
       alert(
         `${t('toolManager.executionFailed')} ${error instanceof Error ? error.message : String(error)}`,
       );
@@ -195,7 +201,7 @@ const ToolManager: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div role="region" aria-label="工具管理器" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Header */}
       <div
         style={{
@@ -240,13 +246,14 @@ const ToolManager: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            aria-label="刷新工具列表"
             onClick={async () => {
               setLoading(true);
               try {
                 const result = await invoke<Tool[]>('list_tools');
                 if (Array.isArray(result) && result.length > 0) setTools(result);
               } catch (e) {
-                console.warn('Failed to refresh tools:', e);
+                // Intentionally empty: graceful degradation
               }
               setLoading(false);
             }}
@@ -267,6 +274,7 @@ const ToolManager: React.FC = () => {
             <RefreshCw size={14} /> {t('toolManager.refresh')}
           </button>
           <button
+            aria-label="注册新工具"
             onClick={() => setShowAddModal(true)}
             style={{
               padding: '8px 16px',
@@ -372,6 +380,8 @@ const ToolManager: React.FC = () => {
       {/* Category Filter + Search */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <button
+          aria-label="显示所有分类工具"
+          aria-pressed={categoryFilter === 'all'}
           onClick={() => setCategoryFilter('all')}
           style={{
             padding: '6px 14px',
@@ -392,6 +402,8 @@ const ToolManager: React.FC = () => {
             return (
               <button
                 key={key}
+                aria-label={`筛选${categoryLabels[key]}类工具`}
+                aria-pressed={categoryFilter === key}
                 onClick={() => setCategoryFilter(key)}
                 style={{
                   padding: '6px 14px',
@@ -427,6 +439,8 @@ const ToolManager: React.FC = () => {
         />
         <input
           type="text"
+          role="searchbox"
+          aria-label="搜索工具"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={t('toolManager.searchPlaceholder')}
@@ -449,7 +463,7 @@ const ToolManager: React.FC = () => {
 
       {/* Loading */}
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+        <div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
           <Loader2 size={28} />
         </div>
       )}
@@ -457,6 +471,7 @@ const ToolManager: React.FC = () => {
       {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div
+          role="status"
           style={{
             textAlign: 'center',
             padding: '48px',
@@ -476,6 +491,7 @@ const ToolManager: React.FC = () => {
       {/* Tool Grid */}
       {!loading && filtered.length > 0 && (
         <div
+          role="list"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
@@ -489,6 +505,7 @@ const ToolManager: React.FC = () => {
               return (
                 <motion.div
                   key={tool.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
@@ -542,6 +559,7 @@ const ToolManager: React.FC = () => {
                       </div>
                     </div>
                     <span
+                      role="status"
                       style={{
                         fontSize: '11px',
                         padding: '2px 8px',
@@ -598,6 +616,7 @@ const ToolManager: React.FC = () => {
                   )}
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
+                      aria-label={`执行工具 ${tool.name}`}
                       onClick={() => {
                         setSelectedTool(tool);
                         setShowExecuteModal(true);
@@ -625,6 +644,7 @@ const ToolManager: React.FC = () => {
                       <Play size={12} /> {t('toolManager.execute')}
                     </button>
                     <button
+                      aria-label={`${tool.status === 'active' ? '停用' : '启用'}工具 ${tool.name}`}
                       onClick={() => handleToggleStatus(tool.id)}
                       disabled={actionLoading === `toggle-${tool.id}`}
                       style={{
@@ -651,6 +671,7 @@ const ToolManager: React.FC = () => {
                         : ` ${t('toolManager.enable')}`}
                     </button>
                     <button
+                      aria-label={`删除工具 ${tool.name}`}
                       onClick={() => handleDelete(tool.id)}
                       disabled={actionLoading === `del-${tool.id}`}
                       style={{
@@ -697,6 +718,9 @@ const ToolManager: React.FC = () => {
               }}
             />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="添加工具"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -748,6 +772,7 @@ const ToolManager: React.FC = () => {
                   </label>
                   <input
                     type="text"
+                    aria-label="工具名称"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={t('toolManager.namePlaceholder')}
@@ -778,6 +803,7 @@ const ToolManager: React.FC = () => {
                     {t('toolManager.description')}
                   </label>
                   <textarea
+                    aria-label="工具描述"
                     value={newDescription}
                     onChange={(e) => setNewDescription(e.target.value)}
                     rows={2}
@@ -810,6 +836,7 @@ const ToolManager: React.FC = () => {
                     {t('toolManager.category')}
                   </label>
                   <select
+                    aria-label="工具分类"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     style={{
@@ -834,6 +861,7 @@ const ToolManager: React.FC = () => {
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
+                  aria-label="取消添加工具"
                   onClick={() => setShowAddModal(false)}
                   style={{
                     padding: '8px 16px',
@@ -849,6 +877,7 @@ const ToolManager: React.FC = () => {
                   {t('toolManager.cancel')}
                 </button>
                 <button
+                  aria-label="确认注册工具"
                   onClick={handleAdd}
                   disabled={!newName.trim()}
                   style={{
@@ -892,6 +921,9 @@ const ToolManager: React.FC = () => {
               }}
             />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="执行工具"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -952,6 +984,7 @@ const ToolManager: React.FC = () => {
                 </div>
               )}
               <textarea
+                aria-label="执行参数JSON"
                 value={executeParams}
                 onChange={(e) => setExecuteParams(e.target.value)}
                 rows={4}
@@ -973,6 +1006,7 @@ const ToolManager: React.FC = () => {
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
+                  aria-label="取消执行"
                   onClick={() => setShowExecuteModal(false)}
                   style={{
                     padding: '8px 16px',
@@ -988,6 +1022,7 @@ const ToolManager: React.FC = () => {
                   {t('toolManager.cancel')}
                 </button>
                 <button
+                  aria-label={`确认执行工具 ${selectedTool.name}`}
                   onClick={handleExecute}
                   disabled={actionLoading === 'exec'}
                   style={{

@@ -24,6 +24,16 @@ interface ChatMessage {
   timestamp: Date;
 }
 
+interface Agent {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface Task {
+  id: string;
+}
+
 const SUGGESTIONS = [
   { icon: Zap, text: '启动所有服务', action: '列出当前运行中的智能体并检查状态' },
   { icon: Brain, text: '查看智能体列表', action: '查询已注册的智能体' },
@@ -41,12 +51,23 @@ const AIChat: React.FC<{
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [renderError, setRenderError] = useState<Error | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || sending) return;
@@ -62,7 +83,7 @@ const AIChat: React.FC<{
 
     try {
       if (agents.length > 0) {
-        const targetAgent = agents.find((a: { status: string }) => a.status === 'running') || agents[0];
+        const targetAgent: Agent = agents.find((a: Agent) => a.status === 'running') || agents[0];
         await invokeAgent(targetAgent.id, userMsg.content);
         const assistantMsg: ChatMessage = {
           id: `msg-${Date.now()}-resp`,
@@ -72,7 +93,7 @@ const AIChat: React.FC<{
         };
         setMessages((prev) => [...prev, assistantMsg]);
       } else {
-        const task = await submitTask(userMsg.content);
+        const task: Task | null = await submitTask(userMsg.content);
         const assistantMsg: ChatMessage = {
           id: `msg-${Date.now()}-resp`,
           role: 'assistant',
@@ -98,27 +119,87 @@ const AIChat: React.FC<{
   }, [input, sending, agents, invokeAgent, submitTask, onSendMessage]);
 
   const handleCopy = (text: string, id: string) => {
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current);
+    }
     navigator.clipboard.writeText(text);
     setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+    let cancelled = false;
+    copyTimeoutRef.current = setTimeout(() => {
+      if (!cancelled) {
+        setCopiedId(null);
+      }
+    }, 2000);
+
+    return () => {
+      cancelled = true;
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
   };
 
   const handleClear = () => {
     setMessages([]);
   };
 
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: compact ? '100%' : 'calc(100vh - 200px)',
-        backgroundColor: 'var(--bg-card)',
-        border: '1px solid var(--border-subtle)',
-        borderRadius: 'var(--radius-lg)',
-        overflow: 'hidden',
-      }}
-    >
+  if (renderError) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: compact ? '100%' : 'calc(100vh - 200px)',
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+        role="alert"
+      >
+        <Sparkles size={48} style={{ color: 'var(--error-color)', marginBottom: '16px' }} />
+        <h3 style={{ margin: 0, color: 'var(--text-primary)', fontSize: 'var(--font-size-lg)' }}>
+          AI 助手出现异常
+        </h3>
+        <p style={{ margin: '8px 0 0', color: 'var(--text-muted)', fontSize: 'var(--font-size-sm)', textAlign: 'center' }}>
+          {renderError.message || '发生未知错误'}
+        </p>
+        <button
+          onClick={() => setRenderError(null)}
+          style={{
+            marginTop: '16px',
+            padding: '8px 16px',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--radius-md)',
+            backgroundColor: 'var(--bg-tertiary)',
+            color: 'var(--text-primary)',
+            cursor: 'pointer',
+            fontSize: 'var(--font-size-sm)',
+          }}
+        >
+          重试
+        </button>
+      </div>
+    );
+  }
+
+  try {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          height: compact ? '100%' : 'calc(100vh - 200px)',
+          backgroundColor: 'var(--bg-card)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: 'var(--radius-lg)',
+          overflow: 'hidden',
+        }}
+      >
       <div
         style={{
           flex: 1,
@@ -210,6 +291,7 @@ const AIChat: React.FC<{
           {messages.map((msg) => (
             <motion.div
               key={msg.id}
+              role="option"
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -405,6 +487,7 @@ const AIChat: React.FC<{
             }
           }}
           placeholder="输入消息，按 Enter 发送..."
+          aria-label="Chat input"
           rows={1}
           style={{
             flex: 1,
@@ -456,8 +539,12 @@ const AIChat: React.FC<{
           )}
         </button>
       </div>
-    </div>
-  );
+      </div>
+    );
+  } catch (error) {
+    setRenderError(error instanceof Error ? error : new Error('渲染错误'));
+    return null;
+  }
 };
 
 export default AIChat;

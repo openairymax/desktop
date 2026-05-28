@@ -188,17 +188,17 @@ const CommandPalette: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'P') {
         e.preventDefault();
-        setIsOpen((prev) => !prev);
+        setIsOpen((prev: boolean) => !prev);
       }
       if (e.key === 'Escape') setIsOpen(false);
       if (isOpen) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
-          setSelectedIndex((i) => Math.min(i + 1, filteredCommands.length - 1));
+          setSelectedIndex((i: number) => Math.min(i + 1, filteredCommands.length - 1));
         }
         if (e.key === 'ArrowUp') {
           e.preventDefault();
-          setSelectedIndex((i) => Math.max(i - 1, 0));
+          setSelectedIndex((i: number) => Math.max(i - 1, 0));
         }
         if (e.key === 'Enter' && filteredCommands[selectedIndex]) {
           e.preventDefault();
@@ -229,7 +229,7 @@ const CommandPalette: React.FC = () => {
         <div className="modal-overlay" onClick={() => setIsOpen(false)}>
           <div
             className="global-search-modal command-palette-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e: React.MouseEvent) => e.stopPropagation()}
           >
             {/* Header */}
             <div
@@ -247,9 +247,13 @@ const CommandPalette: React.FC = () => {
                 type="text"
                 className="global-search-input"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
                 placeholder="Type a command or search..."
                 autoFocus
+                role="combobox"
+                aria-expanded={isOpen}
+                aria-haspopup="listbox"
+                aria-label="Search commands"
               />
               {query && (
                 <button onClick={() => setQuery('')} className="icon-btn">
@@ -290,7 +294,7 @@ const CommandPalette: React.FC = () => {
             </div>
 
             {/* Results */}
-            <div className="global-search-results" style={{ maxHeight: '320px' }}>
+            <div className="global-search-results" style={{ maxHeight: '320px' }} role="listbox">
               {filteredCommands.length === 0 ? (
                 <div className="global-search-empty">
                   <p>No commands found for "{query}"</p>
@@ -302,6 +306,8 @@ const CommandPalette: React.FC = () => {
                     className={`global-search-result-item ${idx === selectedIndex ? 'selected' : ''}`}
                     onClick={() => executeCommand(cmd)}
                     onMouseEnter={() => setSelectedIndex(idx)}
+                    role="option"
+                    aria-selected={idx === selectedIndex}
                   >
                     <div
                       className={`global-search-result-icon ${idx === selectedIndex ? '' : ''}`}
