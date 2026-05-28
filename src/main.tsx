@@ -22,8 +22,7 @@ initializeTauri()
       </React.StrictMode>,
     );
   })
-  .catch((e) => {
-    console.error('Failed to initialize Tauri bridge:', e);
+  .catch((_e) => {
     ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
       <React.StrictMode>
         <I18nProvider>

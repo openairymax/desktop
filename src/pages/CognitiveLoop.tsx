@@ -83,10 +83,12 @@ const CognitiveLoop: React.FC = () => {
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
   const [thinkingMode, setThinkingMode] = useState('single');
   const [loopCount, setLoopCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const handleStartLoop = async () => {
     if (!input.trim() || running) return;
     setRunning(true);
+    setError(null);
     setLoopCount((prev) => prev + 1);
 
     const newSteps: CognitiveStep[] = [
@@ -139,15 +141,16 @@ const CognitiveLoop: React.FC = () => {
           })),
         );
       }
-    } catch (error) {
-      console.error('Cognitive loop error:', error);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
       setSteps((prev) =>
         prev.map((s) => ({
           ...s,
           status: 'failed' as const,
           content:
             s.status === 'running'
-              ? `错误: ${error instanceof Error ? error.message : String(error)}`
+              ? `错误: ${errorMessage}`
               : s.content,
         })),
       );
@@ -160,7 +163,7 @@ const CognitiveLoop: React.FC = () => {
   const progressPct = steps.length > 0 ? (completedCount / steps.length) * 100 : 0;
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }} role="application" aria-label={t('cognitiveLoop.title')}>
       <div
         style={{
           display: 'flex',
@@ -219,6 +222,8 @@ const CognitiveLoop: React.FC = () => {
 
       {/* Thinking Mode Selector */}
       <div
+        role="region"
+        aria-label="思考模式选择"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)',
@@ -243,7 +248,16 @@ const CognitiveLoop: React.FC = () => {
           {THINKING_MODES.map((mode) => (
             <button
               key={mode.key}
+              role="radio"
+              aria-checked={thinkingMode === mode.key}
+              tabIndex={0}
               onClick={() => setThinkingMode(mode.key)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setThinkingMode(mode.key);
+                }
+              }}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -274,6 +288,8 @@ const CognitiveLoop: React.FC = () => {
 
       {/* Input Area */}
       <div
+        role="region"
+        aria-label="输入与控制"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           border: '1px solid var(--border-subtle)',
@@ -404,6 +420,11 @@ const CognitiveLoop: React.FC = () => {
               ))}
             </div>
             <div
+              role="progressbar"
+              aria-valuenow={completedCount}
+              aria-valuemin={0}
+              aria-valuemax={steps.length}
+              aria-label={`进度: ${Math.round(progressPct)}%`}
               style={{
                 height: '3px',
                 backgroundColor: 'var(--bg-tertiary)',
@@ -426,7 +447,45 @@ const CognitiveLoop: React.FC = () => {
         )}
       </div>
 
+      {error && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          style={{
+            backgroundColor: 'rgba(239,68,68,0.08)',
+            border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: '12px',
+            padding: '14px 20px',
+            marginBottom: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '13px',
+            color: 'var(--error-color)',
+          }}
+        >
+          <span style={{ fontWeight: '600', flexShrink: 0 }}>错误</span>
+          <span style={{ flex: 1 }}>{error}</span>
+          <button
+            aria-label="关闭错误提示"
+            onClick={() => setError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '2px 6px',
+              fontSize: '16px',
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Steps List */}
+      <div role="region" aria-label="认知循环步骤链" aria-live="polite">
       <AnimatePresence mode="popLayout">
         {steps.map((step, index) => {
           const cfg = PHASE_CONFIG[step.phase];
@@ -437,7 +496,17 @@ const CognitiveLoop: React.FC = () => {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
+              role="button"
+              tabIndex={0}
+              aria-expanded={isSelected}
+              aria-label={`${cfg.label}: ${step.content.slice(0, 80)}`}
               onClick={() => setSelectedStep(isSelected ? null : index)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedStep(isSelected ? null : index);
+                }
+              }}
               style={{
                 backgroundColor: 'var(--bg-secondary)',
                 border: `1px solid ${isSelected ? cfg.color : 'var(--border-subtle)'}`,
@@ -552,9 +621,12 @@ const CognitiveLoop: React.FC = () => {
           );
         })}
       </AnimatePresence>
+      </div>
 
       {steps.length === 0 && (
         <div
+          role="status"
+          aria-label="空状态提示"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)',

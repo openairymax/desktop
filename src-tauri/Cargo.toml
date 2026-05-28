@@ -1,6 +1,6 @@
 [package]
 name = "airymax-agentos"
-version = "0.0.5"
+version = "0.1.0"
 description = "Airymax AgentOS - Industrial-grade AI Agent Operating System Desktop Client"
 authors = ["Airymax Team"]
 license = "Apache-2.0"

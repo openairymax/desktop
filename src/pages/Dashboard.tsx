@@ -302,6 +302,8 @@ const Dashboard: React.FC = () => {
                 border: '1px solid var(--border-subtle)',
                 cursor: 'default',
               }}
+              role="status"
+              aria-label={stat.title}
             >
               <div
                 style={{
@@ -414,7 +416,7 @@ const Dashboard: React.FC = () => {
           }}
         >
           {QUICK_ACTIONS.map((action) => (
-            <Link to={action.path} key={action.label} style={{ textDecoration: 'none' }}>
+            <Link to={action.path} key={action.label} style={{ textDecoration: 'none' }} aria-label={action.desc}>
               <motion.div
                 whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
                 whileTap={{ scale: 0.97 }}

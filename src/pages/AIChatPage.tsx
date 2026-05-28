@@ -7,7 +7,7 @@ import AIChat from '../components/AIChat';
 const AIChatPage: React.FC = () => {
   const { t } = useTranslation();
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }} role="region" aria-label="AI Chat">
       <motion.div
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}

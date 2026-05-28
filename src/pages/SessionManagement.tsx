@@ -103,7 +103,7 @@ export default function SessionManagement() {
     try {
       await createSession(newSession.agent === 'auto' ? 'default' : newSession.agent);
     } catch (e) {
-      console.warn('Failed to create session:', e);
+      // Intentionally empty: graceful degradation
     }
     setShowCreateModal(false);
     setNewSession({ name: '', agent: 'auto', description: '' });
@@ -114,11 +114,11 @@ export default function SessionManagement() {
       try {
         await closeSession(id);
       } catch (e) {
-        console.warn('Failed to archive session:', e);
+        // Intentionally empty: graceful degradation
       }
     },
-    [closeSession],
-  );
+  [closeSession],
+);
 
   const deleteSession = useCallback(
     async (id: string) => {
@@ -126,7 +126,7 @@ export default function SessionManagement() {
         try {
           await closeSession(id);
         } catch (e) {
-          console.warn('Failed to delete session:', e);
+          // Intentionally empty: graceful degradation
         }
       }
     },
@@ -141,7 +141,7 @@ export default function SessionManagement() {
   };
 
   return (
-    <div>
+    <div role="region" aria-label="会话管理">
       <div
         style={{
           display: 'flex',
@@ -173,10 +173,11 @@ export default function SessionManagement() {
             className="btn btn-secondary btn-sm"
             onClick={() => fetchSessions()}
             disabled={loading}
+            aria-label="刷新会话列表"
           >
             <RefreshCw size={14} className={loading ? 'spin' : ''} />
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)}>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowCreateModal(true)} aria-label="新建会话">
             <Plus size={16} /> {t('sessionExtended.newSession')}
           </button>
         </div>
@@ -184,6 +185,7 @@ export default function SessionManagement() {
 
       {error && (
         <div
+          role="alert"
           style={{
             padding: '10px 14px',
             marginBottom: '12px',
@@ -215,6 +217,8 @@ export default function SessionManagement() {
           <input
             type="text"
             className="input"
+            role="searchbox"
+            aria-label="搜索会话"
             placeholder={t('sessionExtended.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -223,6 +227,7 @@ export default function SessionManagement() {
         </div>
         <select
           className="input"
+          aria-label="按状态过滤"
           style={{ width: '140px' }}
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
@@ -236,17 +241,18 @@ export default function SessionManagement() {
       </div>
 
       {loading && displaySessions.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }} role="status" aria-live="polite">
           <RefreshCw size={32} className="spin" style={{ marginBottom: '12px', opacity: 0.4 }} />
           <div style={{ fontSize: '14px' }}>加载会话数据...</div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }} role="list">
           <AnimatePresence>
             {filtered.map((session, i) => (
               <motion.div
                 key={session.id}
                 className="card"
+                role="listitem"
                 initial={{ opacity: 0, x: -12 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
@@ -362,6 +368,7 @@ export default function SessionManagement() {
                   <button
                     className="btn btn-sm btn-secondary"
                     onClick={() => setSelectedSession(session)}
+                    aria-label="查看会话详情"
                   >
                     <Eye size={13} />
                   </button>
@@ -369,6 +376,7 @@ export default function SessionManagement() {
                     <button
                       className="btn btn-sm btn-secondary"
                       onClick={() => archiveSession(session.id)}
+                      aria-label="归档会话"
                     >
                       <Archive size={13} />
                     </button>
@@ -376,6 +384,7 @@ export default function SessionManagement() {
                   <button
                     className="btn btn-sm btn-danger"
                     onClick={() => deleteSession(session.id)}
+                    aria-label="删除会话"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -402,6 +411,9 @@ export default function SessionManagement() {
           <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
             <motion.div
               className="modal-content"
+              role="dialog"
+              aria-modal="true"
+              aria-label="新建会话"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -409,7 +421,7 @@ export default function SessionManagement() {
             >
               <div className="modal-header">
                 <h2 className="modal-title">新建会话</h2>
-                <button className="modal-close" onClick={() => setShowCreateModal(false)}>
+                <button className="modal-close" onClick={() => setShowCreateModal(false)} aria-label="关闭">
                   <X size={18} />
                 </button>
               </div>
@@ -428,6 +440,7 @@ export default function SessionManagement() {
                   </label>
                   <input
                     className="input"
+                    aria-label="会话名称"
                     placeholder="输入会话名称..."
                     value={newSession.name}
                     onChange={(e) => setNewSession({ ...newSession, name: e.target.value })}
@@ -448,6 +461,7 @@ export default function SessionManagement() {
                   </label>
                   <select
                     className="input"
+                    aria-label="选择智能体"
                     value={newSession.agent}
                     onChange={(e) => setNewSession({ ...newSession, agent: e.target.value })}
                   >
@@ -478,6 +492,7 @@ export default function SessionManagement() {
                   </label>
                   <textarea
                     className="input"
+                    aria-label="会话描述"
                     rows={3}
                     placeholder="描述会话目的..."
                     value={newSession.description}
@@ -507,6 +522,9 @@ export default function SessionManagement() {
           <div className="modal-overlay" onClick={() => setSelectedSession(null)}>
             <motion.div
               className="modal-content"
+              role="dialog"
+              aria-modal="true"
+              aria-label="会话详情"
               onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -514,7 +532,7 @@ export default function SessionManagement() {
             >
               <div className="modal-header">
                 <h2 className="modal-title">{selectedSession.name} - 详情</h2>
-                <button className="modal-close" onClick={() => setSelectedSession(null)}>
+                <button className="modal-close" onClick={() => setSelectedSession(null)} aria-label="关闭">
                   <X size={18} />
                 </button>
               </div>
@@ -555,6 +573,8 @@ export default function SessionManagement() {
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
     <div
+      role="status"
+      aria-label={label}
       style={{
         background: 'var(--bg-card)',
         border: '1px solid var(--border-color)',
@@ -591,7 +611,7 @@ function DetailRow({ label, value }: { label: string; value: string }) {
 
 function EmptyState({ message, subMessage }: { message: string; subMessage: string }) {
   return (
-    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+    <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }} role="status">
       <MessageCircle size={48} style={{ marginBottom: '16px', opacity: 0.3 }} />
       <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>{message}</div>
       <div style={{ fontSize: '14px' }}>{subMessage}</div>

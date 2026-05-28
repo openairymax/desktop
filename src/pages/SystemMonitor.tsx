@@ -186,7 +186,6 @@ const SystemMonitor: React.FC = () => {
 
       setLastUpdate(new Date());
     } catch (e) {
-      console.warn('Backend system_monitor unavailable, using browser fallback:', e);
       setConnected(false);
       setError(e instanceof Error ? e.message : String(e));
       updateBrowserMetrics();
@@ -258,6 +257,7 @@ const SystemMonitor: React.FC = () => {
               </span>
               {connected ? (
                 <span
+                  role="status"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -270,6 +270,7 @@ const SystemMonitor: React.FC = () => {
                 </span>
               ) : (
                 <span
+                  role="status"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -292,6 +293,7 @@ const SystemMonitor: React.FC = () => {
         <button
           onClick={handleRefresh}
           disabled={refreshing}
+          aria-label="刷新监控数据"
           style={{
             padding: '8px 12px',
             border: '1px solid var(--border-color)',
@@ -313,6 +315,7 @@ const SystemMonitor: React.FC = () => {
 
       {error && !connected && (
         <div
+          role="alert"
           style={{
             padding: '10px 14px',
             marginBottom: '16px',
@@ -343,6 +346,7 @@ const SystemMonitor: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.06 }}
+            role="status"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',

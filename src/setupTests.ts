@@ -53,6 +53,8 @@ window.__TAURI_INTERNALS__ = {};
 HTMLCanvasElement.prototype.getContext = vi.fn();
 HTMLCanvasElement.prototype.toDataURL = vi.fn();
 
+Element.prototype.scrollIntoView = vi.fn();
+
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args) => {

@@ -68,7 +68,6 @@ export function AgentOSProvider({ children }: { children: ReactNode }) {
           const h = await client.testConnection();
           setConnection((prev) => ({ ...prev, health: h }));
         } catch (e) {
-          console.warn('Hook fallback:', e);
           setConnection((prev) =>
             prev.status === 'connected'
               ? { status: 'disconnected', error: 'Connection lost' }
@@ -245,7 +244,6 @@ export function useTasks() {
     try {
       return await client.tasks.count();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return tasks.length;
     }
   }, [client, tasks.length]);
@@ -334,7 +332,6 @@ export function useMemory() {
     try {
       return await client.memories.count();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return memories.length;
     }
   }, [client, memories.length]);
@@ -353,7 +350,6 @@ export function useMemory() {
     try {
       return await client.memories.getStats();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return {};
     }
   }, [client]);
@@ -441,7 +437,6 @@ export function useSessions() {
     try {
       return await client.sessions.count();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return sessions.length;
     }
   }, [client, sessions.length]);
@@ -450,7 +445,6 @@ export function useSessions() {
     try {
       return await client.sessions.countActive();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return sessions.filter((s) => s.status === SessionStatus.ACTIVE).length;
     }
   }, [client, sessions]);
@@ -592,7 +586,6 @@ export function useSkills() {
     try {
       return await client.skills.count();
     } catch (e) {
-      console.warn('Hook fallback:', e);
       return skills.length;
     }
   }, [client, skills.length]);

@@ -43,7 +43,6 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
       localStorage.setItem('agentos-wizard-completed', 'true');
       onComplete();
     } catch (error) {
-      console.error('Failed to save settings:', error);
       localStorage.setItem('agentos-wizard-completed', 'true');
       onComplete();
     } finally {
@@ -53,6 +52,8 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
 
   return (
     <div
+      role="region"
+      aria-label="欢迎向导"
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -160,7 +161,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             MCIS · 微内核 · 三层认知循环 · 四层记忆卷载
           </p>
 
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '36px' }}>
+          <div role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={steps.length} style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '36px' }}>
             {steps.map((s) => (
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div
@@ -721,7 +722,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
           }}
         >
           {step > 1 ? (
-            <button className="btn btn-secondary" onClick={() => setStep(step - 1)}>
+            <button className="btn btn-secondary" onClick={() => setStep(step - 1)} aria-label="上一步">
               上一步
             </button>
           ) : (
@@ -729,7 +730,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
           )}
 
           {step < 5 ? (
-            <button className="btn btn-primary btn-lg" onClick={() => setStep(step + 1)}>
+            <button className="btn btn-primary btn-lg" onClick={() => setStep(step + 1)} aria-label="下一步">
               继续 <ArrowRight size={17} />
             </button>
           ) : (

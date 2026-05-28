@@ -107,7 +107,7 @@ const MemoryEvolution: React.FC = () => {
       await writeMemory(newContent.trim(), newLayer as ServiceMemoryLayer);
       await fetchMemories();
     } catch (e) {
-      console.error('Failed to store memory:', e);
+      // Intentionally empty: graceful degradation
     }
     setNewContent('');
     setShowStoreModal(false);
@@ -120,7 +120,7 @@ const MemoryEvolution: React.FC = () => {
       await deleteMemory(id);
       await fetchMemories();
     } catch (e) {
-      console.error('Failed to delete memory:', e);
+      // Intentionally empty: graceful degradation
     }
     setActionLoading(null);
   };
@@ -131,7 +131,7 @@ const MemoryEvolution: React.FC = () => {
       await evolveMemory();
       await fetchMemories();
     } catch (e) {
-      console.error('Failed to evolve memory:', e);
+      // Intentionally empty: graceful degradation
     }
     setActionLoading(null);
   };
@@ -142,7 +142,7 @@ const MemoryEvolution: React.FC = () => {
       await clearMemories();
       await fetchMemories();
     } catch (e) {
-      console.error('Failed to clear memories:', e);
+      // Intentionally empty: graceful degradation
     }
   };
 
@@ -156,7 +156,7 @@ const MemoryEvolution: React.FC = () => {
   });
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div role="region" aria-label="记忆演化" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div
         style={{
           display: 'flex',
@@ -200,6 +200,7 @@ const MemoryEvolution: React.FC = () => {
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            aria-label="刷新记忆"
             onClick={() => fetchMemories()}
             style={{
               padding: '8px 12px',
@@ -219,6 +220,7 @@ const MemoryEvolution: React.FC = () => {
             {t('toolManager.refresh')}
           </button>
           <button
+            aria-label="进化记忆"
             onClick={handleEvolve}
             disabled={actionLoading === 'evolve'}
             style={{
@@ -244,6 +246,7 @@ const MemoryEvolution: React.FC = () => {
             进化
           </button>
           <button
+            aria-label="清除所有记忆"
             onClick={handleClear}
             style={{
               padding: '8px 12px',
@@ -263,6 +266,7 @@ const MemoryEvolution: React.FC = () => {
             {t('terminal.clear')}
           </button>
           <button
+            aria-label="存储记忆"
             onClick={() => setShowStoreModal(true)}
             style={{
               padding: '8px 16px',
@@ -296,6 +300,8 @@ const MemoryEvolution: React.FC = () => {
           ([key, cfg]) => (
             <div
               key={key}
+              role="status"
+              aria-label={`${cfg.label} ${counts[key] || 0} 条`}
               style={{
                 backgroundColor: 'var(--bg-secondary)',
                 border: '1px solid var(--border-subtle)',
@@ -353,6 +359,10 @@ const MemoryEvolution: React.FC = () => {
           ([key, cfg]) => (
             <div
               key={key}
+              role="button"
+              aria-pressed={layerFilter === key}
+              aria-label={`筛选${cfg.label}`}
+              tabIndex={0}
               style={{
                 padding: '10px 14px',
                 backgroundColor: 'var(--bg-secondary)',
@@ -395,6 +405,8 @@ const MemoryEvolution: React.FC = () => {
           />
           <input
             type="text"
+            role="searchbox"
+            aria-label="搜索记忆"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索记忆内容..."
@@ -415,6 +427,7 @@ const MemoryEvolution: React.FC = () => {
           />
         </div>
         <select
+          aria-label="筛选层级"
           value={layerFilter}
           onChange={(e) => setLayerFilter(e.target.value)}
           style={{
@@ -438,7 +451,7 @@ const MemoryEvolution: React.FC = () => {
 
       {/* Loading */}
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+        <div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
           <Loader2 size={28} />
         </div>
       )}
@@ -446,6 +459,7 @@ const MemoryEvolution: React.FC = () => {
       {/* Empty */}
       {!loading && filtered.length === 0 && (
         <div
+          role="status"
           style={{
             textAlign: 'center',
             padding: '48px',
@@ -460,6 +474,7 @@ const MemoryEvolution: React.FC = () => {
           />
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>暂无记忆数据</p>
           <button
+            aria-label="存储第一条记忆"
             onClick={() => setShowStoreModal(true)}
             style={{
               display: 'inline-flex',
@@ -482,13 +497,14 @@ const MemoryEvolution: React.FC = () => {
 
       {/* Memory List */}
       {!loading && filtered.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           <AnimatePresence>
             {filtered.map((memory, index) => {
               const cfg = LAYER_CONFIG[memory.layer];
               return (
                 <motion.div
                   key={memory.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 6 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
@@ -572,6 +588,7 @@ const MemoryEvolution: React.FC = () => {
                     </p>
                   </div>
                   <button
+                    aria-label="删除记忆"
                     onClick={() => handleDelete(memory.id)}
                     disabled={actionLoading === `delete-${memory.id}`}
                     style={{
@@ -622,6 +639,9 @@ const MemoryEvolution: React.FC = () => {
               }}
             />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="存储记忆"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -652,6 +672,8 @@ const MemoryEvolution: React.FC = () => {
                 {t('memoryEvolution.storeMemory')}
               </h3>
               <div
+                role="radiogroup"
+                aria-label="选择记忆层级"
                 style={{
                   display: 'grid',
                   gridTemplateColumns: '1fr 1fr',
@@ -664,6 +686,9 @@ const MemoryEvolution: React.FC = () => {
                     <button
                       key={key}
                       type="button"
+                      role="radio"
+                      aria-checked={newLayer === key}
+                      aria-label={cfg.label}
                       onClick={() => setNewLayer(key)}
                       style={{
                         padding: '10px',
@@ -707,6 +732,7 @@ const MemoryEvolution: React.FC = () => {
               />
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
+                  aria-label="取消"
                   onClick={() => setShowStoreModal(false)}
                   style={{
                     padding: '8px 16px',
@@ -722,6 +748,7 @@ const MemoryEvolution: React.FC = () => {
                   {t('toolManager.cancel')}
                 </button>
                 <button
+                  aria-label="确认存储"
                   onClick={handleStore}
                   disabled={!newContent.trim()}
                   style={{

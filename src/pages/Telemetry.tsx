@@ -369,6 +369,7 @@ const Telemetry: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             onClick={() => setAutoRefresh(!autoRefresh)}
+            aria-label={autoRefresh ? '暂停自动刷新' : '开启自动刷新'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -397,6 +398,7 @@ const Telemetry: React.FC = () => {
               a.click();
               URL.revokeObjectURL(url);
             }}
+            aria-label="导出遥测数据"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -418,6 +420,7 @@ const Telemetry: React.FC = () => {
       </div>
 
       <div
+        role="tablist"
         style={{
           display: 'flex',
           gap: '8px',
@@ -434,6 +437,8 @@ const Telemetry: React.FC = () => {
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key as typeof activeTab)}
+            role="tab"
+            aria-selected={activeTab === tab.key}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -775,6 +780,7 @@ const Telemetry: React.FC = () => {
               <button
                 key={level}
                 onClick={() => setFilterLevel(level)}
+                aria-label={`筛选${level === 'all' ? '全部' : level === 'info' ? '信息' : level === 'warning' ? '警告' : '错误'}级别`}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',

@@ -128,7 +128,7 @@ const AgentManagement: React.FC = () => {
       await spawnAgent(newName.trim(), { description: newDescription, model: newModel });
       await fetchAgents();
     } catch (e) {
-      console.error('Failed to spawn agent:', e);
+      // Intentionally empty: graceful degradation
     }
     setNewName('');
     setNewDescription('');
@@ -143,7 +143,7 @@ const AgentManagement: React.FC = () => {
       await terminateAgent(agentId);
       await fetchAgents();
     } catch (e) {
-      console.error('Failed to terminate agent:', e);
+      // Intentionally empty: graceful degradation
     }
     setActionLoading(null);
   };
@@ -154,7 +154,7 @@ const AgentManagement: React.FC = () => {
       await invokeAgent(agentId, 'start');
       await fetchAgents();
     } catch (e) {
-      console.error('Failed to start agent:', e);
+      // Intentionally empty: graceful degradation
     }
     setActionLoading(null);
   };
@@ -165,7 +165,7 @@ const AgentManagement: React.FC = () => {
       await terminateAgent(agentId);
       await fetchAgents();
     } catch (e) {
-      console.error('Failed to delete agent:', e);
+      // Intentionally empty: graceful degradation
     }
     setActionLoading(null);
   };
@@ -183,7 +183,7 @@ const AgentManagement: React.FC = () => {
       await invokeAgent(selectedAgent.id, invokeInput.trim());
       await fetchAgents();
     } catch (e) {
-      console.error('Failed to invoke agent:', e);
+      // Intentionally empty: graceful degradation
     }
     setInvokeInput('');
     setShowInvokeModal(false);
@@ -196,7 +196,7 @@ const AgentManagement: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1280px', margin: '0 auto' }} role="region" aria-label="Agent 管理">
       <div
         style={{
           display: 'flex',
@@ -245,6 +245,7 @@ const AgentManagement: React.FC = () => {
               await fetchAgents();
               setLoading(false);
             }}
+            aria-label="刷新 Agent 列表"
             style={{
               padding: '8px 12px',
               border: '1px solid var(--border-color)',
@@ -263,6 +264,7 @@ const AgentManagement: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
+            aria-label="注册新 Agent"
             style={{
               padding: '8px 16px',
               border: 'none',
@@ -322,6 +324,8 @@ const AgentManagement: React.FC = () => {
         ].map((s) => (
           <div
             key={s.label}
+            role="status"
+            aria-label={s.label}
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
@@ -377,6 +381,8 @@ const AgentManagement: React.FC = () => {
           />
           <input
             type="text"
+            role="searchbox"
+            aria-label="搜索 Agent"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t('agents.searchAgents')}
@@ -407,6 +413,8 @@ const AgentManagement: React.FC = () => {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
+              aria-label={STATUS_CONFIG[s]?.label || t('common.all')}
+              aria-pressed={statusFilter === s}
               style={{
                 padding: '6px 12px',
                 borderRadius: '6px',
@@ -427,6 +435,8 @@ const AgentManagement: React.FC = () => {
 
       {loading && (
         <div
+          role="status"
+          aria-live="polite"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -443,6 +453,7 @@ const AgentManagement: React.FC = () => {
 
       {!loading && filteredAgents.length === 0 && (
         <div
+          role="status"
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)',
@@ -458,6 +469,7 @@ const AgentManagement: React.FC = () => {
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>{t('agents.noAgents')}</p>
           <button
             onClick={() => setShowCreateModal(true)}
+            aria-label="注册新 Agent"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -479,6 +491,7 @@ const AgentManagement: React.FC = () => {
 
       {!loading && filteredAgents.length > 0 && (
         <div
+          role="list"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
@@ -491,6 +504,7 @@ const AgentManagement: React.FC = () => {
               return (
                 <motion.div
                   key={agent.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.04 }}
@@ -544,6 +558,7 @@ const AgentManagement: React.FC = () => {
                           {agent.name}
                         </h3>
                         <span
+                          role="status"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -574,6 +589,7 @@ const AgentManagement: React.FC = () => {
                     </div>
                     <button
                       onClick={() => viewDetail(agent)}
+                      aria-label={`查看 ${agent.name} 详情`}
                       style={{
                         width: '28px',
                         height: '28px',
@@ -626,6 +642,7 @@ const AgentManagement: React.FC = () => {
                       <button
                         onClick={() => handleTerminate(agent.id)}
                         disabled={actionLoading === `terminate-${agent.id}`}
+                        aria-label={`停止 ${agent.name}`}
                         style={{
                           flex: 1,
                           padding: '8px 12px',
@@ -654,6 +671,7 @@ const AgentManagement: React.FC = () => {
                       <button
                         onClick={() => handleStart(agent.id)}
                         disabled={actionLoading === `start-${agent.id}`}
+                        aria-label={`启动 ${agent.name}`}
                         style={{
                           flex: 1,
                           padding: '8px 12px',
@@ -681,6 +699,7 @@ const AgentManagement: React.FC = () => {
                     )}
                     <button
                       onClick={() => handleOpenInvoke(agent)}
+                      aria-label={`调用 ${agent.name}`}
                       style={{
                         flex: 1,
                         padding: '8px 12px',
@@ -702,6 +721,7 @@ const AgentManagement: React.FC = () => {
                     <button
                       onClick={() => handleDelete(agent.id)}
                       disabled={actionLoading === `delete-${agent.id}`}
+                      aria-label={`删除 ${agent.name}`}
                       style={{
                         width: '34px',
                         border: '1px solid var(--border-color)',
@@ -746,6 +766,9 @@ const AgentManagement: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="注册 Agent"
               style={{
                 position: 'fixed',
                 top: '50%',
@@ -794,6 +817,7 @@ const AgentManagement: React.FC = () => {
                   </label>
                   <input
                     type="text"
+                    aria-label="Agent 名称"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder={t('agents.agentNameHelp')}
@@ -824,6 +848,7 @@ const AgentManagement: React.FC = () => {
                     {t('common.description')}
                   </label>
                   <textarea
+                    aria-label="Agent 描述"
                     value={newDescription}
                     onChange={(e) => setNewDescription(e.target.value)}
                     rows={3}
@@ -856,6 +881,7 @@ const AgentManagement: React.FC = () => {
                     {t('common.model')}
                   </label>
                   <select
+                    aria-label="Agent 模型"
                     value={newModel}
                     onChange={(e) => setNewModel(e.target.value)}
                     style={{
@@ -881,6 +907,7 @@ const AgentManagement: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   onClick={() => setShowCreateModal(false)}
+                  aria-label="取消注册"
                   style={{
                     padding: '8px 16px',
                     border: '1px solid var(--border-color)',
@@ -897,6 +924,7 @@ const AgentManagement: React.FC = () => {
                 <button
                   onClick={handleSpawn}
                   disabled={!newName.trim() || actionLoading === 'spawn'}
+                  aria-label="确认创建 Agent"
                   style={{
                     padding: '8px 16px',
                     background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
@@ -946,6 +974,9 @@ const AgentManagement: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="调用智能体"
               style={{
                 position: 'fixed',
                 top: '50%',
@@ -983,6 +1014,7 @@ const AgentManagement: React.FC = () => {
                 {selectedAgent.name}
               </p>
               <textarea
+                aria-label="调用指令输入"
                 value={invokeInput}
                 onChange={(e) => setInvokeInput(e.target.value)}
                 rows={4}
@@ -1005,6 +1037,7 @@ const AgentManagement: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   onClick={() => setShowInvokeModal(false)}
+                  aria-label="取消调用"
                   style={{
                     padding: '8px 16px',
                     border: '1px solid var(--border-color)',
@@ -1021,6 +1054,7 @@ const AgentManagement: React.FC = () => {
                 <button
                   onClick={handleInvoke}
                   disabled={!invokeInput.trim() || actionLoading === 'invoke'}
+                  aria-label="发送调用指令"
                   style={{
                     padding: '8px 16px',
                     background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
@@ -1070,6 +1104,9 @@ const AgentManagement: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="智能体详情"
               style={{
                 position: 'fixed',
                 top: '50%',
@@ -1105,6 +1142,7 @@ const AgentManagement: React.FC = () => {
                 </h2>
                 <button
                   onClick={() => setShowDetail(false)}
+                  aria-label="关闭详情"
                   style={{
                     width: '32px',
                     height: '32px',

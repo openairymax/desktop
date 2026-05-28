@@ -192,6 +192,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
             }}
           />
           <motion.div
+            role="dialog"
+            aria-modal="true"
             initial={{ opacity: 0, scale: 0.96, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
@@ -212,6 +214,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
             }}
           >
             <div
+              role="searchbox"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -225,6 +228,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
                 ref={inputRef}
                 type="text"
                 value={query}
+                aria-label="Global search"
+                aria-describedby="search-hints"
                 onChange={(e) => {
                   setQuery(e.target.value);
                   setSelectedIndex(0);
@@ -265,7 +270,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
               </kbd>
             </div>
 
-            <div style={{ maxHeight: '360px', overflowY: 'auto', padding: '8px' }}>
+            <div role="listbox" style={{ maxHeight: '360px', overflowY: 'auto', padding: '8px' }}>
               {filtered.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-muted)' }}>
                   <Search size={28} style={{ marginBottom: '8px', opacity: 0.5 }} />
@@ -295,6 +300,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
                       return (
                         <button
                           key={item.path}
+                          role="option"
+                          aria-selected={isSelected}
                           onClick={() => navigateTo(item)}
                           onMouseEnter={() => setSelectedIndex(globalIdx)}
                           style={{
@@ -349,6 +356,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
             </div>
 
             <div
+              id="search-hints"
               style={{
                 padding: '8px 16px',
                 borderTop: '1px solid var(--border-subtle)',
