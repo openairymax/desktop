@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import EmptyState from '../EmptyState';
+import { EmptyStates } from '../EmptyState';
 import React from 'react';
 
 describe('EmptyState', () => {
@@ -64,5 +65,25 @@ describe('EmptyState', () => {
       const { container } = render(<EmptyState type={type} title={type} />);
       expect(container.querySelector('.empty-state')).toBeInTheDocument();
     });
+  });
+
+  it('renders EmptyStates.noData with correct title', () => {
+    render(<EmptyStates.noData />);
+    expect(screen.getByText('No data available')).toBeInTheDocument();
+  });
+
+  it('renders EmptyStates.searchEmpty with correct title', () => {
+    render(<EmptyStates.searchEmpty />);
+    expect(screen.getByText('No results found')).toBeInTheDocument();
+  });
+
+  it('renders EmptyStates.offline with correct title', () => {
+    render(<EmptyStates.offline />);
+    expect(screen.getByText('Connection lost')).toBeInTheDocument();
+  });
+
+  it('renders EmptyStates.error with correct title', () => {
+    render(<EmptyStates.error />);
+    expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
 });
