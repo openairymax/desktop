@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import { AGENTOS_GATEWAY_URL } from '../constants/endpoints';
 
 type TabKey = 'appearance' | 'gateway' | 'data' | 'about';
 
