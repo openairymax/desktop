@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { logger } from '../utils/logger';
 import {
   Database,
   Brain,
@@ -157,7 +158,7 @@ const MemorySystem: React.FC = () => {
       const results = await sdk.memorySearch(searchQuery, 100);
       setMemories(results || []);
     } catch (error) {
-      console.error('Memory search failed:', error);
+      logger.error('Memory search failed', error);
     }
   };
 

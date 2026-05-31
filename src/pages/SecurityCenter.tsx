@@ -17,6 +17,7 @@ import {
   Key,
   Database,
 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface SecurityPolicy {
   id: string;
@@ -156,7 +157,7 @@ const SecurityCenter: React.FC = () => {
     try {
       localStorage.setItem('agentos-security-policies', JSON.stringify(policies));
     } catch (error) {
-      console.error('Failed to save security policies to localStorage:', error);
+      logger.error('Failed to save security policies to localStorage', error);
     }
   }, [policies]);
 
@@ -164,7 +165,7 @@ const SecurityCenter: React.FC = () => {
     try {
       localStorage.setItem('agentos-audit-logs', JSON.stringify(logs));
     } catch (error) {
-      console.error('Failed to save audit logs to localStorage:', error);
+      logger.error('Failed to save audit logs to localStorage', error);
     }
   }, [logs]);
 
