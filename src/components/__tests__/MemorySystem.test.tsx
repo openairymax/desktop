@@ -37,6 +37,8 @@ vi.mock('lucide-react', () => {
     Hash: createSvg,
     Eye: createSvg,
     RefreshCw: createSvg,
+    CheckCircle: createSvg,
+    AlertTriangle: createSvg,
   };
 });
 

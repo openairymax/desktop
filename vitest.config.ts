@@ -14,6 +14,12 @@ export default defineConfig({
       reporter: ['text', 'json', 'html'],
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/__tests__/**', 'src/setupTests.ts', 'src/vite-env.d.ts'],
+      thresholds: {
+        statements: 40,
+        branches: 40,
+        functions: 40,
+        lines: 40,
+      },
     },
   },
   resolve: {
