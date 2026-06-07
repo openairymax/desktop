@@ -11,9 +11,19 @@ const ALLOWED_CLI_COMMANDS: &[&str] = &[
 
 fn validate_path(path: &str) -> Result<std::path::PathBuf, String> {
     let p = std::path::Path::new(path);
-    let canonical = p
-        .canonicalize()
-        .map_err(|e| format!("Invalid path {}: {}", path, e))?;
+    // If path exists, canonicalize directly; otherwise canonicalize parent + join filename
+    let canonical = if p.exists() {
+        p.canonicalize().map_err(|e| format!("Invalid path {}: {}", path, e))?
+    } else {
+        let parent = p.parent().unwrap_or_else(|| std::path::Path::new("/"));
+        let parent_canonical = parent
+            .canonicalize()
+            .map_err(|e| format!("Invalid parent path for {}: {}", path, e))?;
+        parent_canonical.join(
+            p.file_name()
+                .ok_or_else(|| format!("Invalid path (no filename): {}", path))?,
+        )
+    };
 
     let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
     let config_dir = dirs::config_dir().unwrap_or_else(|| home.clone());
@@ -725,11 +735,19 @@ pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String
         request.messages.len()
     );
 
+    // Read API key from environment variables based on provider
+    let api_key = match request.provider_id.as_str() {
+        "openai" => std::env::var("OPENAI_API_KEY").ok(),
+        "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
+        "ollama" | "localai" => None, // Ollama/LocalAI typically don't require API keys
+        _ => std::env::var("AGENTOS_LLM_API_KEY").ok(),
+    };
+
     let config = match request.provider_id.as_str() {
-        "openai" => LLMProviderConfig::openai(None, Some(model)),
-        "anthropic" => LLMProviderConfig::anthropic(None, Some(model)),
-        "ollama" | "localai" => LLMProviderConfig::ollama(None, Some(model)),
-        _ => LLMProviderConfig::openai(None, Some(model)),
+        "openai" => LLMProviderConfig::openai(api_key, Some(model)),
+        "anthropic" => LLMProviderConfig::anthropic(api_key, Some(model)),
+        "ollama" | "localai" => LLMProviderConfig::ollama(api_key, Some(model)),
+        _ => LLMProviderConfig::openai(api_key, Some(model)),
     };
 
     let client = LLMClient::new();
@@ -790,10 +808,17 @@ pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Valu
 
     log::info!("Testing LLM connection for provider: {}", provider_id);
 
+    let api_key = match provider_id.as_str() {
+        "openai" => std::env::var("OPENAI_API_KEY").ok(),
+        "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
+        "ollama" | "localai" => None,
+        _ => std::env::var("AGENTOS_LLM_API_KEY").ok(),
+    };
+
     let config = match provider_id.as_str() {
-        "openai" => LLMProviderConfig::openai(None, None),
-        "anthropic" => LLMProviderConfig::anthropic(None, None),
-        "ollama" | "localai" => LLMProviderConfig::ollama(None, None),
+        "openai" => LLMProviderConfig::openai(api_key, None),
+        "anthropic" => LLMProviderConfig::anthropic(api_key, None),
+        "ollama" | "localai" => LLMProviderConfig::ollama(api_key, None),
         _ => return Err(format!("Unknown provider: {}", provider_id)),
     };
 

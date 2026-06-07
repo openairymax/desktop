@@ -13,7 +13,6 @@ import {
   Clock,
   Loader2,
   MessageSquare,
-  BarChart3,
   Activity,
   Gauge,
   FileText,
