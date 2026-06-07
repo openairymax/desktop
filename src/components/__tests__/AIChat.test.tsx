@@ -31,7 +31,6 @@ vi.mock('lucide-react', () => ({
   Clock: () => React.createElement('svg'),
   Loader2: () => React.createElement('svg'),
   MessageSquare: () => React.createElement('svg'),
-  BarChart3: () => React.createElement('svg'),
   Activity: () => React.createElement('svg'),
   Gauge: () => React.createElement('svg'),
   FileText: () => React.createElement('svg'),
