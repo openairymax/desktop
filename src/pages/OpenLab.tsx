@@ -37,7 +37,7 @@ const defaultApps: OpenLabApp[] = [
     version: '2.1.0',
     rating: 4.8,
     downloads: 12540,
-    author: 'AgentOS Team',
+    author: 'AgentRT Team',
     tags: ['文档', '自动化', 'markdown'],
     status: 'available',
     lastUpdated: '2026-04-20',
@@ -206,7 +206,7 @@ const OpenLab: React.FC = () => {
           应用市场
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-          浏览和安装 AgentOS 扩展应用
+          浏览和安装 AgentRT 扩展应用
         </p>
       </div>
 

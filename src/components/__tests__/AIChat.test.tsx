@@ -127,7 +127,7 @@ describe('AIChat', () => {
   it('renders chat input and send button', () => {
     render(<AIChat />);
     expect(screen.getByPlaceholderText('输入消息，按 Enter 发送...')).toBeInTheDocument();
-    expect(screen.getByText('AI 助手 — 连接 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('AI 助手 — 连接 AgentRT')).toBeInTheDocument();
   });
 
   it('shows suggestions when no messages', () => {

@@ -24,9 +24,9 @@ interface Step {
 const steps: Step[] = [
   {
     id: 1,
-    title: '欢迎使用 AgentOS',
+    title: '欢迎使用 AgentRT',
     description:
-      'AgentOS 是一个工业级 AI 智能体系统，提供全方位的智能体管理、任务编排和系统监控功能。',
+      'AgentRT 是一个工业级 AI 智能体系统，提供全方位的智能体管理、任务编排和系统监控功能。',
     icon: <LayoutDashboard size={24} />,
   },
   {
@@ -80,7 +80,7 @@ const steps: Step[] = [
   {
     id: 8,
     title: '开始使用',
-    description: '现在您已经了解了 AgentOS 的核心功能，开始创建您的第一个智能体吧！',
+    description: '现在您已经了解了 AgentRT 的核心功能，开始创建您的第一个智能体吧！',
     icon: <Sparkles size={24} />,
   },
 ];

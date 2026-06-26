@@ -57,7 +57,7 @@ export function AgentOSProvider({ children }: { children: ReactNode }) {
       if (health.status === 'unreachable') {
         setConnection({
           status: 'error',
-          error: `Cannot reach AgentOS Gateway at ${client.config.endpoint}`,
+          error: `Cannot reach AgentRT Gateway at ${client.config.endpoint}`,
         });
         return;
       }

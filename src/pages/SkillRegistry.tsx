@@ -171,7 +171,7 @@ const SkillRegistry: React.FC = () => {
               技能注册中心
             </h1>
             <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-              AgentOS 技能管理、注册与执行
+              AgentRT 技能管理、注册与执行
             </p>
           </div>
         </div>

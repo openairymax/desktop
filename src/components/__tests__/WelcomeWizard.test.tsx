@@ -38,14 +38,14 @@ describe('WelcomeWizard', () => {
 
   it('renders the wizard with progress bar', () => {
     renderWizard();
-    expect(screen.getByText('AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('AgentRT')).toBeInTheDocument();
     expect(screen.getByText('工业级 AI 智能体操作系统')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toBeInTheDocument();
   });
 
   it('renders step 1 welcome content', () => {
     renderWizard();
-    expect(screen.getByText('欢迎使用 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('欢迎使用 AgentRT')).toBeInTheDocument();
     expect(screen.getByText('三层认知循环')).toBeInTheDocument();
     expect(screen.getByText('四层记忆卷载')).toBeInTheDocument();
     expect(screen.getByText('安全穹顶 Cupolas')).toBeInTheDocument();
@@ -55,7 +55,7 @@ describe('WelcomeWizard', () => {
   it('navigates to step 2 on clicking next', () => {
     renderWizard();
     fireEvent.click(screen.getByRole('button', { name: '下一步' }));
-    expect(screen.getByText('认识 AgentOS 架构')).toBeInTheDocument();
+    expect(screen.getByText('认识 AgentRT 架构')).toBeInTheDocument();
     expect(screen.getByText('微内核 CoreKern')).toBeInTheDocument();
     expect(screen.getByText('三层认知循环 CoreLoopThree')).toBeInTheDocument();
     expect(screen.getByText('四层记忆卷载 MemoryRovol')).toBeInTheDocument();
@@ -66,16 +66,16 @@ describe('WelcomeWizard', () => {
     renderWizard();
 
     fireEvent.click(screen.getByRole('button', { name: '下一步' }));
-    expect(screen.getByText('认识 AgentOS 架构')).toBeInTheDocument();
+    expect(screen.getByText('认识 AgentRT 架构')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '下一步' }));
     expect(screen.getByText('选择界面语言')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '上一步' }));
-    expect(screen.getByText('认识 AgentOS 架构')).toBeInTheDocument();
+    expect(screen.getByText('认识 AgentRT 架构')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: '上一步' }));
-    expect(screen.getByText('欢迎使用 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('欢迎使用 AgentRT')).toBeInTheDocument();
   });
 
   it('does not show back button on step 1', () => {

@@ -542,7 +542,7 @@ const Settings: React.FC = () => {
                 color: 'var(--text-primary)',
               }}
             >
-              Airymax AgentOS
+              Airymax AgentRT
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
               {t('settingsExtended.versionInfo', { version: __APP_VERSION__ })}

@@ -237,7 +237,7 @@ const TaskManagement: React.FC = () => {
               {t('tasks.title')}
             </h1>
             <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-              AgentOS 任务全生命周期管理
+              AgentRT 任务全生命周期管理
             </p>
           </div>
         </div>

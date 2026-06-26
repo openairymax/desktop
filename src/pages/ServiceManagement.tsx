@@ -80,7 +80,7 @@ const ServiceManagement: React.FC = () => {
     const svcList: ServiceInfo[] = [
       {
         id: 'svc-gateway',
-        name: 'AgentOS Gateway',
+        name: 'AgentRT Gateway',
         type: 'gateway',
         status: gatewayStatus,
         endpoint: localStorage.getItem('agentos-endpoint') || AGENTOS_GATEWAY_URL,

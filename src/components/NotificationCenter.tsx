@@ -28,7 +28,7 @@ const NotificationCenter: React.FC = () => {
       id: '1',
       type: 'success',
       title: 'System Ready',
-      message: 'All services are running normally. AgentOS is ready to use.',
+      message: 'All services are running normally. AgentRT is ready to use.',
       timestamp: new Date(Date.now() - 5 * 60000),
       read: false,
       action: { label: 'View Dashboard', onClick: () => navigate('/') },

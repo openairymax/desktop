@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicehash/tauri/dev/tooling/cli/schema.json",
-  "productName": "Airymax AgentOS",
+  "productName": "Airymax AgentRT",
   "version": "0.1.0",
   "identifier": "com.airmax.agentos",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Airymax AgentOS",
+        "title": "Airymax AgentRT",
         "width": 1280,
         "height": 800,
         "minWidth": 960,
@@ -57,7 +57,7 @@
       "iconPath": "icons/icon_32x32.png",
       "iconAsTemplate": true,
       "menuOnLeftClick": false,
-      "title": "Airymax AgentOS"
+      "title": "Airymax AgentRT"
     }
   },
   "bundle": {

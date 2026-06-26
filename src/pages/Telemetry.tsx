@@ -363,7 +363,7 @@ const Telemetry: React.FC = () => {
             遥测仪表盘
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-            AgentOS 系统指标监控与性能分析
+            AgentRT 系统指标监控与性能分析
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>

@@ -156,7 +156,7 @@ const Dashboard: React.FC = () => {
         {
           title: '网关状态',
           value: connStatus,
-          sub: health?.version ? `v${health.version}` : 'AgentOS Gateway',
+          sub: health?.version ? `v${health.version}` : 'AgentRT Gateway',
           icon: <Server size={20} />,
           color: connColor,
           progress: connection.status === 'connected' ? 100 : 0,
@@ -242,7 +242,7 @@ const Dashboard: React.FC = () => {
                 letterSpacing: '-0.02em',
               }}
             >
-              {greeting}，欢迎使用 Airymax AgentOS
+              {greeting}，欢迎使用 Airymax AgentRT
             </h1>
             <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
               {currentTime.toLocaleDateString('zh-CN', {

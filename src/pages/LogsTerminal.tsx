@@ -93,9 +93,9 @@ const LogsTerminal: React.FC = () => {
 
   useEffect(() => {
     if (connection.status === 'connected') {
-      addLog('system', 'System', '已连接到 AgentOS 后端');
+      addLog('system', 'System', '已连接到 AgentRT 后端');
     } else if (connection.status === 'disconnected') {
-      addLog('warn', 'System', '与 AgentOS 后端断开连接');
+      addLog('warn', 'System', '与 AgentRT 后端断开连接');
     } else if (connection.status === 'error') {
       addLog('error', 'System', `连接错误: ${connection.error || '未知'}`);
     }
@@ -170,7 +170,7 @@ const LogsTerminal: React.FC = () => {
             } else {
               output = `系统状态:
   后端连接: 未连接 (${connection.status})
-  请先确保 AgentOS 后端正在运行`;
+  请先确保 AgentRT 后端正在运行`;
             }
             break;
           }
@@ -231,7 +231,7 @@ const LogsTerminal: React.FC = () => {
             setTerminalInput('');
             return;
           case 'version':
-            output = 'Airymax AgentOS v0.0.5 (Tauri Desktop)';
+            output = 'Airymax AgentRT v0.0.5 (Tauri Desktop)';
             break;
           default:
             output = `命令未找到: ${cmd}. 输入 help 查看可用命令。`;
@@ -616,7 +616,7 @@ const LogsTerminal: React.FC = () => {
             <div style={{ color: '#58a6ff', marginBottom: '8px' }}>
               ══════════════════════════════════════════════
               <br />
-              &nbsp;&nbsp;Airymax AgentOS Terminal v0.0.5
+              &nbsp;&nbsp;Airymax AgentRT Terminal v0.0.5
               <br />
               &nbsp;&nbsp;输入 help 获取可用命令
               <br />
