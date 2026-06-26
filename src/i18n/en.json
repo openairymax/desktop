@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "AgentOS Desktop",
+    "title": "AgentRT Desktop",
     "version": "Version {version}",
     "quickDeploy": "Quick Deploy"
   },
@@ -59,7 +59,7 @@
   },
   "services": {
     "title": "Service Management",
-    "subtitle": "Manage your AgentOS containerized services",
+    "subtitle": "Manage your AgentRT containerized services",
     "status": "Status",
     "running": "Running",
     "stopped": "Stopped",
@@ -84,7 +84,7 @@
     "actions": "Actions",
     "activeServices": "Active Services",
     "noRunningServices": "No running services",
-    "noRunningServicesHint": "Click \"Start All\" to launch AgentOS services",
+    "noRunningServicesHint": "Click \"Start All\" to launch AgentRT services",
     "confirmStopAll": "Are you sure you want to stop all services?",
     "devModeInfo": "Development Mode",
     "prodModeInfo": "Production Mode",
@@ -229,7 +229,7 @@
     "envVariables": "Environment Variables",
     "envVariablesDesc": "Database, Redis, JWT, and API configuration",
     "mainConfig": "Main Configuration",
-    "mainConfigDesc": "Core AgentOS settings and parameters",
+    "mainConfigDesc": "Core AgentRT settings and parameters",
     "dockerComposeDev": "Docker Compose (Dev)",
     "dockerComposeDevDesc": "Development environment service definitions",
     "dockerComposeProd": "Docker Compose (Prod)",
@@ -290,7 +290,7 @@
     "workingDirectory": "Working Directory",
     "ready": "Ready",
     "running": "Running...",
-    "terminalReady": "AgentOS Terminal Ready",
+    "terminalReady": "AgentRT Terminal Ready",
     "terminalReadyHint": "Type a command or click a quick command above to get started",
     "exitCode": "Exit code",
     "completedIn": "Completed in",
@@ -302,7 +302,7 @@
     "healthCheck": "Health Check",
     "stopAllServices": "Stop All Services",
     "cleanUpResources": "Clean Up Resources",
-    "welcomeMessage": "Welcome to AgentOS Terminal",
+    "welcomeMessage": "Welcome to AgentRT Terminal",
     "enterCommandHint": "Type a command and press Enter to execute",
     "enterCommand": "Enter command..."
   },
@@ -352,7 +352,7 @@
   },
   "settings": {
     "title": "Settings",
-    "description": "Customize your AgentOS Desktop experience",
+    "description": "Customize your AgentRT Desktop experience",
     "general": "General",
     "appearance": "Appearance & Preferences",
     "language": "Language",
@@ -363,12 +363,12 @@
     "themeAuto": "Follow System",
     "themeHelp": "Choose your preferred appearance mode",
     "autoStart": "Auto Start on Login",
-    "autoStartHelp": "Automatically launch AgentOS when the system starts",
+    "autoStartHelp": "Automatically launch AgentRT when the system starts",
     "notifications": "Desktop Notifications",
     "notificationsHelp": "Show desktop notifications for task status changes",
     "connection": "Connection",
     "backendUrl": "Backend Service URL",
-    "backendUrlHelp": "The URL of the AgentOS backend service",
+    "backendUrlHelp": "The URL of the AgentRT backend service",
     "testConnection": "Test Connection",
     "testConnectionHelp": "Verify the backend service is reachable",
     "connectionSuccess": "Connection to {url} successful!",
@@ -390,7 +390,7 @@
     "cacheCleared": "Cache cleared successfully",
     "savedSuccess": "Settings saved successfully!",
     "saveError": "Failed to save settings",
-    "footer": "AgentOS Desktop Client",
+    "footer": "AgentRT Desktop Client",
     "documentation": "Documentation",
     "projectPath": "Project Path",
     "minimizeToTray": "Minimize to System Tray",
@@ -399,7 +399,7 @@
   "llmConfig": {
     "title": "AI Model Configuration",
     "subtitle": "Configure LLM APIs to power your AI agents",
-    "description": "Configure your AI model API keys and settings. AgentOS supports multiple providers.",
+    "description": "Configure your AI model API keys and settings. AgentRT supports multiple providers.",
     "providers": "Configured Providers",
     "addProvider": "Add Provider",
     "selectProvider": "Select AI Provider",
@@ -445,7 +445,7 @@
     "title": "Protocol Compatibility",
     "demo": {
       "title": "Protocol Compatibility Demo",
-      "subtitle": "AgentOS UnifiedProtocol",
+      "subtitle": "AgentRT UnifiedProtocol",
       "connectionTest": {
         "title": "Connection Test",
         "endpointAddress": "Endpoint Address",
@@ -484,7 +484,7 @@
     "list": {
       "jsonrpc": {
         "name": "JSON-RPC 2.0",
-        "description": "AgentOS Native JSON-RPC Protocol"
+        "description": "AgentRT Native JSON-RPC Protocol"
       },
       "mcp": {
         "name": "MCP v1.0",
@@ -508,7 +508,7 @@
   },
   "memoryEvolution": {
     "title": "Memory System",
-    "subtitle": "AgentOS Long-term Memory Management & Evolution Tracking",
+    "subtitle": "AgentRT Long-term Memory Management & Evolution Tracking",
     "storeMemory": "Store Memory",
     "searchMemory": "Search Memory",
     "memoryList": "Memory List",
@@ -589,7 +589,7 @@
   },
   "tools": {
     "title": "Tool Manager",
-    "subtitle": "AgentOS Available Tools List & Execution Console",
+    "subtitle": "AgentRT Available Tools List & Execution Console",
     "toolName": "Tool Name",
     "description": "Description",
     "category": "Category",
@@ -615,7 +615,7 @@
   },
   "cognitiveLoop": {
     "title": "Cognitive Loop",
-    "subtitle": "AgentOS Perception → Reasoning → Action → Reflection Visualization",
+    "subtitle": "AgentRT Perception → Reasoning → Action → Reflection Visualization",
     "inputPlaceholder": "Enter a task or query to start the cognitive loop...",
     "startLoop": "Start Cognitive Loop",
     "running": "Running...",
@@ -642,7 +642,7 @@
   },
   "protocolPlayground": {
     "title": "Protocol Playground",
-    "subtitle": "AgentOS Multi-Protocol Compatibility & Message Interaction Testing",
+    "subtitle": "AgentRT Multi-Protocol Compatibility & Message Interaction Testing",
     "selectProtocol": "Select Protocol",
     "connectionStatus": "Connection Status",
     "connected": "Connected",
@@ -669,7 +669,7 @@
   },
   "aiChat": {
     "title": "AI Assistant",
-    "subtitle": "Interact with agents through AgentOS",
+    "subtitle": "Interact with agents through AgentRT",
     "inputPlaceholder": "Type a message...",
     "send": "Send",
     "thinking": "Thinking...",
@@ -685,7 +685,7 @@
   },
   "sessions": {
     "title": "Session Management",
-    "subtitle": "Manage and monitor AgentOS conversation sessions",
+    "subtitle": "Manage and monitor AgentRT conversation sessions",
     "createSession": "New Session",
     "closeSession": "Close Session",
     "sessionName": "Session Name",
@@ -711,7 +711,7 @@
   },
   "skills": {
     "title": "Skill Registry",
-    "subtitle": "Register, load and execute AgentOS skills",
+    "subtitle": "Register, load and execute AgentRT skills",
     "registerSkill": "Register Skill",
     "loadSkill": "Load",
     "unloadSkill": "Unload",
@@ -728,7 +728,7 @@
     "loaded": "Loaded",
     "inactive": "Inactive",
     "noSkills": "No skills registered",
-    "noSkillsHint": "Register a new skill to extend AgentOS capabilities",
+    "noSkillsHint": "Register a new skill to extend AgentRT capabilities",
     "deleteConfirm": "Are you sure you want to delete this skill?",
     "executeConfirm": "Execute this skill with the provided parameters?",
     "executionResult": "Execution Result",
@@ -739,17 +739,17 @@
   },
   "openLab": {
     "title": "OpenLab",
-    "subtitle": "AgentOS Experimental Playground & Sandbox",
+    "subtitle": "AgentRT Experimental Playground & Sandbox",
     "newExperiment": "New Experiment",
     "runExperiment": "Run",
     "stopExperiment": "Stop",
     "results": "Results",
     "noExperiments": "No experiments yet",
-    "noExperimentsHint": "Create a new experiment to explore AgentOS capabilities"
+    "noExperimentsHint": "Create a new experiment to explore AgentRT capabilities"
   },
   "security": {
     "title": "Security Center",
-    "subtitle": "AgentOS Security Audit & Access Control",
+    "subtitle": "AgentRT Security Audit & Access Control",
     "auditLog": "Audit Log",
     "accessControl": "Access Control",
     "apiKeyManagement": "API Key Management",
@@ -762,7 +762,7 @@
   },
   "telemetry": {
     "title": "Telemetry",
-    "subtitle": "AgentOS Performance Metrics & Usage Analytics",
+    "subtitle": "AgentRT Performance Metrics & Usage Analytics",
     "metrics": "Metrics",
     "traces": "Traces",
     "logs": "Logs",
@@ -770,7 +770,7 @@
     "refreshRate": "Refresh Rate",
     "timeRange": "Time Range",
     "noData": "No telemetry data available",
-    "noDataHint": "Start AgentOS services to generate telemetry data"
+    "noDataHint": "Start AgentRT services to generate telemetry data"
   },
   "toolManager": {
     "title": "Tools & Skills",
@@ -869,7 +869,7 @@
   },
   "settingsExtended": {
     "title": "System Settings",
-    "subtitle": "Customize Airymax AgentOS behavior and appearance",
+    "subtitle": "Customize Airymax AgentRT behavior and appearance",
     "appearanceTab": "Appearance",
     "gatewayTab": "Gateway",
     "dataTab": "Data Management",
@@ -885,7 +885,7 @@
     "compactMode": "Compact mode (reduced spacing)",
     "enableNotifications": "Enable notifications",
     "gatewayTitle": "Gateway Connection",
-    "gatewayAddress": "AgentOS Gateway Address",
+    "gatewayAddress": "AgentRT Gateway Address",
     "autoConnectGateway": "Auto-connect gateway on startup",
     "offlineModeHint": "In offline mode, the desktop client uses local storage for all features. Connect to gateway to unlock full multi-agent collaboration capabilities.",
     "dataManagementTitle": "Data Management",

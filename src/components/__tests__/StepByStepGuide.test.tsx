@@ -22,7 +22,7 @@ describe('StepByStepGuide', () => {
 
   it('renders the first step by default', () => {
     render(<StepByStepGuide onComplete={vi.fn()} />);
-    expect(screen.getByText('欢迎使用 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('欢迎使用 AgentRT')).toBeInTheDocument();
     expect(screen.getByText('步骤 1 / 8')).toBeInTheDocument();
   });
 
@@ -52,7 +52,7 @@ describe('StepByStepGuide', () => {
     render(<StepByStepGuide onComplete={vi.fn()} />);
     fireEvent.click(screen.getByText('下一步'));
     fireEvent.click(screen.getByText('上一步'));
-    expect(screen.getByText('欢迎使用 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('欢迎使用 AgentRT')).toBeInTheDocument();
     expect(screen.getByText('步骤 1 / 8')).toBeInTheDocument();
   });
 
@@ -103,7 +103,7 @@ describe('StepByStepGuide', () => {
   it('renders description for current step', () => {
     render(<StepByStepGuide onComplete={vi.fn()} />);
     expect(
-      screen.getByText(/AgentOS 是一个工业级/),
+      screen.getByText(/AgentRT 是一个工业级/),
     ).toBeInTheDocument();
   });
 });

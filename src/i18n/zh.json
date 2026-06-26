@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Airymax AgentOS 桌面客户端",
+    "title": "Airymax AgentRT 桌面客户端",
     "version": "版本 {version}",
     "quickDeploy": "快速部署"
   },
@@ -59,7 +59,7 @@
   },
   "services": {
     "title": "服务管理",
-    "subtitle": "管理您的 AgentOS 容器化服务",
+    "subtitle": "管理您的 AgentRT 容器化服务",
     "status": "状态",
     "running": "运行中",
     "stopped": "已停止",
@@ -84,7 +84,7 @@
     "actions": "操作",
     "activeServices": "活跃服务",
     "noRunningServices": "没有运行中的服务",
-    "noRunningServicesHint": "点击\"全部启动\"以启动 AgentOS 服务",
+    "noRunningServicesHint": "点击\"全部启动\"以启动 AgentRT 服务",
     "confirmStopAll": "确定要停止所有服务吗？",
     "devModeInfo": "开发模式",
     "prodModeInfo": "生产模式",
@@ -229,7 +229,7 @@
     "envVariables": "环境变量",
     "envVariablesDesc": "数据库、Redis、JWT 和 API 配置",
     "mainConfig": "主配置",
-    "mainConfigDesc": "AgentOS 核心设置和参数",
+    "mainConfigDesc": "AgentRT 核心设置和参数",
     "dockerComposeDev": "Docker Compose（开发）",
     "dockerComposeDevDesc": "开发环境服务定义",
     "dockerComposeProd": "Docker Compose（生产）",
@@ -290,7 +290,7 @@
     "workingDirectory": "工作目录",
     "ready": "就绪",
     "running": "运行中...",
-    "terminalReady": "AgentOS 终端就绪",
+    "terminalReady": "AgentRT 终端就绪",
     "terminalReadyHint": "输入命令或点击上方的快捷命令开始使用",
     "exitCode": "退出码",
     "completedIn": "完成耗时",
@@ -302,7 +302,7 @@
     "healthCheck": "健康检查",
     "stopAllServices": "停止所有服务",
     "cleanUpResources": "清理资源",
-    "welcomeMessage": "欢迎使用 AgentOS 终端",
+    "welcomeMessage": "欢迎使用 AgentRT 终端",
     "enterCommandHint": "输入命令并按 Enter 执行",
     "enterCommand": "输入命令..."
   },
@@ -352,7 +352,7 @@
   },
   "settings": {
     "title": "设置",
-    "description": "自定义您的 AgentOS 桌面客户端体验",
+    "description": "自定义您的 AgentRT 桌面客户端体验",
     "general": "常规",
     "appearance": "外观与偏好",
     "language": "语言",
@@ -363,12 +363,12 @@
     "themeAuto": "跟随系统",
     "themeHelp": "选择您偏好的外观模式",
     "autoStart": "开机自动启动",
-    "autoStartHelp": "系统启动时自动运行 AgentOS",
+    "autoStartHelp": "系统启动时自动运行 AgentRT",
     "notifications": "桌面通知",
     "notificationsHelp": "任务状态变更时显示桌面通知",
     "connection": "连接",
     "backendUrl": "后端服务地址",
-    "backendUrlHelp": "AgentOS 后端服务的 URL 地址",
+    "backendUrlHelp": "AgentRT 后端服务的 URL 地址",
     "testConnection": "测试连接",
     "testConnectionHelp": "验证后端服务是否可达",
     "connectionSuccess": "连接 {url} 成功！",
@@ -390,7 +390,7 @@
     "cacheCleared": "缓存已清除",
     "savedSuccess": "设置保存成功！",
     "saveError": "设置保存失败",
-    "footer": "AgentOS 桌面客户端",
+    "footer": "AgentRT 桌面客户端",
     "documentation": "文档",
     "projectPath": "项目路径",
     "minimizeToTray": "最小化到系统托盘",
@@ -399,7 +399,7 @@
   "llmConfig": {
     "title": "AI 模型配置",
     "subtitle": "配置大语言模型 API，为智能体提供推理能力",
-    "description": "配置您的 AI 模型 API 密钥和设置。AgentOS 支持多个提供商。",
+    "description": "配置您的 AI 模型 API 密钥和设置。AgentRT 支持多个提供商。",
     "providers": "已配置的提供商",
     "addProvider": "添加提供商",
     "selectProvider": "选择 AI 提供商",
@@ -445,7 +445,7 @@
     "title": "协议兼容性",
     "demo": {
       "title": "协议兼容性演示",
-      "subtitle": "AgentOS UnifiedProtocol",
+      "subtitle": "AgentRT UnifiedProtocol",
       "connectionTest": {
         "title": "连接测试",
         "endpointAddress": "端点地址",
@@ -484,7 +484,7 @@
     "list": {
       "jsonrpc": {
         "name": "JSON-RPC 2.0",
-        "description": "AgentOS 原生 JSON-RPC 协议"
+        "description": "AgentRT 原生 JSON-RPC 协议"
       },
       "mcp": {
         "name": "MCP v1.0",
@@ -508,7 +508,7 @@
   },
   "memoryEvolution": {
     "title": "记忆系统",
-    "subtitle": "AgentOS 长期记忆管理与进化追踪",
+    "subtitle": "AgentRT 长期记忆管理与进化追踪",
     "storeMemory": "存储记忆",
     "searchMemory": "搜索记忆",
     "memoryList": "记忆列表",
@@ -589,7 +589,7 @@
   },
   "tools": {
     "title": "工具管理",
-    "subtitle": "AgentOS 可用工具列表与执行控制台",
+    "subtitle": "AgentRT 可用工具列表与执行控制台",
     "toolName": "工具名称",
     "description": "描述",
     "category": "类别",
@@ -615,7 +615,7 @@
   },
   "cognitiveLoop": {
     "title": "认知循环",
-    "subtitle": "AgentOS 感知 → 推理 → 行动 → 反思 全流程可视化",
+    "subtitle": "AgentRT 感知 → 推理 → 行动 → 反思 全流程可视化",
     "inputPlaceholder": "输入任务或查询，启动认知循环...",
     "startLoop": "启动认知循环",
     "running": "运行中...",
@@ -642,7 +642,7 @@
   },
   "protocolPlayground": {
     "title": "协议沙箱",
-    "subtitle": "AgentOS 多协议兼容性与消息交互测试",
+    "subtitle": "AgentRT 多协议兼容性与消息交互测试",
     "selectProtocol": "选择协议",
     "connectionStatus": "连接状态",
     "connected": "已连接",
@@ -669,7 +669,7 @@
   },
   "aiChat": {
     "title": "AI 助手",
-    "subtitle": "通过 AgentOS 与智能体交互",
+    "subtitle": "通过 AgentRT 与智能体交互",
     "inputPlaceholder": "输入消息...",
     "send": "发送",
     "thinking": "思考中...",
@@ -685,7 +685,7 @@
   },
   "sessions": {
     "title": "会话管理",
-    "subtitle": "管理和监控 AgentOS 对话会话",
+    "subtitle": "管理和监控 AgentRT 对话会话",
     "createSession": "新建会话",
     "closeSession": "关闭会话",
     "sessionName": "会话名称",
@@ -711,7 +711,7 @@
   },
   "skills": {
     "title": "技能注册",
-    "subtitle": "注册、加载和执行 AgentOS 技能",
+    "subtitle": "注册、加载和执行 AgentRT 技能",
     "registerSkill": "注册技能",
     "loadSkill": "加载",
     "unloadSkill": "卸载",
@@ -728,7 +728,7 @@
     "loaded": "已加载",
     "inactive": "未激活",
     "noSkills": "暂无注册技能",
-    "noSkillsHint": "注册新技能以扩展 AgentOS 能力",
+    "noSkillsHint": "注册新技能以扩展 AgentRT 能力",
     "deleteConfirm": "确定要删除此技能吗？",
     "executeConfirm": "使用提供的参数执行此技能？",
     "executionResult": "执行结果",
@@ -739,17 +739,17 @@
   },
   "openLab": {
     "title": "OpenLab",
-    "subtitle": "AgentOS 实验沙箱与探索平台",
+    "subtitle": "AgentRT 实验沙箱与探索平台",
     "newExperiment": "新建实验",
     "runExperiment": "运行",
     "stopExperiment": "停止",
     "results": "结果",
     "noExperiments": "暂无实验",
-    "noExperimentsHint": "创建新实验以探索 AgentOS 能力"
+    "noExperimentsHint": "创建新实验以探索 AgentRT 能力"
   },
   "security": {
     "title": "安全中心",
-    "subtitle": "AgentOS 安全审计与访问控制",
+    "subtitle": "AgentRT 安全审计与访问控制",
     "auditLog": "审计日志",
     "accessControl": "访问控制",
     "apiKeyManagement": "API 密钥管理",
@@ -762,7 +762,7 @@
   },
   "telemetry": {
     "title": "遥测数据",
-    "subtitle": "AgentOS 性能指标与使用分析",
+    "subtitle": "AgentRT 性能指标与使用分析",
     "metrics": "指标",
     "traces": "追踪",
     "logs": "日志",
@@ -770,7 +770,7 @@
     "refreshRate": "刷新频率",
     "timeRange": "时间范围",
     "noData": "暂无遥测数据",
-    "noDataHint": "启动 AgentOS 服务以生成遥测数据"
+    "noDataHint": "启动 AgentRT 服务以生成遥测数据"
   },
   "toolManager": {
     "title": "工具与技能",
@@ -869,7 +869,7 @@
   },
   "settingsExtended": {
     "title": "系统设置",
-    "subtitle": "自定义 Airymax AgentOS 的行为和外观",
+    "subtitle": "自定义 Airymax AgentRT 的行为和外观",
     "appearanceTab": "外观设置",
     "gatewayTab": "网关配置",
     "dataTab": "数据管理",
@@ -885,7 +885,7 @@
     "compactMode": "紧凑模式（减少间距）",
     "enableNotifications": "启用通知提醒",
     "gatewayTitle": "网关连接",
-    "gatewayAddress": "AgentOS Gateway 地址",
+    "gatewayAddress": "AgentRT Gateway 地址",
     "autoConnectGateway": "启动时自动连接网关",
     "offlineModeHint": "离线模式下桌面端将使用本地存储运行所有功能，连接网关后可解锁完整的多智能体协作能力。",
     "dataManagementTitle": "数据管理",

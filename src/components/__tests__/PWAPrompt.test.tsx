@@ -73,7 +73,7 @@ describe('PWAPrompt', () => {
 
     fireEvent(window, event);
 
-    expect(screen.getByText('安装 AgentOS')).toBeInTheDocument();
+    expect(screen.getByText('安装 AgentRT')).toBeInTheDocument();
   });
 
   it('renders install and dismiss buttons', () => {
@@ -136,7 +136,7 @@ describe('PWAPrompt', () => {
     fireEvent.click(screen.getByText('稍后'));
 
     expect(localStorage.getItem('pwa-prompt-dismissed')).toBe('true');
-    expect(screen.queryByText('安装 AgentOS')).not.toBeInTheDocument();
+    expect(screen.queryByText('安装 AgentRT')).not.toBeInTheDocument();
   });
 
   it('cleans up event listener on unmount', () => {

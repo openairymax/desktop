@@ -129,7 +129,7 @@ describe('OpenLab', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText(/v2\.1\.0/)).toBeInTheDocument();
-    expect(within(dialog).getByText(/AgentOS Team/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/AgentRT Team/)).toBeInTheDocument();
   });
 
   it('shows tag chips in detail dialog', () => {

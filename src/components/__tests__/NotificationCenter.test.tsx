@@ -41,7 +41,7 @@ describe('NotificationCenter', () => {
     render(<NotificationCenter />);
     fireEvent.click(screen.getByRole('button', { name: /Notifications/i }));
     expect(screen.getByText('System Ready')).toBeInTheDocument();
-    expect(screen.getByText('All services are running normally. AgentOS is ready to use.')).toBeInTheDocument();
+    expect(screen.getByText('All services are running normally. AgentRT is ready to use.')).toBeInTheDocument();
   });
 
   it('shows different notification types', () => {

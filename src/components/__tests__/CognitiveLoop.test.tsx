@@ -103,6 +103,6 @@ describe('CognitiveLoop', () => {
 
   it('shows the architecture description', () => {
     render(<CognitiveLoop />);
-    expect(screen.getByText(/AgentOS 核心推理循环/)).toBeInTheDocument();
+    expect(screen.getByText(/AgentRT 核心推理循环/)).toBeInTheDocument();
   });
 });

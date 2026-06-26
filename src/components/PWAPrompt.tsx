@@ -83,7 +83,7 @@ export function PWAPrompt() {
           color: 'var(--text-primary)',
           marginBottom: '4px',
         }}>
-          安装 AgentOS
+          安装 AgentRT
         </div>
         <div style={{
           fontSize: '12px',

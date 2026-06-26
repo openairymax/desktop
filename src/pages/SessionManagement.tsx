@@ -401,7 +401,7 @@ export default function SessionManagement() {
           subMessage={
             connection.status === 'connected'
               ? '尝试其他搜索条件或创建新会话'
-              : '请先连接到 AgentOS 后端'
+              : '请先连接到 AgentRT 后端'
           }
         />
       )}

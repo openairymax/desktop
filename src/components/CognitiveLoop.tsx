@@ -260,7 +260,7 @@ const CognitiveLoop: React.FC = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: '18px' }}>认知循环引擎</h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                AgentOS 核心推理循环：感知 → 推理 → 行动 → 反思
+                AgentRT 核心推理循环：感知 → 推理 → 行动 → 反思
                 {cycleCount > 0 && (
                   <span
                     role="status"

@@ -290,9 +290,9 @@ const AIChat: React.FC<{
             >
               <MessageSquare size={28} />
             </div>
-            <p style={{ fontSize: 'var(--font-size-md)' }}>AI 助手 — 连接 AgentOS</p>
+            <p style={{ fontSize: 'var(--font-size-md)' }}>AI 助手 — 连接 AgentRT</p>
             <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-muted)' }}>
-              消息将通过 AgentOS Gateway 发送到智能体或作为任务提交
+              消息将通过 AgentRT Gateway 发送到智能体或作为任务提交
             </p>
             <div
               style={{
@@ -490,7 +490,7 @@ const AIChat: React.FC<{
                 fontSize: 'var(--font-size-sm)',
               }}
             >
-              正在通过 AgentOS 处理...
+              正在通过 AgentRT 处理...
             </div>
           </motion.div>
         )}

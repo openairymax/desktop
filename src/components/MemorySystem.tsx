@@ -248,7 +248,7 @@ const MemorySystem: React.FC = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: '18px' }}>认知记忆系统</h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                AgentOS 核心能力：短期/长期记忆 + 向量检索 + 上下文管理
+                AgentRT 核心能力：短期/长期记忆 + 向量检索 + 上下文管理
                 {memories.length > 0 && (
                   <span
                     role="status"
