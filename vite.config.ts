@@ -11,9 +11,9 @@ export default defineConfig(async () => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icon-*.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'AgentOS Desktop',
-        short_name: 'AgentOS',
-        description: 'AgentOS智能体交互平台 - AI驱动的智能体管理系统',
+        name: 'AgentRT Desktop',
+        short_name: 'AgentRT',
+        description: 'AgentRT智能体交互平台 - AI驱动的智能体管理系统',
         theme_color: '#0071e3',
         background_color: '#ffffff',
         display: 'standalone',
@@ -129,7 +129,7 @@ export default defineConfig(async () => ({
     },
   },
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.0.5'),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0'),
   },
   build: {
     rollupOptions: {

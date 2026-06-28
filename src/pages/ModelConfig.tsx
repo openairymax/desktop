@@ -48,7 +48,7 @@ const PROVIDER_TEMPLATES = {
   },
   ollama: {
     label: 'Ollama (本地)',
-    baseUrl: AGENTOS_OLLAMA_URL,
+    baseUrl: import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434/v1',
     models: ['llama3', 'qwen2.5', 'mistral', 'codellama'],
     icon: <Cpu size={16} />,
     color: '#6366f1',
@@ -118,6 +118,21 @@ const ModelConfig: React.FC = () => {
             setSystemParams((prev) => ({ ...prev, ...configResp.systemParams }));
           if (configResp?.envVars) setEnvVars(configResp.envVars);
         } catch {
+          try {
+            const stored = localStorage.getItem('agentos-config');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed.providers?.length > 0) setProviders(parsed.providers);
+              if (parsed.systemParams)
+                setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
+              if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
+            }
+          } catch {
+            void 0;
+          }
+        }
+      } else {
+        try {
           const stored = localStorage.getItem('agentos-config');
           if (stored) {
             const parsed = JSON.parse(stored);
@@ -126,15 +141,8 @@ const ModelConfig: React.FC = () => {
               setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
             if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
           }
-        }
-      } else {
-        const stored = localStorage.getItem('agentos-config');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed.providers?.length > 0) setProviders(parsed.providers);
-          if (parsed.systemParams)
-            setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
-          if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
+        } catch {
+          void 0;
         }
       }
     } catch {
@@ -160,7 +168,7 @@ const ModelConfig: React.FC = () => {
           body: JSON.stringify({ providers, systemParams, envVars }),
         });
       } catch (e) {
-        console.warn('Backend config save failed, saved locally only:', e);
+        // Intentionally empty: graceful degradation
       }
     }
   };
@@ -182,7 +190,7 @@ const ModelConfig: React.FC = () => {
       setProviders((prev) => [...prev, newProv]);
       await saveAll();
     } catch (e) {
-      console.error('Failed to add provider:', e);
+      // Intentionally empty: graceful degradation
     }
     setShowAddModal(false);
     setNewApiKey('');
@@ -219,7 +227,6 @@ const ModelConfig: React.FC = () => {
             },
           });
         } catch (e) {
-          console.warn('Connection test failed for provider:', id, e);
           setTestResults({
             ...testResults,
             [id]: { success: false, message: '连接失败' },
@@ -266,7 +273,7 @@ const ModelConfig: React.FC = () => {
   ];
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }} role="region" aria-label="模型配置">
       <div
         style={{
           display: 'flex',
@@ -286,6 +293,7 @@ const ModelConfig: React.FC = () => {
           </p>
         </div>
         <button
+          aria-label="添加模型提供商"
           onClick={() => setShowAddModal(true)}
           style={{
             display: 'flex',
@@ -311,6 +319,8 @@ const ModelConfig: React.FC = () => {
       </div>
 
       <div
+        role="tablist"
+        aria-label="配置标签页"
         style={{
           display: 'flex',
           gap: '4px',
@@ -324,6 +334,10 @@ const ModelConfig: React.FC = () => {
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            id={`tab-${tab.key}`}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            aria-controls={`panel-${tab.key}`}
             onClick={() => setActiveTab(tab.key)}
             style={{
               display: 'flex',
@@ -350,9 +364,13 @@ const ModelConfig: React.FC = () => {
 
       {/* ===== Providers Tab ===== */}
       {activeTab === 'providers' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div
+          id="panel-providers"
+          role="tabpanel"
+          aria-labelledby="tab-providers"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+            <div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
               <Loader2 size={28} className="spin" />
             </div>
           ) : providers.length === 0 ? (
@@ -375,6 +393,7 @@ const ModelConfig: React.FC = () => {
             </div>
           ) : (
             <div
+              role="list"
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
@@ -389,6 +408,7 @@ const ModelConfig: React.FC = () => {
                 return (
                   <motion.div
                     key={p.id}
+                    role="listitem"
                     layout
                     style={{
                       backgroundColor: 'var(--bg-secondary)',
@@ -444,6 +464,7 @@ const ModelConfig: React.FC = () => {
                           <XCircle size={14} style={{ color: 'var(--error-color)' }} />
                         )}
                         <button
+                          aria-label={`删除 ${p.name}`}
                           onClick={() => handleDeleteProvider(p.id)}
                           style={{
                             background: 'none',
@@ -480,6 +501,7 @@ const ModelConfig: React.FC = () => {
 
                     <div style={{ display: 'flex', gap: '8px' }}>
                       <button
+                        aria-label={`测试连接 ${p.name}`}
                         onClick={() => handleTestConnection(p.id)}
                         disabled={testingId === p.id}
                         style={{
@@ -510,6 +532,8 @@ const ModelConfig: React.FC = () => {
                     {testRes && (
                       <AnimatePresence>
                         <motion.div
+                          role="status"
+                          aria-live="polite"
                           initial={{ opacity: 0, y: -4 }}
                           animate={{ opacity: 1, y: 0 }}
                           style={{
@@ -542,8 +566,14 @@ const ModelConfig: React.FC = () => {
 
       {/* ===== System Params Tab ===== */}
       {activeTab === 'system' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div
+          id="panel-system"
+          role="tabpanel"
+          aria-labelledby="tab-system"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div
+            role="form"
+            aria-label="系统运行参数"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               borderRadius: '12px',
@@ -602,6 +632,7 @@ const ModelConfig: React.FC = () => {
                   {field.label}
                 </label>
                 <input
+                  aria-label={field.label}
                   type="number"
                   value={systemParams[field.key]}
                   onChange={(e) =>
@@ -641,6 +672,7 @@ const ModelConfig: React.FC = () => {
                 日志级别
               </label>
               <select
+                aria-label="日志级别"
                 value={systemParams.logLevel}
                 onChange={(e) => setSystemParams((prev) => ({ ...prev, logLevel: e.target.value }))}
                 style={{
@@ -677,6 +709,7 @@ const ModelConfig: React.FC = () => {
               >
                 <input
                   type="checkbox"
+                  aria-label="启用双思考模式"
                   checked={systemParams.enableDualThinking}
                   onChange={(e) =>
                     setSystemParams((prev) => ({ ...prev, enableDualThinking: e.target.checked }))
@@ -688,6 +721,7 @@ const ModelConfig: React.FC = () => {
             </div>
 
             <button
+              aria-label="保存配置"
               onClick={handleSaveSystem}
               style={{
                 display: 'flex',
@@ -712,7 +746,11 @@ const ModelConfig: React.FC = () => {
 
       {/* ===== Env Vars Tab ===== */}
       {activeTab === 'env' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div
+          id="panel-env"
+          role="tabpanel"
+          aria-labelledby="tab-env"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
           <div
             style={{
               backgroundColor: 'var(--bg-secondary)',
@@ -741,6 +779,7 @@ const ModelConfig: React.FC = () => {
                 {t('config.envVariables')}
               </h3>
               <button
+                aria-label="新增环境变量"
                 onClick={addEnvVar}
                 style={{
                   display: 'flex',
@@ -778,6 +817,7 @@ const ModelConfig: React.FC = () => {
                   style={{ display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center' }}
                 >
                   <input
+                    aria-label="环境变量 KEY"
                     placeholder="KEY"
                     value={ev.key}
                     onChange={(e) => updateEnvVar(idx, 'key', e.target.value)}
@@ -794,6 +834,7 @@ const ModelConfig: React.FC = () => {
                     }}
                   />
                   <input
+                    aria-label="环境变量 VALUE"
                     placeholder="VALUE"
                     value={ev.value}
                     onChange={(e) => updateEnvVar(idx, 'value', e.target.value)}
@@ -810,6 +851,7 @@ const ModelConfig: React.FC = () => {
                     }}
                   />
                   <button
+                    aria-label="删除环境变量"
                     onClick={() => removeEnvVar(idx)}
                     style={{
                       background: 'none',
@@ -825,6 +867,7 @@ const ModelConfig: React.FC = () => {
               ))
             )}
             <button
+              aria-label="保存配置"
               onClick={handleSaveSystem}
               style={{
                 marginTop: '16px',
@@ -866,6 +909,9 @@ const ModelConfig: React.FC = () => {
               }}
             />
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="添加 LLM 提供商"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -917,6 +963,7 @@ const ModelConfig: React.FC = () => {
                   ).map(([k, t]) => (
                     <button
                       key={k}
+                      aria-label={`选择 ${t.label}`}
                       onClick={() => {
                         setNewProviderType(k);
                         setNewBaseUrl(t.baseUrl);
@@ -959,6 +1006,8 @@ const ModelConfig: React.FC = () => {
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
+                    role="textbox"
+                    aria-label="API Key"
                     type={showApiKey === 'new' ? 'text' : 'password'}
                     value={newApiKey}
                     onChange={(e) => setNewApiKey(e.target.value)}
@@ -978,6 +1027,8 @@ const ModelConfig: React.FC = () => {
                     }}
                   />
                   <button
+                    aria-label="显示/隐藏 API Key"
+                    aria-pressed={showApiKey === 'new'}
                     onClick={() => setShowApiKey(showApiKey === 'new' ? null : 'new')}
                     style={{
                       position: 'absolute',
@@ -1009,6 +1060,7 @@ const ModelConfig: React.FC = () => {
                   Base URL
                 </label>
                 <input
+                  aria-label="Base URL"
                   value={newBaseUrl}
                   onChange={(e) => setNewBaseUrl(e.target.value)}
                   placeholder={
@@ -1042,6 +1094,7 @@ const ModelConfig: React.FC = () => {
                   默认模型
                 </label>
                 <select
+                  aria-label="默认模型"
                   value={newModel}
                   onChange={(e) => setNewModel(e.target.value)}
                   style={{
@@ -1069,6 +1122,7 @@ const ModelConfig: React.FC = () => {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                 <button
+                  aria-label="取消"
                   onClick={() => setShowAddModal(false)}
                   style={{
                     padding: '8px 16px',
@@ -1084,6 +1138,7 @@ const ModelConfig: React.FC = () => {
                   {t('toolManager.cancel')}
                 </button>
                 <button
+                  aria-label="添加提供商"
                   onClick={handleAddProvider}
                   disabled={!newApiKey.trim() || saving}
                   style={{

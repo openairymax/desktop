@@ -51,7 +51,6 @@ export const copyToClipboard = async (text: string): Promise<boolean> => {
     await navigator.clipboard.writeText(text);
     return true;
   } catch (e) {
-    console.warn('Clipboard write failed:', e);
     return false;
   }
 };

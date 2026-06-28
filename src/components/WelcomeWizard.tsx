@@ -30,7 +30,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
 
   const steps = [
     { id: 1, title: '欢迎', icon: Sparkles },
-    { id: 2, title: '认识 AgentOS', icon: Brain },
+    { id: 2, title: '认识 AgentRT', icon: Brain },
     { id: 3, title: '语言', icon: Globe },
     { id: 4, title: '服务', icon: Server },
     { id: 5, title: '完成', icon: CheckCircle2 },
@@ -43,7 +43,6 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
       localStorage.setItem('agentos-wizard-completed', 'true');
       onComplete();
     } catch (error) {
-      console.error('Failed to save settings:', error);
       localStorage.setItem('agentos-wizard-completed', 'true');
       onComplete();
     } finally {
@@ -53,6 +52,8 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
 
   return (
     <div
+      role="region"
+      aria-label="欢迎向导"
       style={{
         minHeight: '100vh',
         display: 'flex',
@@ -137,7 +138,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               letterSpacing: '-0.03em',
             }}
           >
-            AgentOS
+            AgentRT
           </h1>
           <p
             style={{
@@ -160,7 +161,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             MCIS · 微内核 · 三层认知循环 · 四层记忆卷载
           </p>
 
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '36px' }}>
+          <div role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={steps.length} style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginTop: '36px' }}>
             {steps.map((s) => (
               <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div
@@ -253,7 +254,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 letterSpacing: '-0.02em',
               }}
             >
-              欢迎使用 AgentOS
+              欢迎使用 AgentRT
             </h2>
             <p
               style={{
@@ -263,7 +264,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 margin: '0 0 28px',
               }}
             >
-              AgentOS 是一个面向 AI
+              AgentRT 是一个面向 AI
               智能体的工业级操作系统。让我们快速完成初始设置，几分钟内即可开始使用。
             </p>
 
@@ -344,7 +345,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 letterSpacing: '-0.02em',
               }}
             >
-              认识 AgentOS 架构
+              认识 AgentRT 架构
             </h2>
             <p
               style={{
@@ -354,7 +355,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 margin: '0 0 24px',
               }}
             >
-              了解 AgentOS 的核心设计理念与技术优势
+              了解 AgentRT 的核心设计理念与技术优势
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -636,7 +637,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               准备就绪！
             </h2>
             <p style={{ fontSize: '15px', color: 'var(--text-secondary)', marginBottom: '28px' }}>
-              AgentOS 已完成初始化配置，开始探索工业级 AI 操作系统
+              AgentRT 已完成初始化配置，开始探索工业级 AI 操作系统
             </p>
 
             <div
@@ -721,7 +722,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
           }}
         >
           {step > 1 ? (
-            <button className="btn btn-secondary" onClick={() => setStep(step - 1)}>
+            <button className="btn btn-secondary" onClick={() => setStep(step - 1)} aria-label="上一步">
               上一步
             </button>
           ) : (
@@ -729,7 +730,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
           )}
 
           {step < 5 ? (
-            <button className="btn btn-primary btn-lg" onClick={() => setStep(step + 1)}>
+            <button className="btn btn-primary btn-lg" onClick={() => setStep(step + 1)} aria-label="下一步">
               继续 <ArrowRight size={17} />
             </button>
           ) : (

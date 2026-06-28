@@ -120,7 +120,7 @@ const TaskManagement: React.FC = () => {
       setNewPriority(50);
       setShowCreateModal(false);
     } catch (e) {
-      console.error('Failed to submit task:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setActionLoading(null);
     }
@@ -131,7 +131,7 @@ const TaskManagement: React.FC = () => {
     try {
       await cancelTask(taskId);
     } catch (e) {
-      console.error('Failed to cancel task:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setActionLoading(null);
     }
@@ -142,7 +142,7 @@ const TaskManagement: React.FC = () => {
     try {
       await deleteTask(taskId);
     } catch (e) {
-      console.error('Failed to delete task:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setActionLoading(null);
     }
@@ -153,7 +153,7 @@ const TaskManagement: React.FC = () => {
     try {
       await waitForTask(taskId, 60000);
     } catch (e) {
-      console.error('Wait for task failed:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setActionLoading(null);
     }
@@ -167,7 +167,7 @@ const TaskManagement: React.FC = () => {
       const detail = await getTask(task.id);
       setSelectedTask(detail);
     } catch (e) {
-      console.error('Failed to get task detail:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setDetailLoading(false);
     }
@@ -198,7 +198,7 @@ const TaskManagement: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+    <div role="region" aria-label="任务管理" style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
       <div
         style={{
           display: 'flex',
@@ -237,12 +237,13 @@ const TaskManagement: React.FC = () => {
               {t('tasks.title')}
             </h1>
             <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-              AgentOS 任务全生命周期管理
+              AgentRT 任务全生命周期管理
             </p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
+            aria-label="刷新任务列表"
             onClick={loadTasks}
             style={{
               padding: '8px 12px',
@@ -263,6 +264,7 @@ const TaskManagement: React.FC = () => {
             {t('toolManager.refresh')}
           </button>
           <button
+            aria-label="创建新任务"
             onClick={() => setShowCreateModal(true)}
             style={{
               padding: '8px 16px',
@@ -287,6 +289,7 @@ const TaskManagement: React.FC = () => {
 
       {tasksError && (
         <div
+          role="alert"
           style={{
             padding: '12px 16px',
             marginBottom: '16px',
@@ -302,6 +305,7 @@ const TaskManagement: React.FC = () => {
           <AlertCircle size={16} />
           <span style={{ fontSize: 'var(--font-size-sm)' }}>{tasksError}</span>
           <button
+            aria-label="重试加载"
             style={{
               marginLeft: 'auto',
               background: 'none',
@@ -357,6 +361,8 @@ const TaskManagement: React.FC = () => {
         ].map((s) => (
           <div
             key={s.label}
+            role="status"
+            aria-label={`${s.label}: ${s.value}`}
             style={{
               backgroundColor: 'var(--bg-card)',
               border: '1px solid var(--border-subtle)',
@@ -410,7 +416,7 @@ const TaskManagement: React.FC = () => {
         ))}
       </div>
 
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+      <div role="group" aria-label="筛选条件" style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: '240px', position: 'relative' }}>
           <Search
             size={16}
@@ -423,6 +429,8 @@ const TaskManagement: React.FC = () => {
             }}
           />
           <input
+            role="searchbox"
+            aria-label="搜索任务"
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -462,6 +470,8 @@ const TaskManagement: React.FC = () => {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
+              aria-label={STATUS_CONFIG[s]?.label ? `筛选${STATUS_CONFIG[s]?.label}任务` : '显示全部任务'}
+              aria-pressed={statusFilter === s}
               style={{
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
@@ -484,6 +494,8 @@ const TaskManagement: React.FC = () => {
 
       {loading && (
         <div
+          role="status"
+          aria-live="polite"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -500,6 +512,7 @@ const TaskManagement: React.FC = () => {
 
       {!loading && filteredTasks.length === 0 && (
         <div
+          role="status"
           style={{
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-subtle)',
@@ -514,6 +527,7 @@ const TaskManagement: React.FC = () => {
           />
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>暂无任务</p>
           <button
+            aria-label="提交第一个任务"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -536,7 +550,7 @@ const TaskManagement: React.FC = () => {
       )}
 
       {!loading && filteredTasks.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <AnimatePresence>
             {filteredTasks.map((task) => {
               const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.pending;
@@ -546,6 +560,7 @@ const TaskManagement: React.FC = () => {
               return (
                 <motion.div
                   key={task.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
@@ -619,6 +634,7 @@ const TaskManagement: React.FC = () => {
                         }}
                       >
                         <span
+                          role="status"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -751,6 +767,7 @@ const TaskManagement: React.FC = () => {
                       }}
                     >
                       <button
+                        aria-label={`查看任务${task.id.slice(0, 8)}详情`}
                         onClick={() => viewTaskDetail(task)}
                         style={{
                           width: '32px',
@@ -769,6 +786,7 @@ const TaskManagement: React.FC = () => {
                         <Eye size={16} />
                       </button>
                       <button
+                        aria-label={isExpanded ? '收起任务详情' : '展开任务详情'}
                         onClick={() => toggleExpand(task.id)}
                         style={{
                           width: '32px',
@@ -794,6 +812,7 @@ const TaskManagement: React.FC = () => {
                       {task.status === 'running' && (
                         <>
                           <button
+                            aria-label={`取消任务${task.id.slice(0, 8)}`}
                             onClick={() => handleCancelTask(task.id)}
                             disabled={actionLoading === `cancel-${task.id}`}
                             style={{
@@ -810,7 +829,6 @@ const TaskManagement: React.FC = () => {
                               transition: 'all var(--transition-fast)',
                               opacity: actionLoading === `cancel-${task.id}` ? 0.5 : 1,
                             }}
-                            title="取消任务"
                           >
                             {actionLoading === `cancel-${task.id}` ? (
                               <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
@@ -819,6 +837,7 @@ const TaskManagement: React.FC = () => {
                             )}
                           </button>
                           <button
+                            aria-label={`等待任务${task.id.slice(0, 8)}完成`}
                             onClick={() => handleWaitTask(task.id)}
                             disabled={actionLoading === `wait-${task.id}`}
                             style={{
@@ -835,7 +854,6 @@ const TaskManagement: React.FC = () => {
                               transition: 'all var(--transition-fast)',
                               opacity: actionLoading === `wait-${task.id}` ? 0.5 : 1,
                             }}
-                            title="等待完成"
                           >
                             {actionLoading === `wait-${task.id}` ? (
                               <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
@@ -846,6 +864,7 @@ const TaskManagement: React.FC = () => {
                         </>
                       )}
                       <button
+                        aria-label={`删除任务${task.id.slice(0, 8)}`}
                         onClick={() => handleDeleteTask(task.id)}
                         disabled={actionLoading === `delete-${task.id}`}
                         style={{
@@ -862,7 +881,6 @@ const TaskManagement: React.FC = () => {
                           transition: 'all var(--transition-fast)',
                           opacity: actionLoading === `delete-${task.id}` ? 0.5 : 1,
                         }}
-                        title="删除任务"
                       >
                         {actionLoading === `delete-${task.id}` ? (
                           <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
@@ -1105,6 +1123,9 @@ const TaskManagement: React.FC = () => {
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="创建新任务"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -1138,6 +1159,7 @@ const TaskManagement: React.FC = () => {
                   {t('tasks.submitNewTask')}
                 </h2>
                 <button
+                  aria-label="关闭创建任务对话框"
                   onClick={() => setShowCreateModal(false)}
                   style={{
                     width: '32px',
@@ -1249,6 +1271,8 @@ const TaskManagement: React.FC = () => {
                       <button
                         key={p.value}
                         type="button"
+                        aria-label={`优先级: ${p.label}`}
+                        aria-pressed={newPriority === p.value}
                         onClick={() => setNewPriority(p.value)}
                         style={{
                           flex: 1,
@@ -1279,6 +1303,7 @@ const TaskManagement: React.FC = () => {
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
+                  aria-label="取消创建"
                   onClick={() => setShowCreateModal(false)}
                   style={{
                     padding: '8px 16px',
@@ -1295,6 +1320,7 @@ const TaskManagement: React.FC = () => {
                   {t('toolManager.cancel')}
                 </button>
                 <button
+                  aria-label="提交任务"
                   onClick={handleSubmitTask}
                   disabled={!newDescription.trim() || actionLoading === 'submit'}
                   style={{
@@ -1351,6 +1377,9 @@ const TaskManagement: React.FC = () => {
             onClick={() => setShowDetailModal(false)}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="任务详情"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -1399,6 +1428,7 @@ const TaskManagement: React.FC = () => {
                   </p>
                 </div>
                 <button
+                  aria-label="关闭任务详情"
                   onClick={() => setShowDetailModal(false)}
                   style={{
                     width: '32px',

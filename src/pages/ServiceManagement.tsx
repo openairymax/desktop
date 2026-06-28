@@ -80,7 +80,7 @@ const ServiceManagement: React.FC = () => {
     const svcList: ServiceInfo[] = [
       {
         id: 'svc-gateway',
-        name: 'AgentOS Gateway',
+        name: 'AgentRT Gateway',
         type: 'gateway',
         status: gatewayStatus,
         endpoint: localStorage.getItem('agentos-endpoint') || AGENTOS_GATEWAY_URL,
@@ -136,7 +136,7 @@ const ServiceManagement: React.FC = () => {
     try {
       await fetchHealth();
     } catch (e) {
-      console.error('Health check failed:', e);
+      // Intentionally empty: graceful degradation
     }
     setCheckingId(null);
   };
@@ -145,7 +145,7 @@ const ServiceManagement: React.FC = () => {
     try {
       await fetchHealth();
     } catch (e) {
-      console.error('Health check all failed:', e);
+      // Intentionally empty: graceful degradation
     }
   };
 
@@ -157,7 +157,7 @@ const ServiceManagement: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto' }} role="region" aria-label="服务管理">
       <div
         style={{
           display: 'flex',
@@ -202,6 +202,7 @@ const ServiceManagement: React.FC = () => {
         <button
           onClick={handleCheckAll}
           disabled={checkingId !== null}
+          aria-label="检查所有服务"
           style={{
             padding: '8px 16px',
             border: 'none',
@@ -306,13 +307,13 @@ const ServiceManagement: React.FC = () => {
 
       {/* Service List */}
       {loading && (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+        <div role="status" aria-live="polite" style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
           <Loader2 size={28} />
         </div>
       )}
 
       {!loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div role="list" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {services.map((svc, index) => {
             const st = STATUS_MAP[svc.status];
             return (
@@ -321,6 +322,7 @@ const ServiceManagement: React.FC = () => {
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.05 }}
+                role="listitem"
                 style={{
                   backgroundColor: 'var(--bg-secondary)',
                   border: `1px solid ${st.color}33`,
@@ -367,6 +369,7 @@ const ServiceManagement: React.FC = () => {
                       {svc.name}
                     </h3>
                     <span
+                      role="status"
                       style={{
                         fontSize: '11px',
                         padding: '2px 8px',
@@ -411,6 +414,7 @@ const ServiceManagement: React.FC = () => {
                 <button
                   onClick={() => handleHealthCheck(svc.id)}
                   disabled={checkingId === svc.id}
+                  aria-label={`检查 ${svc.name}`}
                   style={{
                     padding: '7px 14px',
                     border: '1px solid var(--border-color)',

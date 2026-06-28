@@ -164,7 +164,6 @@ const CognitiveLoop: React.FC = () => {
               ),
             );
           } catch (e) {
-            console.error('Tool execution failed:', e);
             setTools((prev) =>
               prev.map((t) =>
                 t.id === toolId
@@ -187,7 +186,6 @@ const CognitiveLoop: React.FC = () => {
       setPhaseProgress(0);
       setActiveThoughtIdx(-1);
     } catch (error) {
-      console.error('Cognitive loop error:', error);
       setThoughts((prev) => [
         ...prev,
         {
@@ -233,7 +231,7 @@ const CognitiveLoop: React.FC = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div role="region" aria-label="认知循环" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div className="card card-elevated">
         <div
@@ -262,16 +260,17 @@ const CognitiveLoop: React.FC = () => {
             <div>
               <h3 style={{ margin: 0, fontSize: '18px' }}>认知循环引擎</h3>
               <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                AgentOS 核心推理循环：感知 → 推理 → 行动 → 反思
+                AgentRT 核心推理循环：感知 → 推理 → 行动 → 反思
                 {cycleCount > 0 && (
                   <span
+                    role="status"
                     style={{ marginLeft: '10px', color: 'var(--primary-color)', fontWeight: 600 }}
                   >
                     · 已完成 {cycleCount} 轮
                   </span>
                 )}
                 {thoughts.length > 0 && (
-                  <span style={{ marginLeft: '10px', color: '#22c55e', fontWeight: 600 }}>
+                  <span role="status" style={{ marginLeft: '10px', color: '#22c55e', fontWeight: 600 }}>
                     · 已连接后端
                   </span>
                 )}
@@ -291,6 +290,7 @@ const CognitiveLoop: React.FC = () => {
                   : runCycle
               }
               disabled={!inputText.trim() || isRunning}
+              aria-label={isRunning ? '停止循环' : '运行循环'}
             >
               {isRunning ? (
                 <>
@@ -306,6 +306,7 @@ const CognitiveLoop: React.FC = () => {
               className="btn btn-secondary btn-lg"
               onClick={runDemoCycle}
               disabled={isRunning}
+              aria-label="演示模式"
             >
               <RotateCcw size={16} /> 演示模式
             </button>
@@ -335,6 +336,8 @@ const CognitiveLoop: React.FC = () => {
             />
             {!inputText.trim() && (
               <span
+                role="status"
+                aria-live="polite"
                 style={{ fontSize: '11.5px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}
               >
                 可用工具:{' '}
@@ -352,6 +355,7 @@ const CognitiveLoop: React.FC = () => {
       {/* Circular Phase Diagram */}
       <div className="card card-elevated">
         <div
+          role="list"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -361,6 +365,10 @@ const CognitiveLoop: React.FC = () => {
           }}
         >
           <div
+            role={isRunning ? 'progressbar' : undefined}
+            aria-valuenow={isRunning ? Math.round(phaseProgress) : undefined}
+            aria-valuemin={isRunning ? 0 : undefined}
+            aria-valuemax={isRunning ? 100 : undefined}
             style={{
               width: '120px',
               height: '120px',
@@ -420,6 +428,8 @@ const CognitiveLoop: React.FC = () => {
             return (
               <div
                 key={phase}
+                role="listitem"
+                aria-current={isActive ? 'step' : undefined}
                 style={{
                   position: 'absolute',
                   left: `calc(50% + ${x}px)`,
@@ -596,6 +606,7 @@ const CognitiveLoop: React.FC = () => {
               tools.map((tool, idx) => (
                 <div
                   key={tool.id}
+                  role={tool.status === 'error' ? 'alert' : undefined}
                   style={{
                     padding: '14px',
                     borderRadius: 'var(--radius-md)',
@@ -649,6 +660,7 @@ const CognitiveLoop: React.FC = () => {
                           {tool.name}
                         </span>
                         <span
+                          role="status"
                           className={`tag ${tool.status === 'success' ? 'status-running' : tool.status === 'error' ? 'status-stopped' : ''}`}
                           style={{
                             fontSize: '10.5px',
