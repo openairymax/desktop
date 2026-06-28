@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import { AGENTOS_GATEWAY_URL } from '../constants/endpoints';
 
 type TabKey = 'appearance' | 'gateway' | 'data' | 'about';
 
@@ -22,6 +23,8 @@ const Settings: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabKey>('appearance');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [language, setLanguage] = useState(() => localStorage.getItem('i18n-lang') || 'zh');
@@ -34,10 +37,14 @@ const Settings: React.FC = () => {
 
   useEffect(() => {
     setTheme(localStorage.getItem('theme') || 'dark');
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
+    setError(null);
     localStorage.setItem('theme', theme);
     localStorage.setItem('i18n-lang', language);
     localStorage.setItem('agentos-endpoint', endpointUrl);
@@ -47,12 +54,15 @@ const Settings: React.FC = () => {
       await invoke('save_settings', {
         settings: { language, theme, endpointUrl, autoConnect, notifEnabled, compactMode },
       });
-    } catch (e) {
-      console.warn('Backend save_settings failed, settings saved locally only:', e);
+      setSaved(true);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
   };
 
   const handleExportData = () => {
@@ -160,8 +170,9 @@ const Settings: React.FC = () => {
 
       {/* Appearance Tab */}
       {activeTab === 'appearance' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="tabpanel" id="panel-appearance" aria-labelledby="tab-appearance">
           <div
+            role="form"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
@@ -205,16 +216,17 @@ const Settings: React.FC = () => {
                     label: t('settingsExtended.lightTheme'),
                     desc: t('settingsExtended.lightThemeDesc'),
                   },
-                ].map((t) => (
+                ].map((themeOption) => (
                   <button
-                    key={t.value}
-                    onClick={() => setTheme(t.value)}
+                    key={themeOption.value}
+                    aria-label={themeOption.label}
+                    onClick={() => setTheme(themeOption.value)}
                     style={{
                       flex: 1,
                       padding: '14px',
                       borderRadius: '10px',
-                      border: `2px solid ${theme === t.value ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                      background: theme === t.value ? 'var(--primary-light)' : 'transparent',
+                      border: `2px solid ${theme === themeOption.value ? 'var(--primary-color)' : 'var(--border-color)'}`,
+                      background: theme === themeOption.value ? 'var(--primary-light)' : 'transparent',
                       cursor: 'pointer',
                       textAlign: 'left',
                       fontFamily: 'inherit',
@@ -225,15 +237,15 @@ const Settings: React.FC = () => {
                         margin: 0,
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: theme === t.value ? 'var(--primary-color)' : 'var(--text-primary)',
+                        color: theme === themeOption.value ? 'var(--primary-color)' : 'var(--text-primary)',
                       }}
                     >
-                      {t.label}
+                      {themeOption.label}
                     </p>
                     <p
                       style={{ margin: '2px 0 0 0', fontSize: '11px', color: 'var(--text-muted)' }}
                     >
-                      {t.desc}
+                      {themeOption.desc}
                     </p>
                   </button>
                 ))}
@@ -254,6 +266,7 @@ const Settings: React.FC = () => {
               <select
                 value={language}
                 onChange={(e) => setLanguage(e.target.value)}
+                aria-label={t('settingsExtended.interfaceLanguage')}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -286,6 +299,7 @@ const Settings: React.FC = () => {
                   type="checkbox"
                   checked={compactMode}
                   onChange={(e) => setCompactMode(e.target.checked)}
+                  aria-label={t('settingsExtended.compactMode')}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
                 />
                 {t('settingsExtended.compactMode')}
@@ -307,6 +321,7 @@ const Settings: React.FC = () => {
                   type="checkbox"
                   checked={notifEnabled}
                   onChange={(e) => setNotifEnabled(e.target.checked)}
+                  aria-label={t('settingsExtended.enableNotifications')}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
                 />
                 {t('settingsExtended.enableNotifications')}
@@ -318,8 +333,9 @@ const Settings: React.FC = () => {
 
       {/* Gateway Tab */}
       {activeTab === 'gateway' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="tabpanel" id="panel-gateway" aria-labelledby="tab-gateway">
           <div
+            role="form"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
@@ -356,6 +372,7 @@ const Settings: React.FC = () => {
                 value={endpointUrl}
                 onChange={(e) => setEndpointUrl(e.target.value)}
                 placeholder={AGENTOS_GATEWAY_URL}
+                aria-label={t('settingsExtended.gatewayAddress')}
                 style={{
                   width: '100%',
                   padding: '10px 14px',
@@ -386,6 +403,7 @@ const Settings: React.FC = () => {
                   type="checkbox"
                   checked={autoConnect}
                   onChange={(e) => setAutoConnect(e.target.checked)}
+                  aria-label={t('settingsExtended.autoConnectGateway')}
                   style={{ width: '16px', height: '16px', accentColor: 'var(--primary-color)' }}
                 />
                 {t('settingsExtended.autoConnectGateway')}
@@ -409,8 +427,9 @@ const Settings: React.FC = () => {
 
       {/* Data Management Tab */}
       {activeTab === 'data' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="tabpanel" id="panel-data" aria-labelledby="tab-data">
           <div
+            role="form"
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
@@ -489,7 +508,7 @@ const Settings: React.FC = () => {
 
       {/* About Tab */}
       {activeTab === 'about' && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} role="tabpanel" id="panel-about" aria-labelledby="tab-about">
           <div
             style={{
               backgroundColor: 'var(--bg-secondary)',
@@ -523,7 +542,7 @@ const Settings: React.FC = () => {
                 color: 'var(--text-primary)',
               }}
             >
-              Airymax AgentOS
+              Airymax AgentRT
             </h2>
             <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: 'var(--text-muted)' }}>
               {t('settingsExtended.versionInfo', { version: __APP_VERSION__ })}
@@ -560,13 +579,31 @@ const Settings: React.FC = () => {
       <div
         style={{
           display: 'flex',
-          justifyContent: 'flex-end',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
           marginTop: '20px',
           position: 'sticky',
           bottom: '0',
           padding: '12px 0',
+          gap: '8px',
         }}
       >
+        {error && (
+          <div
+            role="alert"
+            style={{
+              padding: '10px 16px',
+              backgroundColor: 'var(--error-light)',
+              borderRadius: '8px',
+              border: '1px solid var(--error-color)',
+              color: 'var(--error-color)',
+              fontSize: '13px',
+              maxWidth: '100%',
+            }}
+          >
+            {t('settingsExtended.saveError')}: {error}
+          </div>
+        )}
         <button
           onClick={handleSave}
           disabled={saving}

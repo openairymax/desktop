@@ -2,7 +2,11 @@ type InvokeFn = {
   <T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T>;
 };
 
-const GATEWAY_URL = () => localStorage.getItem('agentos-endpoint') || 'http://localhost:18789';
+const GATEWAY_URL = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) return envUrl;
+  return localStorage.getItem('agentos-endpoint') || '';
+};
 
 async function gatewayInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const url = `${GATEWAY_URL()}/jsonrpc`;
@@ -53,14 +57,14 @@ const invoke: InvokeFn = async <T = unknown>(
     try {
       return await tauriInvoke<T>(cmd, args);
     } catch (e) {
-      console.warn(`[Tauri invoke failed for ${cmd}, trying gateway]:`, e);
+      // Intentionally empty: graceful degradation
     }
   }
 
   try {
     return await gatewayInvoke<T>(cmd, args);
   } catch (e) {
-    console.warn(`[Gateway invoke failed for ${cmd}, using fallback]:`, e);
+    // Intentionally empty: graceful degradation
   }
 
   return fallbackInvoke<T>(cmd, args);

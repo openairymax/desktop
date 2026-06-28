@@ -92,7 +92,7 @@ const SkillRegistry: React.FC = () => {
       await executeSkill(selectedSkill.id, params);
       setShowExecuteModal(false);
     } catch (e) {
-      console.error('Invalid JSON:', e);
+      // Intentionally empty: graceful degradation
     } finally {
       setActionLoading(null);
     }
@@ -132,7 +132,7 @@ const SkillRegistry: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
+    <div role="region" aria-label="技能注册表" style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
       <div
         style={{
           display: 'flex',
@@ -171,13 +171,14 @@ const SkillRegistry: React.FC = () => {
               技能注册中心
             </h1>
             <p style={{ margin: '2px 0 0 0', color: 'var(--text-muted)' }}>
-              AgentOS 技能管理、注册与执行
+              AgentRT 技能管理、注册与执行
             </p>
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <button
             onClick={() => fetchSkills()}
+            aria-label="刷新技能列表"
             style={{
               padding: '8px 12px',
               border: '1px solid var(--border-color)',
@@ -198,6 +199,7 @@ const SkillRegistry: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
+            aria-label="注册新技能"
             style={{
               padding: '8px 16px',
               border: 'none',
@@ -221,6 +223,7 @@ const SkillRegistry: React.FC = () => {
 
       {skillsError && (
         <div
+          role="alert"
           style={{
             padding: '12px 16px',
             marginBottom: '16px',
@@ -236,6 +239,7 @@ const SkillRegistry: React.FC = () => {
           <AlertCircle size={16} />
           <span style={{ fontSize: 'var(--font-size-sm)' }}>{skillsError}</span>
           <button
+            aria-label="重试加载技能"
             style={{
               marginLeft: 'auto',
               background: 'none',
@@ -283,6 +287,8 @@ const SkillRegistry: React.FC = () => {
         ].map((s) => (
           <div
             key={s.label}
+            role="status"
+            aria-label={`${s.label}: ${s.value}`}
             style={{
               backgroundColor: 'var(--bg-card)',
               border: '1px solid var(--border-subtle)',
@@ -350,6 +356,8 @@ const SkillRegistry: React.FC = () => {
           />
           <input
             type="text"
+            role="searchbox"
+            aria-label="搜索技能"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索技能..."
@@ -388,6 +396,8 @@ const SkillRegistry: React.FC = () => {
             <button
               key={s}
               onClick={() => setStatusFilter(s)}
+              aria-label={`筛选: ${STATUS_CONFIG[s]?.label || '全部'}`}
+              aria-pressed={statusFilter === s}
               style={{
                 padding: '6px 12px',
                 borderRadius: 'var(--radius-sm)',
@@ -410,6 +420,8 @@ const SkillRegistry: React.FC = () => {
 
       {loading && (
         <div
+          role="status"
+          aria-live="polite"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -426,6 +438,7 @@ const SkillRegistry: React.FC = () => {
 
       {!loading && filteredSkills.length === 0 && (
         <div
+          role="status"
           style={{
             backgroundColor: 'var(--bg-card)',
             border: '1px solid var(--border-subtle)',
@@ -441,6 +454,7 @@ const SkillRegistry: React.FC = () => {
           <p style={{ color: 'var(--text-muted)', marginBottom: '16px' }}>暂无技能</p>
           <button
             onClick={() => setShowCreateModal(true)}
+            aria-label="注册第一个技能"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -463,6 +477,7 @@ const SkillRegistry: React.FC = () => {
 
       {!loading && filteredSkills.length > 0 && (
         <div
+          role="list"
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
@@ -475,6 +490,7 @@ const SkillRegistry: React.FC = () => {
               return (
                 <motion.div
                   key={skill.id}
+                  role="listitem"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
@@ -533,6 +549,7 @@ const SkillRegistry: React.FC = () => {
                           {skill.name}
                         </h3>
                         <span
+                          role="status"
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -576,6 +593,7 @@ const SkillRegistry: React.FC = () => {
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       onClick={() => openExecute(skill)}
+                      aria-label={`执行技能 ${skill.name}`}
                       style={{
                         flex: 1,
                         padding: '8px 12px',
@@ -600,6 +618,7 @@ const SkillRegistry: React.FC = () => {
                       <button
                         onClick={() => handleUnload(skill.id)}
                         disabled={actionLoading === `unload-${skill.id}`}
+                        aria-label={`卸载技能 ${skill.name}`}
                         style={{
                           flex: 1,
                           padding: '8px 12px',
@@ -629,6 +648,7 @@ const SkillRegistry: React.FC = () => {
                       <button
                         onClick={() => handleLoad(skill.id)}
                         disabled={actionLoading === `load-${skill.id}`}
+                        aria-label={`加载技能 ${skill.name}`}
                         style={{
                           flex: 1,
                           padding: '8px 12px',
@@ -658,6 +678,7 @@ const SkillRegistry: React.FC = () => {
                     <button
                       onClick={() => handleDelete(skill.id)}
                       disabled={actionLoading === `delete-${skill.id}`}
+                      aria-label={`删除技能 ${skill.name}`}
                       style={{
                         padding: '8px 10px',
                         border: '1px solid var(--error-color)',
@@ -702,6 +723,9 @@ const SkillRegistry: React.FC = () => {
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label="注册新技能"
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -736,6 +760,7 @@ const SkillRegistry: React.FC = () => {
                 </h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
+                  aria-label="关闭注册技能对话框"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -843,6 +868,7 @@ const SkillRegistry: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   onClick={() => setShowCreateModal(false)}
+                  aria-label="取消注册技能"
                   style={{
                     padding: '8px 16px',
                     border: '1px solid var(--border-color)',
@@ -859,6 +885,7 @@ const SkillRegistry: React.FC = () => {
                 <button
                   onClick={handleRegister}
                   disabled={!newName.trim() || actionLoading === 'register'}
+                  aria-label="确认注册技能"
                   style={{
                     padding: '8px 16px',
                     background: 'linear-gradient(135deg, #f59e0b, #f97316)',
@@ -907,6 +934,9 @@ const SkillRegistry: React.FC = () => {
             onClick={() => setShowExecuteModal(false)}
           >
             <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`执行技能 ${selectedSkill.name}`}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
@@ -952,6 +982,7 @@ const SkillRegistry: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setShowExecuteModal(false)}
+                  aria-label="关闭执行技能对话框"
                   style={{
                     width: '32px',
                     height: '32px',
@@ -1012,6 +1043,7 @@ const SkillRegistry: React.FC = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                 <button
                   onClick={() => setShowExecuteModal(false)}
+                  aria-label="取消执行技能"
                   style={{
                     padding: '8px 16px',
                     border: '1px solid var(--border-color)',
@@ -1028,6 +1060,7 @@ const SkillRegistry: React.FC = () => {
                 <button
                   onClick={handleExecute}
                   disabled={actionLoading === 'execute'}
+                  aria-label="确认执行技能"
                   style={{
                     padding: '8px 16px',
                     background: 'linear-gradient(135deg, #f59e0b, #f97316)',

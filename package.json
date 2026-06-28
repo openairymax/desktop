@@ -1,1 +1,57 @@
-{"name":"airymax-agentos","private":true,"version":"0.0.5","type":"module","scripts":{"dev":"vite","build":"tsc -b && vite build","preview":"vite preview","tauri":"tauri","lint":"eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0","format":"prettier --write \"src/**/*.{ts,tsx,css,json}\"","check":"tsc -b && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 && vite build","typecheck":"tsc -b --noEmit","clean":"rm -rf dist src-tauri/target","test":"vitest","test:run":"vitest run","test:coverage":"vitest run --coverage","test:e2e":"playwright test"},"dependencies":{"@tauri-apps/api":"^2","@tauri-apps/plugin-shell":"^2","framer-motion":"^12.38.0","i18next":"^26.0.9","lucide-react":"^0.294.0","react":"^18.2.0","react-dom":"^18.2.0","react-i18next":"^17.0.4","react-router-dom":"^6.20.0","recharts":"^2.10.3"},"devDependencies":{"@tauri-apps/cli":"^2.10.1","@testing-library/jest-dom":"^6.9.1","@testing-library/react":"^16.3.2","@testing-library/user-event":"^14.5.2","@types/react":"^18.2.43","@types/react-dom":"^18.2.17","@typescript-eslint/eslint-plugin":"^7.0.0","@typescript-eslint/parser":"^7.0.0","@vitejs/plugin-react":"^4.2.1","eslint":"^8.56.0","eslint-plugin-react-hooks":"^4.6.0","eslint-plugin-react-refresh":"^0.4.5","jsdom":"^24.1.3","playwright":"^1.44.1","prettier":"^3.2.0","typescript":"^5.2.2","vite":"^5.0.8","vite-plugin-pwa":"^1.3.0","vitest":"^1.6.1","workbox-window":"^7.4.1"}}
+{
+  "name": "airymax-agentos",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,json}\"",
+    "check": "tsc -b && eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0 && vite build",
+    "typecheck": "tsc -b --noEmit",
+    "clean": "rm -rf dist src-tauri/target",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-shell": "^2",
+    "@testing-library/dom": "^10.4.1",
+    "framer-motion": "^12.38.0",
+    "i18next": "^26.0.9",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^17.0.4",
+    "react-router-dom": "^6.20.0",
+    "recharts": "^2.10.3"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.10.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@vitest/coverage-v8": "^1.6.1",
+    "eslint": "^8.56.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^24.1.3",
+    "playwright": "^1.44.1",
+    "prettier": "^3.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8",
+    "vite-plugin-pwa": "^1.3.0",
+    "vitest": "^1.6.1",
+    "workbox-window": "^7.4.1"
+  }
+}

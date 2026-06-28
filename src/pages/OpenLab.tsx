@@ -37,7 +37,7 @@ const defaultApps: OpenLabApp[] = [
     version: '2.1.0',
     rating: 4.8,
     downloads: 12540,
-    author: 'AgentOS Team',
+    author: 'AgentRT Team',
     tags: ['文档', '自动化', 'markdown'],
     status: 'available',
     lastUpdated: '2026-04-20',
@@ -161,8 +161,7 @@ const OpenLab: React.FC = () => {
           }),
         );
       })
-      .catch((e: unknown) => {
-        console.warn('App install failed:', e);
+      .catch((_e: unknown) => {
         setApps((prev) =>
           prev.map((app) => {
             if (app.id === id) {
@@ -190,7 +189,7 @@ const OpenLab: React.FC = () => {
   };
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div role="region" aria-label="OpenLab 实验平台" style={{ maxWidth: '1400px', margin: '0 auto' }}>
       <div style={{ marginBottom: '24px' }}>
         <h1
           style={{
@@ -207,7 +206,7 @@ const OpenLab: React.FC = () => {
           应用市场
         </h1>
         <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-          浏览和安装 AgentOS 扩展应用
+          浏览和安装 AgentRT 扩展应用
         </p>
       </div>
 
@@ -225,6 +224,8 @@ const OpenLab: React.FC = () => {
           />
           <input
             type="text"
+            role="searchbox"
+            aria-label="搜索实验"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="搜索应用..."
@@ -245,6 +246,8 @@ const OpenLab: React.FC = () => {
             <button
               key={cat}
               onClick={() => setFilterCategory(cat)}
+              aria-label={`筛选分类: ${cat}`}
+              aria-pressed={filterCategory === cat}
               style={{
                 padding: '8px 14px',
                 borderRadius: '8px',
@@ -263,6 +266,7 @@ const OpenLab: React.FC = () => {
       </div>
 
       <div
+        role="list"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
@@ -272,6 +276,7 @@ const OpenLab: React.FC = () => {
         {filteredApps.map((app) => (
           <motion.div
             key={app.id}
+            role="listitem"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             style={{
@@ -335,6 +340,7 @@ const OpenLab: React.FC = () => {
                   handleInstall(app.id);
                 }}
                 disabled={app.status === 'updating'}
+                aria-label={app.status === 'installed' ? '卸载应用' : app.status === 'updating' ? '安装中' : '安装应用'}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -351,7 +357,7 @@ const OpenLab: React.FC = () => {
                 }}
               >
                 {app.status === 'updating' ? (
-                  <RefreshCw size={14} className="animate-spin" />
+                  <span role="status" aria-live="polite"><RefreshCw size={14} className="animate-spin" /></span>
                 ) : app.status === 'installed' ? (
                   <>
                     <CheckCircle size={14} /> 已安装
@@ -396,7 +402,7 @@ const OpenLab: React.FC = () => {
       </div>
 
       {filteredApps.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
+        <div role="status" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
           <Package size={48} style={{ marginBottom: '12px', opacity: 0.5 }} />
           <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>未找到匹配的应用</p>
           <p style={{ margin: 0, fontSize: '13px' }}>尝试调整搜索条件或分类筛选</p>
@@ -405,6 +411,9 @@ const OpenLab: React.FC = () => {
 
       {selectedApp && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selectedApp.name} 应用详情`}
           style={{
             position: 'fixed',
             inset: 0,
@@ -472,6 +481,7 @@ const OpenLab: React.FC = () => {
               </div>
               <button
                 onClick={() => setSelectedApp(null)}
+                aria-label="关闭"
                 style={{
                   width: '32px',
                   height: '32px',
@@ -587,6 +597,7 @@ const OpenLab: React.FC = () => {
                 setSelectedApp(null);
               }}
               disabled={selectedApp.status === 'updating'}
+              aria-label={selectedApp.status === 'installed' ? '卸载应用' : selectedApp.status === 'updating' ? '安装中' : '安装应用'}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -608,9 +619,9 @@ const OpenLab: React.FC = () => {
               }}
             >
               {selectedApp.status === 'updating' ? (
-                <>
+                <span role="status" aria-live="polite">
                   <RefreshCw size={16} className="animate-spin" /> 安装中...
-                </>
+                </span>
               ) : selectedApp.status === 'installed' ? (
                 <>
                   <CheckCircle size={16} /> 已安装

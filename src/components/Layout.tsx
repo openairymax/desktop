@@ -340,7 +340,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               backgroundClip: 'text',
             }}
           >
-            {sidebarCollapsed ? 'A' : 'Airymax AgentOS'}
+            {sidebarCollapsed ? 'A' : 'Airymax AgentRT'}
           </motion.span>
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
@@ -682,7 +682,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <ConnectionIndicator compact showLabel />
-            <span style={{ color: 'var(--text-muted)' }}>Airymax AgentOS v0.0.5</span>
+            <span style={{ color: 'var(--text-muted)' }}>Airymax AgentRT v0.0.5</span>
           </div>
           <div>
             <span>{new Date().toLocaleDateString()}</span>

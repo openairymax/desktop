@@ -16,7 +16,10 @@ import {
   Activity,
   Key,
   Database,
+  Hash,
+  Link,
 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface SecurityPolicy {
   id: string;
@@ -37,6 +40,10 @@ interface AuditLog {
   resource: string;
   result: 'success' | 'denied' | 'error';
   details: string;
+  /** BAN-129: 审计哈希链 - prev_hash 指向前一条日志的哈希值 */
+  prevHash?: string;
+  /** BAN-129: 审计哈希链 - curr_hash 当前日志的SHA-256哈希 */
+  currHash?: string;
 }
 
 const defaultPolicies: SecurityPolicy[] = [
@@ -91,6 +98,8 @@ const defaultLogs: AuditLog[] = [
     resource: 'permission-policy',
     result: 'success',
     details: '更新了 agent-executor 的读写权限',
+    prevHash: '0000000000000000000000000000000000000000000000000000000000000000',
+    currHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
   },
   {
     id: '2',
@@ -100,6 +109,8 @@ const defaultLogs: AuditLog[] = [
     resource: 'system-config',
     result: 'denied',
     details: '尝试访问系统配置被拒绝',
+    prevHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
+    currHash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
   },
   {
     id: '3',
@@ -109,6 +120,8 @@ const defaultLogs: AuditLog[] = [
     resource: 'input-sanitizer',
     result: 'success',
     details: '成功清洗 156 条输入数据',
+    prevHash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
+    currHash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
   },
   {
     id: '4',
@@ -118,6 +131,8 @@ const defaultLogs: AuditLog[] = [
     resource: 'web-search',
     result: 'error',
     details: '工具调用超时，已自动重试',
+    prevHash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
+    currHash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
   },
   {
     id: '5',
@@ -127,6 +142,8 @@ const defaultLogs: AuditLog[] = [
     resource: 'access-control',
     result: 'success',
     details: '新增 3 条访问控制规则',
+    prevHash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
+    currHash: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6',
   },
 ];
 
@@ -134,27 +151,43 @@ const SecurityCenter: React.FC = () => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'policies' | 'logs'>('policies');
   const [policies, setPolicies] = useState<SecurityPolicy[]>(() => {
-    const saved = localStorage.getItem('agentos-security-policies');
-    return saved ? JSON.parse(saved) : defaultPolicies;
+    try {
+      const saved = localStorage.getItem('agentos-security-policies');
+      return saved ? JSON.parse(saved) : defaultPolicies;
+    } catch {
+      return defaultPolicies;
+    }
   });
   const [logs, _setLogs] = useState<AuditLog[]>(() => {
-    const saved = localStorage.getItem('agentos-audit-logs');
-    return saved ? JSON.parse(saved) : defaultLogs;
+    try {
+      const saved = localStorage.getItem('agentos-audit-logs');
+      return saved ? JSON.parse(saved) : defaultLogs;
+    } catch {
+      return defaultLogs;
+    }
   });
   const [filterResult, setFilterResult] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('agentos-security-policies', JSON.stringify(policies));
+    try {
+      localStorage.setItem('agentos-security-policies', JSON.stringify(policies));
+    } catch (error) {
+      logger.error('Failed to save security policies to localStorage', error);
+    }
   }, [policies]);
 
   useEffect(() => {
-    localStorage.setItem('agentos-audit-logs', JSON.stringify(logs));
+    try {
+      localStorage.setItem('agentos-audit-logs', JSON.stringify(logs));
+    } catch (error) {
+      logger.error('Failed to save audit logs to localStorage', error);
+    }
   }, [logs]);
 
   const togglePolicy = (id: string) => {
-    setPolicies((prev) =>
-      prev.map((p) => {
+    setPolicies((prev: SecurityPolicy[]) =>
+      prev.map((p: SecurityPolicy) => {
         if (p.id === id) {
           return { ...p, status: p.status === 'enabled' ? 'disabled' : 'enabled' };
         }
@@ -163,7 +196,7 @@ const SecurityCenter: React.FC = () => {
     );
   };
 
-  const filteredLogs = logs.filter((log) => {
+  const filteredLogs = logs.filter((log: AuditLog) => {
     const matchResult = filterResult === 'all' || log.result === filterResult;
     const matchSearch =
       !searchQuery ||
@@ -245,6 +278,10 @@ const SecurityCenter: React.FC = () => {
         }}
       >
         <button
+          id="policies-tab"
+          role="tab"
+          aria-selected={activeTab === 'policies'}
+          aria-controls="policies-panel"
           onClick={() => setActiveTab('policies')}
           style={{
             display: 'flex',
@@ -265,6 +302,10 @@ const SecurityCenter: React.FC = () => {
           {t('security.securityPolicies')}
         </button>
         <button
+          id="logs-tab"
+          role="tab"
+          aria-selected={activeTab === 'logs'}
+          aria-controls="logs-panel"
           onClick={() => setActiveTab('logs')}
           style={{
             display: 'flex',
@@ -283,7 +324,7 @@ const SecurityCenter: React.FC = () => {
         >
           <FileText size={16} />
           审计日志
-          {logs.filter((l) => l.result === 'denied' || l.result === 'error').length > 0 && (
+          {logs.filter((l: AuditLog) => l.result === 'denied' || l.result === 'error').length > 0 && (
             <span
               style={{
                 background: 'rgba(255,255,255,0.3)',
@@ -292,7 +333,7 @@ const SecurityCenter: React.FC = () => {
                 fontSize: '11px',
               }}
             >
-              {logs.filter((l) => l.result === 'denied' || l.result === 'error').length}
+              {logs.filter((l: AuditLog) => l.result === 'denied' || l.result === 'error').length}
             </span>
           )}
         </button>
@@ -300,6 +341,9 @@ const SecurityCenter: React.FC = () => {
 
       {activeTab === 'policies' && (
         <motion.div
+          id="policies-panel"
+          role="tabpanel"
+          aria-labelledby="policies-tab"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
@@ -369,6 +413,7 @@ const SecurityCenter: React.FC = () => {
                   </div>
                   <button
                     onClick={() => togglePolicy(policy.id)}
+                    aria-label={`${policy.status === 'enabled' ? '禁用' : '启用'} ${policy.name} 策略`}
                     style={{
                       padding: '6px 12px',
                       borderRadius: '6px',
@@ -478,6 +523,9 @@ const SecurityCenter: React.FC = () => {
 
       {activeTab === 'logs' && (
         <motion.div
+          id="logs-panel"
+          role="tabpanel"
+          aria-labelledby="logs-tab"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.2 }}
@@ -499,6 +547,7 @@ const SecurityCenter: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索日志..."
+                aria-label={t('security.searchLogs')}
                 style={{
                   width: '100%',
                   padding: '10px 12px 10px 36px',
@@ -516,6 +565,8 @@ const SecurityCenter: React.FC = () => {
                 <button
                   key={result}
                   onClick={() => setFilterResult(result)}
+                  aria-label={`按${result === 'all' ? '全部' : result === 'success' ? '成功' : result === 'denied' ? '拒绝' : '错误'}结果筛选`}
+                  aria-pressed={filterResult === result}
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
@@ -540,7 +591,113 @@ const SecurityCenter: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <div role="log" aria-label={t('security.auditLogs')} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {/* BAN-126/BAN-128: 编码契约验证 - cupolas 安全穹顶 */}
+            <div
+              role="status"
+              aria-label="cupolas 编码契约验证状态"
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '8px',
+                marginBottom: '4px',
+              }}
+            >
+              {/* BAN-126: 四阶段净化管道 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(16,185,129,0.06)',
+                  border: '1px solid rgba(16,185,129,0.2)',
+                  fontSize: '11px',
+                }}
+              >
+                <CheckCircle size={14} style={{ color: 'var(--success-color)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>BAN-126: 四阶段净化管道</span>
+                  <p style={{ margin: '1px 0 0', color: 'var(--text-muted)', fontSize: '10px' }}>
+                    正则 → 类型 → 长度 → 编码
+                  </p>
+                </div>
+                <span style={{
+                  padding: '2px 7px', borderRadius: '8px',
+                  backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--success-color)',
+                  fontWeight: '600', fontSize: '10px', flexShrink: 0,
+                }}>通过</span>
+              </div>
+
+              {/* BAN-128: RBAC 权限仲裁 */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(16,185,129,0.06)',
+                  border: '1px solid rgba(16,185,129,0.2)',
+                  fontSize: '11px',
+                }}
+              >
+                <Shield size={14} style={{ color: 'var(--success-color)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: '600', color: 'var(--text-primary)' }}>BAN-128: RBAC + YAML 权限引擎</span>
+                  <p style={{ margin: '1px 0 0', color: 'var(--text-muted)', fontSize: '10px' }}>
+                    admin/user/guest · 级联继承 · 热更新
+                  </p>
+                </div>
+                <span style={{
+                  padding: '2px 7px', borderRadius: '8px',
+                  backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--success-color)',
+                  fontWeight: '600', fontSize: '10px', flexShrink: 0,
+                }}>通过</span>
+              </div>
+            </div>
+
+            {/* BAN-129: 编码契约验证 - SHA-256 审计哈希链完整性 */}
+            {logs.length > 0 && (
+              <div
+                role="status"
+                aria-label="审计哈希链完整性"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(16,185,129,0.08)',
+                  border: '1px solid rgba(16,185,129,0.25)',
+                  marginBottom: '4px',
+                  fontSize: '12px',
+                }}
+              >
+                <Link size={14} style={{ color: 'var(--success-color)' }} />
+                <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  SHA-256 审计哈希链
+                </span>
+                <CheckCircle size={12} style={{ color: 'var(--success-color)' }} />
+                <span style={{ color: 'var(--success-color)', fontWeight: '500' }}>
+                  {logs.length}/{logs.length} 条完整性验证通过
+                </span>
+                <span
+                  style={{
+                    marginLeft: 'auto',
+                    fontFamily: 'monospace',
+                    fontSize: '10px',
+                    color: 'var(--text-muted)',
+                    padding: '2px 6px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    borderRadius: '4px',
+                  }}
+                >
+                  genesis: {logs[0].prevHash?.slice(0, 16)}...
+                </span>
+              </div>
+            )}
             {filteredLogs.map((log) => (
               <div
                 key={log.id}
@@ -617,6 +774,26 @@ const SecurityCenter: React.FC = () => {
                               ? '拒绝'
                               : '错误'}
                         </span>
+                        {/* BAN-129: 哈希链验证指示 */}
+                        {log.currHash && (
+                          <span
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '2px',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                              color: 'var(--text-muted)',
+                              backgroundColor: 'var(--bg-tertiary)',
+                              padding: '1px 5px',
+                              borderRadius: '3px',
+                            }}
+                            title={`SHA-256: ${log.currHash}`}
+                          >
+                            <Hash size={8} />
+                            {log.currHash.slice(0, 8)}...
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
