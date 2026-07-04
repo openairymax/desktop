@@ -11,7 +11,7 @@ Powered by OpenAirymax
 [![AtomGit](https://atomgit.com/openairymax/desktop/star/badge.svg)](https://atomgit.com/openairymax/desktop)
  
 [![Version](https://img.shields.io/badge/version-0.0.4-5a6b7e)](https://atomgit.com/openairymax/desktop/releases)
-[![License](https://img.shields.io/badge/license-MIT-4a90d9)](https://atomgit.com/openairymax/desktop)
+[![License](https://img.shields.io/badge/license-AGPL--3.0+Apache--2.0-4a90d9)](LICENSE)
 
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -131,4 +131,4 @@ npm run tauri build
 
 ## 许可证
 
-[MIT](LICENSE) © 2026 Airymax Team
+[AGPL-3.0-or-later OR Apache-2.0](LICENSE) © 2026 SPHARX Ltd. All Rights Reserved.
