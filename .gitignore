@@ -28,7 +28,8 @@ src-tauri/target/
 src-tauri/gen/
 src-tauri/WixTools/
 src-tauri/icons/
-Cargo.lock
+# Tauri 桌面应用为二进制 crate，Cargo.lock 应跟踪以确保可复现构建
+# 不排除 src-tauri/Cargo.lock
 
 # -----------------------------------------------------------------------------
 # Vite
