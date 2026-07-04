@@ -3,7 +3,7 @@ name = "airymax-agentos"
 version = "0.1.0"
 description = "Airymax AgentOS - Industrial-grade AI Agent Operating System Desktop Client"
 authors = ["Airymax Team"]
-license = "Apache-2.0"
+license = "AGPL-3.0-or-later OR Apache-2.0"
 repository = "https://github.com/SpharxTeam/AgentOS"
 edition = "2021"
 
