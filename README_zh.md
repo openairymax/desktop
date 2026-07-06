@@ -3,7 +3,7 @@
 # Airymax 桌面客户端
 
 > Airymax AI 智能体运行时平台的个人客户端 —— 基于 Tauri v2 构建的跨平台
-> 桌面应用，将 AgentRT 后端核心模块能力完整映射到图形界面。
+> 桌面应用，将 AgentRT 后端核心模块能力完整映射到原生图形界面。
 
 **语言:** [English](README.md) | 简体中文
 
@@ -22,38 +22,24 @@ Powered by OpenAirymax
 
 ---
 
-## 1. 模块定位
+## 概述
 
-**桌面客户端**是 Airymax 产品线的**个人客户端**。它将运行时、SDK 与生态能力打包为一个可安装的桌面应用，
-让个人用户无需接触终端或容器编排器即可操作整个平台。
+**桌面客户端**是 Airymax 产品线的**个人客户端**。它将 AgentRT 运行时、SDK 与生态能力打包为
+一个可安装的桌面应用，让个人用户无需接触终端或容器编排器即可操作整个平台。它是
+[`products/`](https://atomgit.com/openairymax/products) 管理仓下三个叶子仓之一，
+另两个为 `docker`（部署镜像）和 `memoryrovol`（商业记忆提供者）。
 
-- **角色**：[`products/`](https://atomgit.com/openairymax/products) 管理仓下三个叶子仓之一，
-  另两个为 `docker`（部署镜像）和 `memoryrovol`（商业记忆提供者）。
-- **受众**：需要本地图形界面操作 Airymax 运行时的个人用户、开发者和评估者。
-- **范围**：跨平台（Windows / macOS / Linux）原生外壳基于 Tauri v2（Rust 内核），
-  前端使用 React 18 + TypeScript + Vite。支持离线优先 PWA、系统托盘集成、全局快捷键，
-  并内置连接到本地运行的 AgentRT 网关。
+应用基于 **Tauri v2**（Rust 2021 edition 内核）构建的跨平台（Windows / macOS / Linux）
+原生外壳，前端采用 **React 18 + TypeScript 5.4 + Vite 5**。支持离线优先 PWA、系统托盘集成、
+全局快捷键，并内置连接到本地运行的 AgentRT 网关（默认 `http://localhost:18789`）。
+Rust 内核通过类型化桥向前端暴露 IPC 命令，前端则将 AgentRT 后端模块
+（kernel、manager、agents、gateway、OpenLab）映射为分页式图形工作区。
 
-### 上游 / 下游
+桌面客户端面向需要本地图形界面操作 Airymax 运行时的个人用户、开发者与评估者。
+可分发制品包括 Windows 的 NSIS / MSI 安装包、macOS 的 DMG 镜像，以及 Linux 的
+DEB / AppImage 包。
 
-```
-                         ┌──────────────────────┐
-   sdk/agentrt ───────▶  │  products/desktop    │  ───────▶  最终用户
-   （运行时 + SDK）       │  （本仓库）          │           （个人）
-                         └──────────────────────┘
-                                  ▲
-                                  │ 可选
-                                  └── products/docker（部署镜像）
-```
-
-- **上游**：
-  - `sdk/agentrt` —— AgentRT 运行时与 SDK，提供网关 HTTP / WebSocket API，
-    由 `VITE_AGENTOS_GATEWAY_HOST:PORT`（默认 `http://localhost:18789`）消费。
-  - `products/docker` —— 可选的配套镜像，用于在桌面客户端旁边启动网关。
-- **下游**：
-  - 最终用户（个人用户），他们安装产出的 `.exe` / `.dmg` / `.deb` / `.AppImage` 制品。
-
-## 2. 目录结构
+## 目录结构
 
 ```
 desktop/
@@ -69,21 +55,27 @@ desktop/
 │   │   ├── agentos-sdk.ts     #   生成的 API 客户端
 │   │   ├── agentos.service.ts #   高层服务门面
 │   │   └── tauri-bridge.ts    #   Rust ↔ JS 桥
-│   ├── hooks/                 # React hooks
-│   ├── i18n/                  # i18next 国际化
+│   ├── hooks/                 # React hooks（useAgentOS、useAnimations 等）
+│   ├── i18n/                  # i18next 国际化（en / zh）
 │   ├── design-system/         # 共享设计令牌
 │   ├── constants/  types/  utils/  styles/
 │   ├── App.tsx  main.tsx
 │   └── setupTests.ts
 ├── src-tauri/                 # Tauri v2（Rust）原生外壳
 │   ├── src/                   # Rust 入口与 IPC 命令
-│   ├── icons/
+│   │   ├── main.rs  lib.rs    #   入口 + app builder
+│   │   ├── commands.rs        #   Tauri 命令处理器
+│   │   ├── backend_client.rs  #   网关 HTTP 客户端（reqwest）
+│   │   ├── llm_client.rs      #   直连 LLM 提供商客户端
+│   │   ├── cli.rs             #   CLI 参数解析
+│   │   └── protocol_commands.rs
+│   ├── icons/                 # 跨平台图标集 + icns / ico
 │   ├── Cargo.toml             # crate `airymax-agentos`
 │   ├── Cargo.lock  build.rs
 │   └── tauri.conf.json        # 窗口 / CSP / 托盘 / 打包配置
 ├── public/                    # 静态资源 + PWA 清单 + Service Worker
 ├── e2e/                       # Playwright 端到端测试
-├── .github/                   # CI 工作流
+├── .github/                   # CI 工作流 + CODEOWNERS
 ├── .eslintrc.json  .prettierrc  tsconfig.json
 ├── vite.config.ts             # Vite + PWA + 网关开发代理
 ├── vitest.config.ts  playwright.config.ts
@@ -96,9 +88,9 @@ desktop/
 └── README_zh.md               # 本文件
 ```
 
-## 3. 功能映射
+## 功能 / 组件
 
-桌面客户端与 AgentRT 后端模块一一对应：
+桌面客户端与 AgentRT 后端模块一一对应。下表将每个工作区标签页映射到上游后端及简要说明。
 
 | 模块 | 对应后端 | 功能描述 |
 |------|----------|----------|
@@ -120,7 +112,7 @@ desktop/
 | 日志终端 | `manager/logging/` | 日志查看与终端模拟器 |
 | 系统设置 | `manager/schema/` + `manager/environment/` | 外观、网关、数据与版本信息 |
 
-## 4. 技术栈
+### 技术栈
 
 | 层次 | 技术 |
 |------|------|
@@ -134,7 +126,46 @@ desktop/
 | PWA | vite-plugin-pwa + Workbox |
 | 测试 | Vitest（单元）+ Playwright（E2E） |
 
-## 5. 安装与使用
+### 原生能力
+
+- **系统托盘** —— 左键切换窗口显示，右键暴露显示 / 隐藏 / 退出菜单
+  （`tauri.conf.json → app.trayIcon`）。
+- **全局快捷键** —— `Ctrl+K` 全局搜索、`Ctrl+1~0` 页面快速导航、
+  `Ctrl+Shift+[` / `Ctrl+Shift+]` 历史后退 / 前进。
+- **单实例** —— `tauri-plugin-single-instance` 在 Windows / Linux 上强制只运行一个进程
+  （macOS 依赖系统原生激活）。
+- **Shell 与对话框插件** —— 打开外部链接、文件选择器、保存对话框。
+
+## 上游依赖
+
+```
+                         ┌──────────────────────┐
+   sdk/agentrt ───────▶  │  products/desktop    │
+   （运行时 + SDK）       │  （本仓库）          │
+                         └──────────────────────┘
+                                  ▲
+                                  │ 可选
+                                  └── products/docker（部署镜像）
+```
+
+- **`sdk/agentrt`** —— AgentRT 运行时与 SDK，提供网关 HTTP / WebSocket API，
+  由前端通过 `VITE_AGENTOS_GATEWAY_HOST:PORT`（默认 `http://localhost:18789`）消费。
+  `src/services/agentos-sdk.ts` 中的 TypeScript API 客户端基于此契约生成。
+- **`products/docker`** —— 可选的配套镜像，用于在个人机器上与桌面客户端并行启动网关。
+  提供一条 `docker compose up` 命令即可启动后端。
+- **Tauri v2 工具链** —— Rust ≥ 1.70、`@tauri-apps/cli`（已在 devDependencies 中固定版本）
+  以及各平台系统库（Linux 的 WebKit2GTK、macOS 的 WebKit、Windows 的 WebView2）。
+
+## 下游消费者
+
+- **终端用户（个人）** —— 直接安装产出的 `.exe` / `.msi` / `.dmg` / `.deb` / `.AppImage`
+  制品。各平台逐步安装 / 卸载说明详见 [`INSTALLATION.md`](INSTALLATION.md)。
+- **`products/docker`（`Dockerfile.desktop`）** —— 消费桌面前端源码以构建静态 Web 镜像
+  （纯 Vite 构建，不含 Tauri 原生外壳），由 Nginx 在 Docker 栈中服务。
+- **Airymax Hub 伞仓** —— 在 `feature/official-hubs-01` 分支上将本叶子仓作为 git 子模块固定，
+  用于协同发布。
+
+## 构建 / 安装
 
 ### 前置条件
 
@@ -186,21 +217,7 @@ npm run tauri build
 
 各平台逐步安装 / 卸载说明详见 [`INSTALLATION.md`](INSTALLATION.md)。
 
-### 键盘快捷键
-
-| 快捷键 | 功能 |
-|--------|------|
-| `Ctrl+K` | 全局搜索 |
-| `Ctrl+1~0` | 快速导航页面 |
-| `Ctrl+Shift+[` | 历史后退 |
-| `Ctrl+Shift+]` | 历史前进 |
-
-### 系统托盘
-
-- **左键单击**：显示 / 隐藏窗口
-- **右键菜单**：显示窗口 / 隐藏到托盘 / 退出
-
-## 6. 开发命令
+### 开发命令
 
 ```bash
 npm run dev            # 仅 Vite 开发服务器（不含原生外壳）
@@ -217,23 +234,12 @@ npm run test:e2e       # Playwright
 npm run clean          # 清理 dist/ 与 src-tauri/target/
 ```
 
-## 7. 分支策略
+### 分支策略
 
 - 叶子仓活跃开发分支：**`feature/official-hubs-01`**
 - 管理仓（`products/`）通过 git 子模块指针跟踪同一分支。
 
-## 8. 相关仓库
-
-| 仓库 | 链接 | 角色 |
-|------|------|------|
-| Airymax Hub（伞仓） | [atomgit.com/openairymax/airymaxhub](https://atomgit.com/openairymax/airymaxhub) | 顶层管理仓 |
-| Products（父仓） | [atomgit.com/openairymax/products](https://atomgit.com/openairymax/products) | 打包与分发层 |
-| AgentRT 运行时 / SDK | `sdk/agentrt`（位于 hub 内） | 上游运行时 |
-| Docker 部署 | [atomgit.com/openairymax/docker](https://atomgit.com/openairymax/docker) | 兄弟部署镜像 |
-| MemoryRovol（商业） | [atomgit.com/spharx/memoryrovol](https://atomgit.com/spharx/memoryrovol) | 商业记忆提供者 |
-| **桌面客户端（本仓）** | [atomgit.com/openairymax/desktop](https://atomgit.com/openairymax/desktop) | 个人客户端 |
-
-## 9. 许可证
+## 许可证
 
 本仓库采用双许可证，最大化个人用户与下游再分发者的兼容性：
 
@@ -248,4 +254,10 @@ AGPL-3.0-or-later OR Apache-2.0
 
 版权、商标与第三方组件声明详见 [`NOTICE`](NOTICE)。
 
-Copyright (c) 2025-2026 **SPHARX Ltd.** All Rights Reserved.
+```
+仓库:    git@atomgit.com:openairymax/desktop.git
+分支:    feature/official-hubs-01
+SPDX:    AGPL-3.0-or-later OR Apache-2.0
+```
+
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.

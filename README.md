@@ -3,8 +3,8 @@
 # Airymax Desktop Client
 
 > Personal client for the Airymax AI Agent Runtime Platform — a cross-platform
-> desktop application built with Tauri v2 that fully maps the AgentRT backend
-> core modules to a graphical interface.
+> desktop application built on Tauri v2 that maps the AgentRT backend core
+> modules to a native graphical interface.
 
 **Language:** English | [简体中文](README_zh.md)
 
@@ -23,47 +23,32 @@ Powered by OpenAirymax
 
 ---
 
-## 1. Module Positioning
+## Overview
 
 The **Desktop Client** is the **personal client** of the Airymax product line.
-It packages the runtime, SDK and ecosystem capabilities into a single
+It packages the AgentRT runtime, SDK and ecosystem capabilities into a single
 installable desktop application so individual users can operate the platform
-without touching a terminal or container orchestrator.
+without touching a terminal or container orchestrator. It is one of the three
+leaf repositories under the
+[`products/`](https://atomgit.com/openairymax/products) management repo,
+alongside `docker` (deployment image) and `memoryrovol` (commercial memory
+provider).
 
-- **Role**: One of the three leaf repositories under the
-  [`products/`](https://atomgit.com/openairymax/products) management repo,
-  alongside `docker` (deployment image) and `memoryrovol` (commercial memory
-  provider).
-- **Audience**: Personal users, developers and evaluators who need a local
-  graphical interface to the Airymax runtime.
-- **Scope**: Cross-platform (Windows / macOS / Linux) native wrapper built on
-  Tauri v2 (Rust core) with a React 18 + TypeScript + Vite frontend. Supports
-  offline-first PWA behaviour, system tray integration, global shortcuts and a
-  built-in connection to a locally running AgentRT gateway.
+The application is a cross-platform (Windows / macOS / Linux) native wrapper
+built on **Tauri v2** (Rust 2021 edition core) with a **React 18 + TypeScript
+5.4 + Vite 5** frontend. It supports offline-first PWA behaviour, system tray
+integration, global shortcuts, and a built-in connection to a locally running
+AgentRT gateway (default `http://localhost:18789`). The Rust core exposes IPC
+commands to the frontend through a typed bridge, while the frontend mirrors
+the AgentRT backend modules (kernel, manager, agents, gateway, OpenLab) into
+tabbed graphical workspaces.
 
-### Upstream / Downstream
+The Desktop Client targets personal users, developers and evaluators who need a
+local graphical interface to the Airymax runtime. Distributable artifacts
+include NSIS / MSI installers for Windows, DMG images for macOS, and DEB /
+AppImage bundles for Linux.
 
-```
-                         ┌──────────────────────┐
-   sdk/agentrt ───────▶  │  products/desktop    │  ───────▶  End Users
-   (runtime + SDK)       │  (this repository)   │           (personal)
-                         └──────────────────────┘
-                                  ▲
-                                  │ optional
-                                  └── products/docker (deployment image)
-```
-
-- **Upstream**:
-  - `sdk/agentrt` — AgentRT runtime & SDK exposes the gateway HTTP / WebSocket
-    API consumed at `VITE_AGENTOS_GATEWAY_HOST:PORT` (default
-    `http://localhost:18789`).
-  - `products/docker` — optional companion image used to launch the gateway
-    side-by-side with the desktop client.
-- **Downstream**:
-  - End users (personal users) who install the produced `.exe` / `.dmg` /
-    `.deb` / `.AppImage` artifacts.
-
-## 2. Directory Structure
+## Directory Structure
 
 ```
 desktop/
@@ -79,21 +64,27 @@ desktop/
 │   │   ├── agentos-sdk.ts     #   Generated API client
 │   │   ├── agentos.service.ts #   High-level service facade
 │   │   └── tauri-bridge.ts    #   Rust ↔ JS bridge
-│   ├── hooks/                 # React hooks
-│   ├── i18n/                  # i18next localization
+│   ├── hooks/                 # React hooks (useAgentOS, useAnimations, ...)
+│   ├── i18n/                  # i18next localization (en / zh)
 │   ├── design-system/         # Shared design tokens
 │   ├── constants/  types/  utils/  styles/
 │   ├── App.tsx  main.tsx
 │   └── setupTests.ts
 ├── src-tauri/                 # Tauri v2 (Rust) native shell
 │   ├── src/                   # Rust entry & IPC commands
-│   ├── icons/
+│   │   ├── main.rs  lib.rs    #   Entry + app builder
+│   │   ├── commands.rs        #   Tauri command handlers
+│   │   ├── backend_client.rs  #   Gateway HTTP client (reqwest)
+│   │   ├── llm_client.rs      #   Direct LLM provider client
+│   │   ├── cli.rs             #   CLI argument parsing
+│   │   └── protocol_commands.rs
+│   ├── icons/                 # Cross-platform icon set + icns / ico
 │   ├── Cargo.toml             # crate `airymax-agentos`
 │   ├── Cargo.lock  build.rs
 │   └── tauri.conf.json        # window / CSP / tray / bundle config
 ├── public/                    # Static assets + PWA manifest + service worker
 ├── e2e/                       # Playwright end-to-end tests
-├── .github/                   # CI workflows
+├── .github/                   # CI workflows + CODEOWNERS
 ├── .eslintrc.json  .prettierrc  tsconfig.json
 ├── vite.config.ts             # Vite + PWA + dev proxy to gateway
 ├── vitest.config.ts  playwright.config.ts
@@ -106,9 +97,10 @@ desktop/
 └── README_zh.md               # 简体中文版
 ```
 
-## 3. Feature Map
+## Features / Components
 
-The desktop client mirrors the AgentRT backend modules:
+The desktop client mirrors the AgentRT backend modules one-to-one. The table
+below maps each workspace tab to its upstream backend and a short description.
 
 | Module | Mapped Backend | Description |
 |--------|----------------|-------------|
@@ -130,7 +122,7 @@ The desktop client mirrors the AgentRT backend modules:
 | Logs Terminal | `manager/logging/` | Log viewer + terminal emulator |
 | Settings | `manager/schema/` + `manager/environment/` | Appearance, gateway, data & version info |
 
-## 4. Tech Stack
+### Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
@@ -144,7 +136,52 @@ The desktop client mirrors the AgentRT backend modules:
 | PWA | vite-plugin-pwa + Workbox |
 | Testing | Vitest (unit) + Playwright (E2E) |
 
-## 5. Installation & Usage
+### Native Capabilities
+
+- **System tray** — left-click toggles the window, right-click exposes
+  show / hide / quit actions (`tauri.conf.json → app.trayIcon`).
+- **Global shortcuts** — `Ctrl+K` global search, `Ctrl+1~0` page navigation,
+  `Ctrl+Shift+[` / `Ctrl+Shift+]` history back / forward.
+- **Single instance** — `tauri-plugin-single-instance` enforces one running
+  process on Windows / Linux (macOS relies on native activation).
+- **Shell & dialog plugins** — open external links, file pickers, save dialogs.
+
+## Upstream Dependencies
+
+```
+                         ┌──────────────────────┐
+   sdk/agentrt ───────▶  │  products/desktop    │
+   (runtime + SDK)       │  (this repository)   │
+                         └──────────────────────┘
+                                  ▲
+                                  │ optional
+                                  └── products/docker (deployment image)
+```
+
+- **`sdk/agentrt`** — AgentRT runtime & SDK exposes the gateway HTTP /
+  WebSocket API consumed by the frontend at `VITE_AGENTOS_GATEWAY_HOST:PORT`
+  (default `http://localhost:18789`). The TypeScript API client in
+  `src/services/agentos-sdk.ts` is generated against this contract.
+- **`products/docker`** — optional companion image used to launch the gateway
+  side-by-side with the desktop client on a personal machine. Provides a
+  one-command `docker compose up` backend.
+- **Tauri v2 toolchain** — Rust ≥ 1.70, `@tauri-apps/cli` (already pinned in
+  `devDependencies`) and platform system libraries (WebKit2GTK on Linux,
+  WebKit on macOS, WebView2 on Windows).
+
+## Downstream Consumers
+
+- **End users (personal)** — install the produced `.exe` / `.msi` / `.dmg` /
+  `.deb` / `.AppImage` artifacts directly. See
+  [`INSTALLATION.md`](INSTALLATION.md) for per-platform install / uninstall
+  instructions.
+- **`products/docker` (`Dockerfile.desktop`)** — consumes the desktop frontend
+  source to build a static web image (pure Vite build, no Tauri native shell)
+  served by Nginx inside the Docker stack.
+- **Airymax Hub umbrella** — pins this leaf repo as a git submodule on the
+  `feature/official-hubs-01` branch for coordinated releases.
+
+## Build / Installation
 
 ### Prerequisites
 
@@ -197,21 +234,7 @@ npm run tauri build
 See [`INSTALLATION.md`](INSTALLATION.md) for step-by-step install / uninstall
 instructions per platform.
 
-### Keyboard Shortcuts
-
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+K` | Global search |
-| `Ctrl+1~0` | Quick page navigation |
-| `Ctrl+Shift+[` | History back |
-| `Ctrl+Shift+]` | History forward |
-
-### System Tray
-
-- **Left click**: show / hide window
-- **Right click menu**: show window / hide to tray / quit
-
-## 6. Development Commands
+### Development commands
 
 ```bash
 npm run dev            # Vite dev server only (no native shell)
@@ -228,23 +251,12 @@ npm run test:e2e       # Playwright
 npm run clean          # Remove dist/ and src-tauri/target/
 ```
 
-## 7. Branch Strategy
+### Branch Strategy
 
 - Leaf repository active development branch: **`feature/official-hubs-01`**
 - Management repo (`products/`) tracks the same branch via git submodule pointer.
 
-## 8. Related Repositories
-
-| Repository | Link | Role |
-|------------|------|------|
-| Airymax Hub (umbrella) | [atomgit.com/openairymax/airymaxhub](https://atomgit.com/openairymax/airymaxhub) | Top-level management repo |
-| Products (parent) | [atomgit.com/openairymax/products](https://atomgit.com/openairymax/products) | Packaging & distribution layer |
-| AgentRT Runtime / SDK | `sdk/agentrt` (within hub) | Upstream runtime |
-| Docker Deployment | [atomgit.com/openairymax/docker](https://atomgit.com/openairymax/docker) | Sibling deployment image |
-| MemoryRovol (commercial) | [atomgit.com/spharx/memoryrovol](https://atomgit.com/spharx/memoryrovol) | Commercial memory provider |
-| **Desktop Client (this repo)** | [atomgit.com/openairymax/desktop](https://atomgit.com/openairymax/desktop) | Personal client |
-
-## 9. License
+## License
 
 This repository is dual-licensed to maximize compatibility for personal users
 and downstream redistributors:
@@ -262,4 +274,10 @@ AGPL-3.0-or-later OR Apache-2.0
 See [`NOTICE`](NOTICE) for copyright, trademark and third-party component
 notices.
 
-Copyright (c) 2025-2026 **SPHARX Ltd.** All Rights Reserved.
+```
+Repository:  git@atomgit.com:openairymax/desktop.git
+Branch:      feature/official-hubs-01
+SPDX:        AGPL-3.0-or-later OR Apache-2.0
+```
+
+Copyright (c) 2025-2026 SPHARX Ltd. All Rights Reserved.
