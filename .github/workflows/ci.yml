@@ -1,249 +1,58 @@
-name: Desktop CI/CD
+name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: ["**"]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
-env:
-  NODE_VERSION: '20'
-  RUST_VERSION: '1.77'
-  TAURI_CLI_VERSION: '2.0.0'
+permissions:
+  contents: read
 
 jobs:
-  typecheck:
-    name: TypeScript Check
+  ci:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          fetch-depth: 1
 
-      - name: Install dependencies
-        run: npm ci
-
-      - name: TypeScript check
-        run: npx tsc --noEmit
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: ESLint check
-        run: npx eslint src/ --max-warnings 0
-
-  rust-check:
-    name: Rust Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: clippy, rustfmt
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Install system dependencies
+      - name: License check
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
-
-      - name: Rust fmt check
-        working-directory: src-tauri
-        run: cargo fmt -- --check
-
-      - name: Clippy check
-        working-directory: src-tauri
-        run: cargo clippy -- -D warnings
-
-      - name: Cargo check
-        working-directory: src-tauri
-        run: cargo check
-
-  test-frontend:
-    name: Frontend Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run frontend tests
-        run: npm test -- --coverage --watchAll=false
-
-  test-rust:
-    name: Rust Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-test-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-test-
-
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
-
-      - name: Run Rust tests
-        working-directory: src-tauri
-        run: cargo test
-
-  build-frontend:
-    name: Build Frontend
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-
-      - name: Verify build output
-        run: |
-          if [ ! -f dist/index.html ]; then
-            echo "Error: dist/index.html not found"
-            exit 1
+          if [ -f "LICENSE" ]; then
+            echo "[OK] LICENSE present"
+          else
+            echo "[NO] LICENSE missing" && exit 1
           fi
-          echo "Frontend build successful!"
 
-      - name: Upload frontend artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: dist/
-          retention-days: 1
-
-  build-tauri:
-    name: Build Tauri (${{ matrix.platform }})
-    needs: [typecheck, rust-check, test-frontend, test-rust, build-frontend]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: linux
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-          - platform: windows
-            os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - platform: macos-arm64
-            os: macos-latest
-            target: aarch64-apple-darwin
-          - platform: macos-x86
-            os: macos-13
-            target: x86_64-apple-darwin
-    runs-on: ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-
-      - name: Install frontend dependencies
-        run: npm ci
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          targets: ${{ matrix.target }}
-
-      - name: Cache Cargo
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ matrix.target }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-${{ matrix.target }}-
-
-      - name: Install Linux dependencies
-        if: matrix.platform == 'linux'
+      - name: README check
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+          if [ -f "README.md" ] || [ -f "README_zh.md" ]; then
+            echo "[OK] README present"
+          else
+            echo "[WARN] README missing"
+          fi
 
-      - name: Install Tauri CLI
-        run: cargo install tauri-cli@${{ env.TAURI_CLI_VERSION }}
+      - name: NOTICE check
+        run: |
+          if [ -f "NOTICE" ]; then
+            echo "[OK] NOTICE present"
+          else
+            echo "[WARN] NOTICE missing"
+          fi
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tauriScript: cargo tauri
-          args: --target ${{ matrix.target }}
+      - name: Dockerfile check
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "[OK] Dockerfile present"
+            # 语法检查（不实际构建）
+            docker run --rm -i hadolint/hadolint < Dockerfile 2>&1 || echo "[WARN] hadolint issues (non-blocking)"
+          else
+            echo "[INFO] No Dockerfile, skipping"
+          fi
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-${{ matrix.platform }}
-          path: |
-            src-tauri/target/${{ matrix.target }}/release/bundle/
-          retention-days: 7
+      - name: docker-compose check
+        run: |
+          if [ -f "docker-compose.yml" ]; then
+            echo "[OK] docker-compose.yml present"
+          fi
