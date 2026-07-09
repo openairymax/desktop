@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -100,7 +100,7 @@ const NotificationCenter: React.FC = () => {
   const getIcon = (type: NotificationItem['type']) => {
     switch (type) {
       case 'success':
-        return <CheckCircle2 size={16} color="#22c55e" />;
+        return <CheckCircle2 size={16} color="#34c759" />;
       case 'warning':
         return <AlertTriangle size={16} color="#ff9f0a" />;
       case 'error':
@@ -115,7 +115,7 @@ const NotificationCenter: React.FC = () => {
   const getTypeColor = (type: NotificationItem['type']) => {
     switch (type) {
       case 'success':
-        return '#22c55e';
+        return '#34c759';
       case 'warning':
         return '#ff9f0a';
       case 'error':

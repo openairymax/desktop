@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -32,14 +32,14 @@ const LAYER_CONFIG: Record<
 > = {
   L1: {
     color: '#007aff',
-    bg: 'rgba(59,130,246,0.1)',
+    bg: 'rgba(0,122,255,0.1)',
     icon: <Clock size={14} />,
     label: '工作记忆',
     desc: '短期临时信息，快速衰减',
   },
   L2: {
     color: '#af52de',
-    bg: 'rgba(139,92,246,0.1)',
+    bg: 'rgba(88,86,214,0.1)',
     icon: <Database size={14} />,
     label: '语义记忆',
     desc: '结构化知识，长期保存',

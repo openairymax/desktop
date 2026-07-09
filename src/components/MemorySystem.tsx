@@ -38,7 +38,7 @@ const MEMORY_TYPES = [
     label: '对话记忆',
     desc: '多轮对话上下文',
   },
-  { key: 'fact', icon: Database, color: '#22c55e', label: '事实记忆', desc: '已确认的知识' },
+  { key: 'fact', icon: Database, color: '#34c759', label: '事实记忆', desc: '已确认的知识' },
   { key: 'skill', icon: Zap, color: '#ff9f0a', label: '技能记忆', desc: '习得的能力模式' },
   { key: 'preference', icon: Shield, color: '#a855f7', label: '偏好记忆', desc: '用户习惯与偏好' },
   { key: 'error', icon: FileText, color: '#ff3b30', label: '错误记忆', desc: '失败经验教训' },
@@ -263,7 +263,7 @@ const MemorySystem: React.FC = () => {
 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
             <TokenRing value={memories.length} max={50} size={56} label="条目" color="#007aff" />
-            <TokenRing value={totalTokens} max={5000} size={56} label="tokens" color="#22c55e" />
+            <TokenRing value={totalTokens} max={5000} size={56} label="tokens" color="#34c759" />
             <TokenRing
               value={Math.round(contextWindow.usedPercent)}
               max={100}
@@ -274,7 +274,7 @@ const MemorySystem: React.FC = () => {
                   ? '#ff3b30'
                   : contextWindow.usedPercent > 40
                     ? '#ff9f0a'
-                    : '#22c55e'
+                    : '#34c759'
               }
             />
           </div>
@@ -416,7 +416,7 @@ const MemorySystem: React.FC = () => {
               {[
                 { label: '感知输入', icon: Eye, color: '#5ac8fa', sub: '观察/对话/事件' },
                 { label: '工作记忆', icon: Brain, color: '#007aff', sub: '短期缓存/推理' },
-                { label: '长期存储', icon: Database, color: '#22c55e', sub: '向量索引/持久化' },
+                { label: '长期存储', icon: Database, color: '#34c759', sub: '向量索引/持久化' },
                 { label: '检索召回', icon: Search, color: '#ff9f0a', sub: '语义相似度匹配' },
               ].map((node, i) => (
                 <React.Fragment key={node.label}>
@@ -850,7 +850,7 @@ const MemorySystem: React.FC = () => {
                       ? '#ff3b30'
                       : contextWindow.usedPercent > 40
                         ? '#ff9f0a'
-                        : '#22c55e'
+                        : '#34c759'
                   }
                 />
                 <div style={{ textAlign: 'center' }}>
@@ -891,7 +891,7 @@ const MemorySystem: React.FC = () => {
                   {
                     label: '输出预留',
                     value: contextWindow.breakdown.output,
-                    color: '#22c55e',
+                    color: '#34c759',
                     max: 16384,
                   },
                 ].map((item) => (
@@ -965,7 +965,7 @@ const MemorySystem: React.FC = () => {
                   title: '摘要压缩',
                   desc: '对早期对话生成摘要，释放 token 空间',
                   icon: FileText,
-                  color: '#22c55e',
+                  color: '#34c759',
                 },
                 {
                   title: '优先级遗忘',

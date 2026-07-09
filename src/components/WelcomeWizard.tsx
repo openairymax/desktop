@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import sdk from '../services/agentos-sdk';
 import { useI18n } from '../i18n';
 import {
@@ -94,7 +94,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             width: '280px',
             height: '280px',
             borderRadius: '50%',
-            background: 'rgba(139,92,246,0.08)',
+            background: 'rgba(88,86,214,0.08)',
           }}
         />
         <div
@@ -499,7 +499,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                   title: 'Docker Compose',
                   desc: '使用容器化部署，一键启动所有服务（推荐新手使用）',
                   tag: '推荐',
-                  tagColor: '#22c55e',
+                  tagColor: '#34c759',
                 },
                 {
                   mode: 'local' as const,
@@ -616,7 +616,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 width: '68px',
                 height: '68px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #34c759, #34d399)',
+                background: 'linear-gradient(135deg, #34c759, #30d158)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

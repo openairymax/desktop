@@ -1,4 +1,4 @@
-﻿import React, { useState, createContext, useContext, useCallback } from 'react';
+import React, { useState, createContext, useContext, useCallback } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -35,7 +35,7 @@ const TOAST_CONFIGS: Record<
 > = {
   success: {
     icon: CheckCircle2,
-    color: '#22c55e',
+    color: '#34c759',
     bgColor: 'rgba(52, 199, 89, 0.08)',
     borderColor: 'rgba(52, 199, 89, 0.25)',
   },
