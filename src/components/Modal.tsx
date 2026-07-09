@@ -30,33 +30,33 @@ const MODAL_CONFIGS: Record<
 > = {
   confirm: {
     icon: HelpCircle,
-    color: '#6366f1',
-    bg: 'rgba(99,102,241,0.08)',
-    borderColor: 'rgba(99,102,241,0.25)',
+    color: '#007aff',
+    bg: 'rgba(0,122,255,0.08)',
+    borderColor: 'rgba(0,122,255,0.25)',
   },
   danger: {
     icon: XCircle,
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.08)',
-    borderColor: 'rgba(239,68,68,0.25)',
+    color: '#ff3b30',
+    bg: 'rgba(255,59,48,0.08)',
+    borderColor: 'rgba(255,59,48,0.25)',
   },
   info: {
     icon: Info,
-    color: '#3b82f6',
-    bg: 'rgba(59,130,246,0.08)',
-    borderColor: 'rgba(59,130,246,0.25)',
+    color: '#007aff',
+    bg: 'rgba(0,122,255,0.08)',
+    borderColor: 'rgba(0,122,255,0.25)',
   },
   success: {
     icon: CheckCircle2,
     color: '#22c55e',
-    bg: 'rgba(34,197,94,0.08)',
-    borderColor: 'rgba(34,197,94,0.25)',
+    bg: 'rgba(52,199,89,0.08)',
+    borderColor: 'rgba(52,199,89,0.25)',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.08)',
-    borderColor: 'rgba(245,158,11,0.25)',
+    color: '#ff9f0a',
+    bg: 'rgba(255,159,10,0.08)',
+    borderColor: 'rgba(255,159,10,0.25)',
   },
 };
 

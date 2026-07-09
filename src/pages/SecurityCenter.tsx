@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import {
@@ -611,8 +611,8 @@ const SecurityCenter: React.FC = () => {
                   gap: '8px',
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                   fontSize: '11px',
                 }}
               >
@@ -625,7 +625,7 @@ const SecurityCenter: React.FC = () => {
                 </div>
                 <span style={{
                   padding: '2px 7px', borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--success-color)',
+                  backgroundColor: 'rgba(52,199,89,0.15)', color: 'var(--success-color)',
                   fontWeight: '600', fontSize: '10px', flexShrink: 0,
                 }}>通过</span>
               </div>
@@ -638,8 +638,8 @@ const SecurityCenter: React.FC = () => {
                   gap: '8px',
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                   fontSize: '11px',
                 }}
               >
@@ -652,7 +652,7 @@ const SecurityCenter: React.FC = () => {
                 </div>
                 <span style={{
                   padding: '2px 7px', borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.15)', color: 'var(--success-color)',
+                  backgroundColor: 'rgba(52,199,89,0.15)', color: 'var(--success-color)',
                   fontWeight: '600', fontSize: '10px', flexShrink: 0,
                 }}>通过</span>
               </div>
@@ -669,8 +669,8 @@ const SecurityCenter: React.FC = () => {
                   gap: '8px',
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.08)',
-                  border: '1px solid rgba(16,185,129,0.25)',
+                  backgroundColor: 'rgba(52,199,89,0.08)',
+                  border: '1px solid rgba(52,199,89,0.25)',
                   marginBottom: '4px',
                   fontSize: '12px',
                 }}

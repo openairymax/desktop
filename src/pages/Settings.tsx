@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
   Settings as SettingsIcon,
@@ -524,7 +524,7 @@ const Settings: React.FC = () => {
                 width: '72px',
                 height: '72px',
                 borderRadius: '18px',
-                background: 'linear-gradient(135deg, #6366f1, #8b5cf6, #06b6d4)',
+                background: 'linear-gradient(135deg, #007aff, #af52de, #5ac8fa)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -612,7 +612,7 @@ const Settings: React.FC = () => {
             border: 'none',
             borderRadius: '8px',
             background: saved
-              ? '#10b981'
+              ? '#34c759'
               : 'linear-gradient(135deg, var(--primary-color), var(--primary-dark))',
             color: 'white',
             cursor: saving ? 'not-allowed' : 'pointer',

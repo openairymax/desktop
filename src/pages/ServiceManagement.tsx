@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Server,
@@ -30,20 +30,20 @@ const STATUS_MAP: Record<
 > = {
   connected: {
     icon: <Wifi size={14} />,
-    color: '#10b981',
-    bg: 'rgba(16,185,129,0.1)',
+    color: '#34c759',
+    bg: 'rgba(52,199,89,0.1)',
     label: '已连接',
   },
   disconnected: {
     icon: <WifiOff size={14} />,
-    color: '#ef4444',
-    bg: 'rgba(239,68,68,0.1)',
+    color: '#ff3b30',
+    bg: 'rgba(255,59,48,0.1)',
     label: '未连接',
   },
   error: {
     icon: <AlertCircle size={14} />,
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.1)',
+    color: '#ff9f0a',
+    bg: 'rgba(255,159,10,0.1)',
     label: '异常',
   },
   unknown: {
@@ -174,7 +174,7 @@ const ServiceManagement: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #10b981, #059669)',
+              background: 'linear-gradient(135deg, #34c759, #059669)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -209,7 +209,7 @@ const ServiceManagement: React.FC = () => {
             borderRadius: '8px',
             background: checkingId
               ? 'var(--bg-tertiary)'
-              : 'linear-gradient(135deg, #10b981, #059669)',
+              : 'linear-gradient(135deg, #34c759, #059669)',
             color: checkingId ? 'var(--text-muted)' : 'white',
             cursor: checkingId ? 'not-allowed' : 'pointer',
             fontSize: '13px',
@@ -237,8 +237,8 @@ const ServiceManagement: React.FC = () => {
             label: '总服务数',
             value: stats.total,
             icon: <Server size={16} />,
-            bg: 'rgba(99,102,241,0.1)',
-            color: '#6366f1',
+            bg: 'rgba(0,122,255,0.1)',
+            color: '#007aff',
           },
           {
             label: '已连接',

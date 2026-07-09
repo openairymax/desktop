@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   ArrowRight,
   CheckCircle2,
@@ -188,7 +188,7 @@ export const StepByStepGuide: React.FC<StepByStepGuideProps> = ({ onComplete }) 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(99, 102, 241, 0.3)',
+                boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
               }}
             >
               {currentStepData.icon}

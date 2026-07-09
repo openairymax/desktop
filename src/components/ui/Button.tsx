@@ -41,9 +41,9 @@ export const Button: React.FC<ButtonProps> = ({
 
   const variantStyles: Record<string, React.CSSProperties> = {
     primary: {
-      background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+      background: 'linear-gradient(135deg, #007aff, #5856d6)',
       color: 'white',
-      boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3), 0 0 0 1px rgba(99, 102, 241, 0.1) inset',
+      boxShadow: '0 2px 8px rgba(0, 122, 255, 0.3), 0 0 0 1px rgba(0, 122, 255, 0.1) inset',
     },
     secondary: {
       backgroundColor: 'var(--bg-tertiary)',
@@ -57,20 +57,20 @@ export const Button: React.FC<ButtonProps> = ({
       border: '1px solid transparent',
     },
     danger: {
-      background: 'linear-gradient(135deg, var(--error-color), #f87171)',
+      background: 'linear-gradient(135deg, #ff3b30, #ff453a)',
       color: 'white',
-      boxShadow: '0 2px 8px rgba(239, 68, 68, 0.3)',
+      boxShadow: '0 2px 8px rgba(255, 59, 48, 0.3)',
     },
     success: {
-      background: 'linear-gradient(135deg, var(--success-color), #4ade80)',
+      background: 'linear-gradient(135deg, #34c759, #30d158)',
       color: 'white',
-      boxShadow: '0 2px 8px rgba(34, 197, 94, 0.3)',
+      boxShadow: '0 2px 8px rgba(52, 199, 89, 0.3)',
     },
   };
 
   const hoverStyles: Record<string, React.CSSProperties> = {
     primary: {
-      boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4), 0 0 0 1px rgba(99, 102, 241, 0.2) inset',
+      boxShadow: '0 4px 16px rgba(0, 122, 255, 0.4), 0 0 0 1px rgba(0, 122, 255, 0.2) inset',
       transform: 'translateY(-1px)',
     },
     secondary: {
@@ -85,11 +85,11 @@ export const Button: React.FC<ButtonProps> = ({
       transform: 'translateY(-1px)',
     },
     danger: {
-      boxShadow: '0 4px 16px rgba(239, 68, 68, 0.4)',
+      boxShadow: '0 4px 16px rgba(255, 59, 48, 0.4)',
       transform: 'translateY(-1px)',
     },
     success: {
-      boxShadow: '0 4px 16px rgba(34, 197, 94, 0.4)',
+      boxShadow: '0 4px 16px rgba(52, 199, 89, 0.4)',
       transform: 'translateY(-1px)',
     },
   };
@@ -105,14 +105,14 @@ export const Button: React.FC<ButtonProps> = ({
         justifyContent: 'center',
         gap: '6px',
         border: variant === 'secondary' ? '1px solid var(--border-color)' : 'none',
-        borderRadius: 'var(--radius-md)',
-        fontWeight: 'var(--font-weight-normal)',
+        borderRadius: 'var(--radius-lg)',
+        fontWeight: 'var(--font-weight-medium)',
         cursor: disabled || loading ? 'not-allowed' : 'pointer',
         transition: 'all var(--transition-base)',
         position: 'relative',
         overflow: 'hidden',
         fontFamily: 'inherit',
-        letterSpacing: 'var(--letter-spacing-normal)',
+        letterSpacing: '-0.005em',
         whiteSpace: 'nowrap',
         ...sizeStyles[size],
         ...variantStyles[variant],
@@ -133,7 +133,7 @@ export const Button: React.FC<ButtonProps> = ({
       }}
       onMouseDown={(e) => {
         if (!disabled && !loading) {
-          e.currentTarget.style.transform = 'scale(0.97)';
+          e.currentTarget.style.transform = 'scale(0.96)';
         }
       }}
       onMouseUp={(e) => {

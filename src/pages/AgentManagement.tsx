@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Bot,
@@ -213,7 +213,7 @@ const AgentManagement: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              background: 'linear-gradient(135deg, #af52de, #af52de)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -269,7 +269,7 @@ const AgentManagement: React.FC = () => {
               padding: '8px 16px',
               border: 'none',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              background: 'linear-gradient(135deg, #af52de, #af52de)',
               color: 'white',
               cursor: 'pointer',
               display: 'flex',
@@ -297,7 +297,7 @@ const AgentManagement: React.FC = () => {
             label: t('dashboard.activeAgents'),
             value: stats.total,
             icon: <Bot size={18} />,
-            color: '#8b5cf6',
+            color: '#af52de',
             bg: 'rgba(139,92,246,0.1)',
           },
           {
@@ -475,7 +475,7 @@ const AgentManagement: React.FC = () => {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 16px',
-              background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+              background: 'linear-gradient(135deg, #af52de, #af52de)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -537,7 +537,7 @@ const AgentManagement: React.FC = () => {
                           width: '42px',
                           height: '42px',
                           borderRadius: '10px',
-                          background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                          background: 'linear-gradient(135deg, #af52de, #af52de)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -927,7 +927,7 @@ const AgentManagement: React.FC = () => {
                   aria-label="确认创建 Agent"
                   style={{
                     padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                    background: 'linear-gradient(135deg, #af52de, #af52de)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
@@ -1057,7 +1057,7 @@ const AgentManagement: React.FC = () => {
                   aria-label="发送调用指令"
                   style={{
                     padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                    background: 'linear-gradient(135deg, #af52de, #af52de)',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',

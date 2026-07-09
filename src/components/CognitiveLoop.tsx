@@ -38,8 +38,8 @@ const PHASES: Record<CyclePhase, StepData> = {
     title: '感知 (Perceive)',
     description: '接收用户输入、观察系统状态、读取环境信号',
     icon: Eye,
-    color: '#06b6d4',
-    gradient: 'linear-gradient(135deg, #06b6d4, #22d3ee)',
+    color: '#5ac8fa',
+    gradient: 'linear-gradient(135deg, #5ac8fa, #5ac8fa)',
     duration: 2000,
   },
   reasoning: {
@@ -47,8 +47,8 @@ const PHASES: Record<CyclePhase, StepData> = {
     title: '推理 (Reason)',
     description: '调用 LLM 进行语义理解、意图识别、方案规划',
     icon: Brain,
-    color: '#6366f1',
-    gradient: 'linear-gradient(135deg, #6366f1, #818cf8)',
+    color: '#007aff',
+    gradient: 'linear-gradient(135deg, #007aff, #5856d6)',
     duration: 3500,
   },
   action: {
@@ -65,8 +65,8 @@ const PHASES: Record<CyclePhase, StepData> = {
     title: '反思 (Reflect)',
     description: '评估结果质量、更新记忆、记录经验教训',
     icon: RefreshCw,
-    color: '#f59e0b',
-    gradient: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
+    color: '#ff9f0a',
+    gradient: 'linear-gradient(135deg, #ff9f0a, #ff9f0a)',
     duration: 2000,
   },
   idle: {
@@ -248,11 +248,11 @@ const CognitiveLoop: React.FC = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: 'var(--radius-lg)',
-                background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
+                background: 'linear-gradient(135deg, #007aff, #af52de)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.3)',
+                boxShadow: '0 4px 16px rgba(0,122,255,0.3)',
               }}
             >
               <Brain size="24" color="white" />
@@ -632,8 +632,8 @@ const CognitiveLoop: React.FC = () => {
                           tool.status === 'success'
                             ? 'linear-gradient(135deg,#22c55e,#4ade80)'
                             : tool.status === 'error'
-                              ? 'linear-gradient(135deg,#ef4444,#f87171)'
-                              : 'linear-gradient(135deg,#3b82f6,#60a5fa)',
+                              ? 'linear-gradient(135deg,#ff3b30,#ff453a)'
+                              : 'linear-gradient(135deg,#007aff,#5856d6)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -667,16 +667,16 @@ const CognitiveLoop: React.FC = () => {
                             padding: '2px 8px',
                             background:
                               tool.status === 'success'
-                                ? 'rgba(34,197,94,0.1)'
+                                ? 'rgba(52,199,89,0.1)'
                                 : tool.status === 'error'
-                                  ? 'rgba(239,68,68,0.1)'
-                                  : 'rgba(59,130,246,0.1)',
+                                  ? 'rgba(255,59,48,0.1)'
+                                  : 'rgba(0,122,255,0.1)',
                             color:
                               tool.status === 'success'
                                 ? '#22c55e'
                                 : tool.status === 'error'
-                                  ? '#ef4444'
-                                  : '#3b82f6',
+                                  ? '#ff3b30'
+                                  : '#007aff',
                           }}
                         >
                           {tool.status === 'success'

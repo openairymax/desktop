@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import sdk from '../services/agentos-sdk';
 import { useI18n } from '../i18n';
 import {
@@ -83,7 +83,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             width: '240px',
             height: '240px',
             borderRadius: '50%',
-            background: 'rgba(99,102,241,0.12)',
+            background: 'rgba(0,122,255,0.12)',
           }}
         />
         <div
@@ -105,7 +105,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
             width: '120px',
             height: '120px',
             borderRadius: '50%',
-            background: 'rgba(99,102,241,0.06)',
+            background: 'rgba(0,122,255,0.06)',
           }}
         />
 
@@ -115,12 +115,12 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               width: '72px',
               height: '72px',
               borderRadius: '18px',
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+              background: 'linear-gradient(135deg, #007aff, #af52de)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 20px',
-              boxShadow: '0 8px 32px rgba(99,102,241,0.4)',
+              boxShadow: '0 8px 32px rgba(0,122,255,0.4)',
               fontSize: '32px',
               fontWeight: 800,
               color: 'white',
@@ -281,21 +281,21 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                   icon: Brain,
                   title: '三层认知循环',
                   desc: '感知 → 规划 → 行动',
-                  color: '#8b5cf6',
+                  color: '#af52de',
                 },
                 {
                   icon: Layers,
                   title: '四层记忆卷载',
                   desc: '原始 → 特征 → 结构 → 模式',
-                  color: '#06b6d4',
+                  color: '#5ac8fa',
                 },
                 {
                   icon: Shield,
                   title: '安全穹顶 Cupolas',
                   desc: '四层纵深防御体系',
-                  color: '#ef4444',
+                  color: '#ff3b30',
                 },
-                { icon: Zap, title: '双系统思考', desc: '快思考 + 慢推理协同', color: '#f59e0b' },
+                { icon: Zap, title: '双系统思考', desc: '快思考 + 慢推理协同', color: '#ff9f0a' },
               ].map((feature, idx) => (
                 <div
                   key={idx}
@@ -363,28 +363,28 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 title="微内核 CoreKern"
                 desc="极简内核设计，仅约 10K 行 C 代码。IPC Binder 延迟 <10μs，纳秒级时间服务，智能指针内存管理。"
                 icon={<Cpu size={20} />}
-                color="#6366f1"
+                color="#007aff"
                 tags={['L4权限', '<10μs延迟', 'Rust安全']}
               />
               <ArchFeatureCard
                 title="三层认知循环 CoreLoopThree"
                 desc="感知层（意图理解）→ 规划层（DAG任务分解）→ 行动层（执行与反馈）。支持 System 1 快思考与 System 2 慢推理双轨并行。"
                 icon={<Activity size={20} />}
-                color="#8b5cf6"
+                color="#af52de"
                 tags={['S1+S2', '~450ms周期', '+500% Token']}
               />
               <ArchFeatureCard
                 title="四层记忆卷载 MemoryRovol"
                 desc="L1 原始卷 → L2 特征层(FAISS向量) → L3 结构层(知识图谱) → L4 模式层(稳定规则)。支持艾宾浩斯遗忘曲线自动裁剪。"
                 icon={<Database size={20} />}
-                color="#06b6d4"
+                color="#5ac8fa"
                 tags={['FAISS', '混合检索', '自动进化']}
               />
               <ArchFeatureCard
                 title="安全穹顶 Cupolas"
                 desc="虚拟工作空间隔离、RBAC 权限裁决、输入净化过滤、全链路审计追踪。四层纵深防御体系确保内生安全。"
                 icon={<Shield size={20} />}
-                color="#ef4444"
+                color="#ff3b30"
                 tags={['零信任', '审计', '隔离']}
               />
             </div>
@@ -507,7 +507,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                   title: '本地开发模式',
                   desc: '直接在本地运行各服务组件，适合开发者调试',
                   tag: '开发',
-                  tagColor: '#f59e0b',
+                  tagColor: '#ff9f0a',
                 },
               ].map((opt) => (
                 <button
@@ -616,12 +616,12 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
                 width: '68px',
                 height: '68px',
                 borderRadius: '50%',
-                background: 'linear-gradient(135deg, #10b981, #34d399)',
+                background: 'linear-gradient(135deg, #34c759, #34d399)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 20px',
-                boxShadow: '0 8px 24px rgba(16,185,129,0.25)',
+                boxShadow: '0 8px 24px rgba(52,199,89,0.25)',
               }}
             >
               <CheckCircle2 size={34} color="white" />
@@ -683,9 +683,9 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               style={{
                 marginTop: '20px',
                 padding: '14px',
-                background: 'rgba(99,102,241,0.06)',
+                background: 'rgba(0,122,255,0.06)',
                 borderRadius: 'var(--radius-md)',
-                border: '1px solid rgba(99,102,241,0.1)',
+                border: '1px solid rgba(0,122,255,0.1)',
               }}
             >
               <div
@@ -700,7 +700,7 @@ const WelcomeWizard: React.FC<WelcomeWizardProps> = ({ onComplete }) => {
               >
                 <Lightbulb
                   size={14}
-                  style={{ color: '#f59e0b', flexShrink: 0, marginTop: '2px' }}
+                  style={{ color: '#ff9f0a', flexShrink: 0, marginTop: '2px' }}
                 />
                 <span>
                   <strong>提示：</strong>

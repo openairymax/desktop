@@ -221,7 +221,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           alignItems: 'center',
           gap: '12px',
           padding: sidebarCollapsed ? '10px' : '10px 14px',
-          borderRadius: '8px',
+          borderRadius: '10px',
           cursor: 'pointer',
           transition: 'all 150ms ease',
           color: isActive ? 'var(--primary-color)' : 'var(--text-secondary)',
@@ -233,6 +233,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           whiteSpace: 'nowrap',
           overflow: 'hidden',
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+          borderLeft: isActive ? '3px solid #007aff' : '3px solid transparent',
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
@@ -267,7 +268,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             padding: '0 14px',
             marginBottom: '6px',
             textTransform: 'uppercase',
-            letterSpacing: '0.08em',
+            letterSpacing: '0.1em',
           }}
         >
           {title}
@@ -334,7 +335,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             style={{
               fontSize: '18px',
               fontWeight: '700',
-              background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+              background: 'linear-gradient(135deg, #007aff, #5856d6)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -436,7 +437,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       >
         <header
           style={{
-            height: '48px',
+            height: '52px',
             backgroundColor: 'var(--bg-secondary)',
             display: 'flex',
             alignItems: 'center',
@@ -457,8 +458,8 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </button>
             <h2
               style={{
-                fontSize: '14px',
-                fontWeight: '500',
+                fontSize: '15px',
+                fontWeight: '600',
                 color: 'var(--text-primary)',
                 margin: 0,
               }}
@@ -472,12 +473,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               onClick={() => setSearchOpen(true)}
               title="全局搜索 (Ctrl+K)"
               style={{
-                width: '34px',
-                height: '34px',
+                width: '36px',
+                height: '36px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 border: '1px solid var(--border-color)',
                 background: 'transparent',
                 color: 'var(--text-secondary)',
@@ -625,7 +626,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     width: '30px',
                     height: '30px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--primary-color), var(--info-color))',
+                    background: 'linear-gradient(135deg, #007aff, #5856d6)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -651,7 +652,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             overflowY: 'auto',
             overflowX: 'hidden',
             backgroundColor: 'var(--bg-primary)',
-            padding: '24px',
+            padding: '28px',
           }}
         >
           <ErrorBoundary>

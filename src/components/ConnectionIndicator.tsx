@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useConnection } from '../hooks/useAgentOS';
 import { Wifi, WifiOff, Loader, AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -23,15 +23,15 @@ const STATUS_CONFIG: Record<
 > = {
   connected: {
     color: 'var(--success-color, #22c55e)',
-    bgColor: 'rgba(34, 197, 94, 0.1)',
+    bgColor: 'rgba(52, 199, 89, 0.1)',
     label: 'Connected',
     labelCn: '已连接',
     icon: <Wifi size={12} />,
     pulse: false,
   },
   connecting: {
-    color: 'var(--warning-color, #f59e0b)',
-    bgColor: 'rgba(245, 158, 11, 0.1)',
+    color: 'var(--warning-color, #ff9f0a)',
+    bgColor: 'rgba(255, 159, 10, 0.1)',
     label: 'Connecting',
     labelCn: '连接中',
     icon: <Loader size={12} />,
@@ -46,8 +46,8 @@ const STATUS_CONFIG: Record<
     pulse: false,
   },
   error: {
-    color: 'var(--error-color, #ef4444)',
-    bgColor: 'rgba(239, 68, 68, 0.1)',
+    color: 'var(--error-color, #ff3b30)',
+    bgColor: 'rgba(255, 59, 48, 0.1)',
     label: 'Error',
     labelCn: '连接错误',
     icon: <AlertTriangle size={12} />,
