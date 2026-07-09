@@ -386,7 +386,11 @@ const AIChat: React.FC<{
                 style={{
                   maxWidth: '100%',
                   padding: '10px 14px',
-                  borderRadius: 'var(--radius-lg)',
+                  borderRadius: msg.role === 'user'
+                    ? '16px 16px 4px 16px'
+                    : msg.role === 'system'
+                      ? '16px 16px 16px 4px'
+                      : '16px 16px 16px 4px',
                   backgroundColor:
                     msg.role === 'user'
                       ? 'var(--primary-color)'
@@ -484,7 +488,7 @@ const AIChat: React.FC<{
             <div
               style={{
                 padding: '10px 14px',
-                borderRadius: 'var(--radius-lg)',
+                borderRadius: '16px 16px 16px 4px',
                 backgroundColor: 'var(--bg-tertiary)',
                 color: 'var(--text-muted)',
                 fontSize: 'var(--font-size-sm)',
@@ -546,7 +550,7 @@ const AIChat: React.FC<{
             flex: 1,
             padding: '10px 14px',
             border: '1px solid var(--border-color)',
-            borderRadius: 'var(--radius-md)',
+            borderRadius: '16px',
             backgroundColor: 'var(--bg-tertiary)',
             color: 'var(--text-primary)',
             fontSize: 'var(--font-size-md)',

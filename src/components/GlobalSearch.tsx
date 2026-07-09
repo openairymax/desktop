@@ -187,8 +187,9 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
               position: 'fixed',
               inset: 0,
               zIndex: 2000,
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              backdropFilter: 'blur(8px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.28)',
+              backdropFilter: 'blur(40px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(40px) saturate(180%)',
             }}
           />
           <motion.div
@@ -218,8 +219,8 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                padding: '12px 16px',
+                gap: '12px',
+                padding: '16px 20px',
                 borderBottom: '1px solid var(--border-subtle)',
               }}
             >
@@ -317,7 +318,7 @@ const GlobalSearch: React.FC<GlobalSearchProps> = ({ open, onClose }) => {
                             fontFamily: 'inherit',
                             fontSize: '13px',
                             color: isSelected ? 'var(--primary-color)' : 'var(--text-secondary)',
-                            transition: 'all 100ms ease',
+                            transition: 'all 120ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                             textAlign: 'left',
                           }}
                         >

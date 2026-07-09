@@ -234,17 +234,20 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           overflow: 'hidden',
           justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
           borderLeft: isActive ? '3px solid #007aff' : '3px solid transparent',
+          transform: isActive ? 'translateX(2px)' : 'translateX(0)',
         }}
         onMouseEnter={(e) => {
           if (!isActive) {
             e.currentTarget.style.backgroundColor = 'var(--bg-tertiary)';
             e.currentTarget.style.color = 'var(--text-primary)';
+            e.currentTarget.style.transform = 'translateX(2px)';
           }
         }}
         onMouseLeave={(e) => {
           if (!isActive) {
             e.currentTarget.style.backgroundColor = 'transparent';
             e.currentTarget.style.color = 'var(--text-secondary)';
+            e.currentTarget.style.transform = 'translateX(0)';
           }
         }}
         title={item.label}
@@ -308,7 +311,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <motion.aside
         initial={false}
         animate={{ width: sidebarCollapsed ? '64px' : '240px' }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
         style={{
           backgroundColor: 'var(--bg-secondary)',
           borderRight: '1px solid var(--border-subtle)',

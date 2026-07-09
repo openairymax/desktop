@@ -212,7 +212,7 @@ const AgentManagement: React.FC = () => {
             style={{
               width: '48px',
               height: '48px',
-              borderRadius: '12px',
+              borderRadius: '16px',
               background: 'linear-gradient(135deg, #af52de, #af52de)',
               display: 'flex',
               alignItems: 'center',
@@ -329,8 +329,8 @@ const AgentManagement: React.FC = () => {
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
-              padding: '18px 20px',
+              borderRadius: '16px',
+              padding: '22px 22px',
               display: 'flex',
               alignItems: 'center',
               gap: '14px',
@@ -457,7 +457,7 @@ const AgentManagement: React.FC = () => {
           style={{
             backgroundColor: 'var(--bg-secondary)',
             border: '1px solid var(--border-subtle)',
-            borderRadius: '12px',
+            borderRadius: '16px',
             padding: '48px',
             textAlign: 'center',
           }}
@@ -511,8 +511,8 @@ const AgentManagement: React.FC = () => {
                   style={{
                     backgroundColor: 'var(--bg-secondary)',
                     border: '1px solid var(--border-subtle)',
-                    borderRadius: '12px',
-                    padding: '20px',
+                    borderRadius: '16px',
+                    padding: '22px',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.boxShadow = 'var(--shadow-md)';
@@ -565,7 +565,7 @@ const AgentManagement: React.FC = () => {
                             gap: '4px',
                             fontSize: '11px',
                             padding: '2px 8px',
-                            borderRadius: '12px',
+                            borderRadius: 'var(--radius-full)',
                             fontWeight: '500',
                             color: statusCfg.color,
                             backgroundColor: statusCfg.bg,

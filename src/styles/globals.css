@@ -2123,31 +2123,37 @@ p {
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
+    transform: translateY(20px);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
+    filter: blur(0px);
   }
 }
 @keyframes pageFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
+    filter: blur(1px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+    filter: blur(0px);
   }
 }
 @keyframes staggerFadeIn {
   from {
     opacity: 0;
-    transform: translateY(12px) scale(0.97);
+    transform: translateY(16px) scale(0.96);
+    filter: blur(2px);
   }
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+    filter: blur(0px);
   }
 }
 @keyframes statusPulse {
@@ -2386,11 +2392,13 @@ p {
 @keyframes scaleInCenter {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.88);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: scale(1);
+    filter: blur(0px);
   }
 }
 
@@ -2406,7 +2414,7 @@ p {
 }
 
 .card-elevated:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px) scale(1.005);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -2905,13 +2913,14 @@ p {
   max-height: 480px;
   background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
+  border-radius: 16px;
   box-shadow:
     var(--shadow-lg),
-    0 16px 48px rgba(0, 0, 0, 0.25);
+    0 16px 48px rgba(0, 0, 0, 0.16),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset;
   display: flex;
   flex-direction: column;
-  animation: slideDown 0.2s ease-out;
+  animation: slideDown 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 200;
   overflow: hidden;
 }
@@ -3080,9 +3089,8 @@ p {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   box-shadow:
-    var(--shadow-lg),
-    0 24px 64px rgba(0, 0, 0, 0.35),
-    0 0 80px rgba(0, 122, 255, 0.08);
+    0 24px 80px rgba(0, 0, 0, 0.28),
+    0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
   display: flex;
   flex-direction: column;
   animation: scaleInCenter 0.2s ease-out;
@@ -3495,10 +3503,10 @@ html.theme-transitioning *::after {
   gap: 12px;
   padding: 14px 18px;
   background: var(--bg-elevated);
-  border-radius: var(--radius-lg);
+  border-radius: 14px;
   box-shadow:
-    var(--shadow-lg),
-    0 8px 24px rgba(0, 0, 0, 0.2);
+    0 8px 32px rgba(0, 0, 0, 0.12),
+    0 0 0 0.5px rgba(255, 255, 255, 0.06) inset;
   border: 1px solid transparent;
   border-left-width: 3px;
   border-style: solid;
@@ -3513,7 +3521,7 @@ html.theme-transitioning *::after {
 @keyframes toastSlideIn {
   from {
     opacity: 0;
-    transform: translateX(100%) scale(0.95);
+    transform: translateX(100%) scale(0.9);
   }
   to {
     opacity: 1;
@@ -3528,7 +3536,7 @@ html.theme-transitioning *::after {
   }
   to {
     opacity: 0;
-    transform: translateX(100%) scale(0.95);
+    transform: translateX(40%) scale(0.92);
   }
 }
 
@@ -3536,7 +3544,7 @@ html.theme-transitioning *::after {
   flex-shrink: 0;
   width: 32px;
   height: 32px;
-  border-radius: var(--radius-md);
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3682,25 +3690,25 @@ html.theme-transitioning *::after {
   animation-delay: 0ms;
 }
 .stagger-enter > *:nth-child(2) {
-  animation-delay: 60ms;
+  animation-delay: 50ms;
 }
 .stagger-enter > *:nth-child(3) {
-  animation-delay: 120ms;
+  animation-delay: 100ms;
 }
 .stagger-enter > *:nth-child(4) {
-  animation-delay: 180ms;
+  animation-delay: 150ms;
 }
 .stagger-enter > *:nth-child(5) {
-  animation-delay: 240ms;
+  animation-delay: 200ms;
 }
 .stagger-enter > *:nth-child(6) {
-  animation-delay: 300ms;
+  animation-delay: 250ms;
 }
 .stagger-enter > *:nth-child(7) {
-  animation-delay: 360ms;
+  animation-delay: 300ms;
 }
 .stagger-enter > *:nth-child(8) {
-  animation-delay: 420ms;
+  animation-delay: 350ms;
 }
 
 @keyframes staggerFadeIn {
