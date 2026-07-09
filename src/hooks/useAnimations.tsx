@@ -1,4 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
+﻿/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState, useCallback } from 'react';
 
 interface AnimationConfig {
@@ -193,7 +193,7 @@ export const GlowCard: React.FC<{
   hoverable?: boolean;
 }> = ({
   children,
-  glowColor = '#6366f1',
+  glowColor = '#007aff',
   intensity = 0.4,
   className = '',
   style = {},
@@ -253,7 +253,7 @@ export const GradientText: React.FC<{
   style?: React.CSSProperties;
 }> = ({
   children,
-  colors = ['#6366f1', '#a78bfa'],
+  colors = ['#007aff', '#af52de'],
   animated = true,
   className = '',
   style = {},

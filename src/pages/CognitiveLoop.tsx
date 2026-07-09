@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -56,26 +56,26 @@ const PHASE_CONFIG: Record<
 > = {
   perception: {
     icon: <Eye size={14} />,
-    color: '#3b82f6',
+    color: '#007aff',
     bgColor: 'rgba(59,130,246,0.1)',
     label: '感知',
   },
   reasoning: {
     icon: <Brain size={14} />,
-    color: '#8b5cf6',
+    color: '#af52de',
     bgColor: 'rgba(139,92,246,0.1)',
     label: '推理',
   },
   action: {
     icon: <Zap size={14} />,
-    color: '#f59e0b',
-    bgColor: 'rgba(245,158,11,0.1)',
+    color: '#ff9f0a',
+    bgColor: 'rgba(255,159,10,0.1)',
     label: '行动',
   },
   reflection: {
     icon: <CheckCircle size={14} />,
-    color: '#10b981',
-    bgColor: 'rgba(16,185,129,0.1)',
+    color: '#34c759',
+    bgColor: 'rgba(52,199,89,0.1)',
     label: '反思',
   },
 };
@@ -215,7 +215,7 @@ const CognitiveLoop: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+              background: 'linear-gradient(135deg, #5ac8fa, #007aff)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -357,7 +357,7 @@ const CognitiveLoop: React.FC = () => {
               boxSizing: 'border-box',
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = '#06b6d4';
+              e.currentTarget.style.borderColor = '#5ac8fa';
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -372,7 +372,7 @@ const CognitiveLoop: React.FC = () => {
               borderRadius: '8px',
               background: running
                 ? 'var(--bg-tertiary)'
-                : 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                : 'linear-gradient(135deg, #5ac8fa, #007aff)',
               color: running ? 'var(--text-muted)' : 'white',
               cursor: !input.trim() || running ? 'not-allowed' : 'pointer',
               fontFamily: 'inherit',
@@ -416,7 +416,7 @@ const CognitiveLoop: React.FC = () => {
                           : steps[idx]?.status === 'running'
                             ? cfg.bgColor
                             : steps[idx]?.status === 'failed'
-                              ? 'rgba(239,68,68,0.1)'
+                              ? 'rgba(255,59,48,0.1)'
                               : 'var(--bg-tertiary)',
                       color:
                         steps[idx]?.status === 'completed'
@@ -474,7 +474,7 @@ const CognitiveLoop: React.FC = () => {
                 style={{
                   height: '100%',
                   borderRadius: '3px',
-                  background: 'linear-gradient(90deg, #3b82f6, #8b5cf6, #f59e0b, #10b981)',
+                  background: 'linear-gradient(90deg, #007aff, #af52de, #ff9f0a, #34c759)',
                 }}
               />
             </div>
@@ -487,8 +487,8 @@ const CognitiveLoop: React.FC = () => {
           role="alert"
           aria-live="assertive"
           style={{
-            backgroundColor: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.3)',
+            backgroundColor: 'rgba(255,59,48,0.08)',
+            border: '1px solid rgba(255,59,48,0.3)',
             borderRadius: '12px',
             padding: '14px 20px',
             marginBottom: '16px',
@@ -682,7 +682,7 @@ const CognitiveLoop: React.FC = () => {
               marginBottom: '16px',
             }}
           >
-            <Brain size={18} style={{ color: '#8b5cf6' }} />
+            <Brain size={18} style={{ color: '#af52de' }} />
             <span style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
               元认知评估 (Metacognition)
             </span>
@@ -703,7 +703,7 @@ const CognitiveLoop: React.FC = () => {
                   metacognition.composite >= 0.7
                     ? 'var(--success-light)'
                     : metacognition.composite >= 0.5
-                      ? 'rgba(245,158,11,0.15)'
+                      ? 'rgba(255,159,10,0.15)'
                       : 'var(--error-light)',
               }}
             >
@@ -712,11 +712,11 @@ const CognitiveLoop: React.FC = () => {
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {([
-              { key: 'accuracy', label: '准确性', weight: 30, icon: <Target size={13} />, color: '#3b82f6', threshold: 0.7 },
-              { key: 'completeness', label: '完整性', weight: 20, icon: <Layers size={13} />, color: '#8b5cf6', threshold: 0.6 },
-              { key: 'consistency', label: '一致性', weight: 20, icon: <TrendingUp size={13} />, color: '#f59e0b', threshold: 0.7 },
-              { key: 'efficiency', label: '效率', weight: 15, icon: <Gauge size={13} />, color: '#10b981', threshold: 0.5 },
-              { key: 'novelty', label: '创新性', weight: 15, icon: <Lightbulb size={13} />, color: '#ec4899', threshold: 0.3 },
+              { key: 'accuracy', label: '准确性', weight: 30, icon: <Target size={13} />, color: '#007aff', threshold: 0.7 },
+              { key: 'completeness', label: '完整性', weight: 20, icon: <Layers size={13} />, color: '#af52de', threshold: 0.6 },
+              { key: 'consistency', label: '一致性', weight: 20, icon: <TrendingUp size={13} />, color: '#ff9f0a', threshold: 0.7 },
+              { key: 'efficiency', label: '效率', weight: 15, icon: <Gauge size={13} />, color: '#34c759', threshold: 0.5 },
+              { key: 'novelty', label: '创新性', weight: 15, icon: <Lightbulb size={13} />, color: '#ff2d55', threshold: 0.3 },
             ] as const).map((dim) => {
               const score = metacognition[dim.key as keyof MetacognitionScores] as number;
               const pct = Math.round(score * 100);
@@ -797,7 +797,7 @@ const CognitiveLoop: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-          <Settings2 size={16} style={{ color: '#3b82f6' }} />
+          <Settings2 size={16} style={{ color: '#007aff' }} />
           <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
             BAN-176: triple_coordinator 状态机白名单验证
           </span>
@@ -807,7 +807,7 @@ const CognitiveLoop: React.FC = () => {
               fontSize: '11px',
               padding: '2px 8px',
               borderRadius: '10px',
-              backgroundColor: 'rgba(16,185,129,0.15)',
+              backgroundColor: 'rgba(52,199,89,0.15)',
               color: 'var(--success-color)',
               fontWeight: '600',
             }}
@@ -841,7 +841,7 @@ const CognitiveLoop: React.FC = () => {
                 backgroundColor: 'rgba(59,130,246,0.08)',
                 border: '1px solid rgba(59,130,246,0.2)',
                 fontFamily: 'monospace',
-                color: '#3b82f6',
+                color: '#007aff',
               }}
             >
               {transition}

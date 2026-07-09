@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FileText,
   Terminal as TerminalIcon,
@@ -34,7 +34,7 @@ const LEVEL_CONFIG = {
     label: 'INFO',
     icon: <Info size={11} />,
   },
-  warn: { color: '#f59e0b', bg: '#f59e0b15', label: 'WARN', icon: <AlertCircle size={11} /> },
+  warn: { color: '#ff9f0a', bg: '#ff9f0a15', label: 'WARN', icon: <AlertCircle size={11} /> },
   error: {
     color: 'var(--error-color)',
     bg: 'var(--error-light)',

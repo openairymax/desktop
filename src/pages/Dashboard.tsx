@@ -54,42 +54,42 @@ const QUICK_ACTIONS: QuickAction[] = [
     icon: <Bot size={18} />,
     path: '/agents',
     desc: '注册、启动、监控 AI 智能体',
-    color: '#6366f1',
+    color: '#007aff',
   },
   {
     label: '提交任务',
     icon: <Workflow size={18} />,
     path: '/tasks',
     desc: '创建和跟踪任务执行状态',
-    color: '#10b981',
+    color: '#34c759',
   },
   {
     label: 'AI 助手',
     icon: <MessageSquare size={18} />,
     path: '/ai-chat',
     desc: '与 AI 智能体对话交互',
-    color: '#f59e0b',
+    color: '#ff9f0a',
   },
   {
     label: '模型配置',
     icon: <Brain size={18} />,
     path: '/model-config',
     desc: '配置 LLM 提供商和模型参数',
-    color: '#ef4444',
+    color: '#ff3b30',
   },
   {
     label: '认知循环',
     icon: <Eye size={18} />,
     path: '/cognitive-loop',
     desc: '查看感知→推理→行动流程',
-    color: '#8b5cf6',
+    color: '#af52de',
   },
   {
     label: '系统监控',
     icon: <BarChart3 size={18} />,
     path: '/system-monitor',
     desc: '实时查看系统资源使用情况',
-    color: '#06b6d4',
+    color: '#5ac8fa',
   },
 ];
 
@@ -140,12 +140,12 @@ const Dashboard: React.FC = () => {
               : '未连接';
       const connColor =
         connection.status === 'connected'
-          ? '#10b981'
+          ? '#34c759'
           : connection.status === 'connecting'
-            ? '#f59e0b'
+            ? '#ff9f0a'
             : connection.status === 'error'
-              ? '#ef4444'
-              : '#9ca3af';
+              ? '#ff3b30'
+              : '#86868b';
 
       const memPct = metrics?.memoryUsage ?? 0;
       const cpuPct = metrics?.cpuUsage ?? 0;
@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
               : `${Math.round(((performance as ChromePerformance)?.memory?.usedJSHeapSize ?? 0) / 1024 / 1024)} MB`,
           sub: memPct > 0 ? '后端内存占用' : '浏览器堆',
           icon: <MemoryStick size={20} />,
-          color: memPct > 80 ? '#f59e0b' : '#10b981',
+          color: memPct > 80 ? '#ff9f0a' : '#34c759',
           progress:
             memPct ||
             Math.round(
@@ -182,7 +182,7 @@ const Dashboard: React.FC = () => {
           value: `${activeTasks}`,
           sub: totalAgents > 0 ? `${totalAgents} 个智能体` : '运行中',
           icon: <Activity size={20} />,
-          color: activeTasks > 0 ? '#6366f1' : '#10b981',
+          color: activeTasks > 0 ? '#007aff' : '#34c759',
           progress: Math.min(activeTasks * 10, 100),
         },
         {
@@ -190,7 +190,7 @@ const Dashboard: React.FC = () => {
           value: cpuPct > 0 ? `${cpuPct}%` : '--',
           sub: cpuPct > 0 ? (cpuPct > 80 ? '负载较高' : '负载正常') : '无数据',
           icon: <Cpu size={20} />,
-          color: cpuPct > 80 ? '#ef4444' : '#8b5cf6',
+          color: cpuPct > 80 ? '#ff3b30' : '#007aff',
           progress: cpuPct || 0,
         },
       ];
@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
       style={{ maxWidth: '1280px', margin: '0 auto' }}
     >
       {/* Header */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
         <div
           style={{
             display: 'flex',
@@ -235,11 +235,11 @@ const Dashboard: React.FC = () => {
           <div>
             <h1
               style={{
-                fontSize: '26px',
+                fontSize: '28px',
                 fontWeight: '700',
                 color: 'var(--text-primary)',
                 margin: 0,
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.022em',
               }}
             >
               {greeting}，欢迎使用 Airymax AgentRT
@@ -283,7 +283,7 @@ const Dashboard: React.FC = () => {
       </motion.div>
 
       {/* System Stats */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
         <div
           style={{
             display: 'grid',
@@ -296,9 +296,9 @@ const Dashboard: React.FC = () => {
               key={stat.title}
               whileHover={{ y: -3 }}
               style={{
-                padding: '18px 20px',
+                padding: '20px 22px',
                 backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '12px',
+                borderRadius: '14px',
                 border: '1px solid var(--border-subtle)',
                 cursor: 'default',
               }}
@@ -356,9 +356,9 @@ const Dashboard: React.FC = () => {
               <div
                 style={{
                   marginTop: '12px',
-                  height: '4px',
+                  height: '3px',
                   backgroundColor: 'var(--bg-tertiary)',
-                  borderRadius: '4px',
+                  borderRadius: '3px',
                   overflow: 'hidden',
                 }}
               >
@@ -368,7 +368,7 @@ const Dashboard: React.FC = () => {
                   transition={{ duration: 1, ease: 'easeOut' }}
                   style={{
                     height: '100%',
-                    borderRadius: '4px',
+                    borderRadius: '3px',
                     background: `linear-gradient(90deg, ${stat.color}, ${stat.color}88)`,
                   }}
                 />
@@ -379,7 +379,7 @@ const Dashboard: React.FC = () => {
       </motion.div>
 
       {/* Quick Actions */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '28px' }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
         <div
           style={{
             display: 'flex',
@@ -412,7 +412,7 @@ const Dashboard: React.FC = () => {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '12px',
+            gap: '14px',
           }}
         >
           {QUICK_ACTIONS.map((action) => (
@@ -421,9 +421,9 @@ const Dashboard: React.FC = () => {
                 whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
                 whileTap={{ scale: 0.97 }}
                 style={{
-                  padding: '18px',
+                  padding: '20px',
                   backgroundColor: 'var(--bg-secondary)',
-                  borderRadius: '12px',
+                  borderRadius: '14px',
                   border: '1px solid var(--border-subtle)',
                   cursor: 'pointer',
                   transition: 'all 200ms ease',
@@ -433,15 +433,15 @@ const Dashboard: React.FC = () => {
               >
                 <div
                   style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
                     background: `${action.color}15`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: action.color,
-                    marginBottom: '12px',
+                    marginBottom: '14px',
                   }}
                 >
                   {action.icon}
@@ -494,7 +494,7 @@ const Dashboard: React.FC = () => {
               style={{
                 padding: '18px 20px',
                 borderBottom: '1px solid var(--border-subtle)',
-                background: 'linear-gradient(135deg, #6366f110, transparent)',
+                background: 'linear-gradient(135deg, #007aff10, transparent)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -503,7 +503,7 @@ const Dashboard: React.FC = () => {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    background: 'linear-gradient(135deg, #007aff, #5856d6)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -582,7 +582,7 @@ const Dashboard: React.FC = () => {
               style={{
                 padding: '18px 20px',
                 borderBottom: '1px solid var(--border-subtle)',
-                background: 'linear-gradient(135deg, #10b98110, transparent)',
+                background: 'linear-gradient(135deg, #34c75910, transparent)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -591,7 +591,7 @@ const Dashboard: React.FC = () => {
                     width: '32px',
                     height: '32px',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #10b981, #06b6d4)',
+                    background: 'linear-gradient(135deg, #34c759, #5ac8fa)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

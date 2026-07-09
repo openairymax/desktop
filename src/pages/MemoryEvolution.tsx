@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -31,29 +31,29 @@ const LAYER_CONFIG: Record<
   { color: string; bg: string; icon: React.ReactNode; label: string; desc: string }
 > = {
   L1: {
-    color: '#3b82f6',
+    color: '#007aff',
     bg: 'rgba(59,130,246,0.1)',
     icon: <Clock size={14} />,
     label: '工作记忆',
     desc: '短期临时信息，快速衰减',
   },
   L2: {
-    color: '#8b5cf6',
+    color: '#af52de',
     bg: 'rgba(139,92,246,0.1)',
     icon: <Database size={14} />,
     label: '语义记忆',
     desc: '结构化知识，长期保存',
   },
   L3: {
-    color: '#f59e0b',
-    bg: 'rgba(245,158,11,0.1)',
+    color: '#ff9f0a',
+    bg: 'rgba(255,159,10,0.1)',
     icon: <Layers size={14} />,
     label: '程序记忆',
     desc: '操作流程与模式',
   },
   L4: {
-    color: '#10b981',
-    bg: 'rgba(16,185,129,0.1)',
+    color: '#34c759',
+    bg: 'rgba(52,199,89,0.1)',
     icon: <Zap size={14} />,
     label: '核心记忆',
     desc: '核心身份与价值观',
@@ -173,7 +173,7 @@ const MemoryEvolution: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              background: 'linear-gradient(135deg, #af52de, #007aff)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -272,7 +272,7 @@ const MemoryEvolution: React.FC = () => {
               padding: '8px 16px',
               border: 'none',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              background: 'linear-gradient(135deg, #af52de, #007aff)',
               color: 'white',
               cursor: 'pointer',
               fontSize: '13px',
@@ -481,7 +481,7 @@ const MemoryEvolution: React.FC = () => {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 16px',
-              background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+              background: 'linear-gradient(135deg, #af52de, #007aff)',
               color: 'white',
               border: 'none',
               borderRadius: '8px',
@@ -755,7 +755,7 @@ const MemoryEvolution: React.FC = () => {
                     padding: '8px 16px',
                     border: 'none',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
+                    background: 'linear-gradient(135deg, #af52de, #007aff)',
                     color: 'white',
                     cursor: !newContent.trim() ? 'not-allowed' : 'pointer',
                     fontSize: '13px',

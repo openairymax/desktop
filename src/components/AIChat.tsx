@@ -67,9 +67,9 @@ const assessComplexity = (input: string): { level: ComplexityLevel; score: numbe
 };
 
 const COMPLEXITY_CONFIG: Record<ComplexityLevel, { color: string; bg: string; model: string; label: string }> = {
-  SIMPLE: { color: '#10b981', bg: 'rgba(16,185,129,0.1)', model: 'gpt-4o-mini', label: '简单' },
-  MODERATE: { color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', model: 'gpt-4o', label: '中等' },
-  COMPLEX: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)', model: 'claude-sonnet', label: '复杂' },
+  SIMPLE: { color: '#34c759', bg: 'rgba(52,199,89,0.1)', model: 'gpt-4o-mini', label: '简单' },
+  MODERATE: { color: '#ff9f0a', bg: 'rgba(255,159,10,0.1)', model: 'gpt-4o', label: '中等' },
+  COMPLEX: { color: '#ff3b30', bg: 'rgba(255,59,48,0.1)', model: 'claude-sonnet', label: '复杂' },
 };
 
 const SUGGESTIONS = [
@@ -440,7 +440,7 @@ const AIChat: React.FC<{
                     height: '30px',
                     borderRadius: '50%',
                     flexShrink: 0,
-                    background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)',
+                    background: 'linear-gradient(135deg, #af52de, #af52de)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -609,7 +609,7 @@ const AIChat: React.FC<{
           fontSize: '11px',
         }}
       >
-        <Clock size={12} style={{ color: '#8b5cf6' }} />
+        <Clock size={12} style={{ color: '#af52de' }} />
         <span style={{ color: 'var(--text-muted)' }}>
           BAN-136:
         </span>

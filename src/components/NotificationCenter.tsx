@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+﻿import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -102,13 +102,13 @@ const NotificationCenter: React.FC = () => {
       case 'success':
         return <CheckCircle2 size={16} color="#22c55e" />;
       case 'warning':
-        return <AlertTriangle size={16} color="#f59e0b" />;
+        return <AlertTriangle size={16} color="#ff9f0a" />;
       case 'error':
-        return <X size={16} color="#ef4444" />;
+        return <X size={16} color="#ff3b30" />;
       case 'system':
-        return <Server size={16} color="#6366f1" />;
+        return <Server size={16} color="#007aff" />;
       default:
-        return <Info size={16} color="#6366f1" />;
+        return <Info size={16} color="#007aff" />;
     }
   };
 
@@ -117,13 +117,13 @@ const NotificationCenter: React.FC = () => {
       case 'success':
         return '#22c55e';
       case 'warning':
-        return '#f59e0b';
+        return '#ff9f0a';
       case 'error':
-        return '#ef4444';
+        return '#ff3b30';
       case 'system':
-        return '#6366f1';
+        return '#007aff';
       default:
-        return '#6366f1';
+        return '#007aff';
     }
   };
 

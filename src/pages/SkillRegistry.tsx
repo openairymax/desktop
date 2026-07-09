@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Wrench,
   Plus,
@@ -149,7 +149,7 @@ const SkillRegistry: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: 'var(--radius-lg)',
-              background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+              background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -204,7 +204,7 @@ const SkillRegistry: React.FC = () => {
               padding: '8px 16px',
               border: 'none',
               borderRadius: 'var(--radius-md)',
-              background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+              background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
               color: 'white',
               cursor: 'pointer',
               display: 'flex',
@@ -267,8 +267,8 @@ const SkillRegistry: React.FC = () => {
             label: '技能总数',
             value: stats.total,
             icon: <Wrench size={18} />,
-            color: '#f59e0b',
-            bg: 'rgba(245,158,11,0.1)',
+            color: '#ff9f0a',
+            bg: 'rgba(255,159,10,0.1)',
           },
           {
             label: '已加载',
@@ -374,8 +374,8 @@ const SkillRegistry: React.FC = () => {
               transition: 'all var(--transition-fast)',
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = '#f59e0b';
-              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)';
+              e.currentTarget.style.borderColor = '#ff9f0a';
+              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,159,10,0.2)';
             }}
             onBlur={(e) => {
               e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -460,7 +460,7 @@ const SkillRegistry: React.FC = () => {
               alignItems: 'center',
               gap: '6px',
               padding: '8px 16px',
-              background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+              background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
               color: 'white',
               border: 'none',
               borderRadius: 'var(--radius-md)',
@@ -528,7 +528,7 @@ const SkillRegistry: React.FC = () => {
                           width: '42px',
                           height: '42px',
                           borderRadius: 'var(--radius-md)',
-                          background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                          background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -599,7 +599,7 @@ const SkillRegistry: React.FC = () => {
                         padding: '8px 12px',
                         border: 'none',
                         borderRadius: 'var(--radius-md)',
-                        background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                        background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
                         color: 'white',
                         cursor: 'pointer',
                         fontFamily: 'inherit',
@@ -815,8 +815,8 @@ const SkillRegistry: React.FC = () => {
                       transition: 'all var(--transition-fast)',
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#f59e0b';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)';
+                      e.currentTarget.style.borderColor = '#ff9f0a';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,159,10,0.2)';
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -855,8 +855,8 @@ const SkillRegistry: React.FC = () => {
                       transition: 'all var(--transition-fast)',
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#f59e0b';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)';
+                      e.currentTarget.style.borderColor = '#ff9f0a';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,159,10,0.2)';
                     }}
                     onBlur={(e) => {
                       e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -888,7 +888,7 @@ const SkillRegistry: React.FC = () => {
                   aria-label="确认注册技能"
                   style={{
                     padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                    background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',
@@ -1031,8 +1031,8 @@ const SkillRegistry: React.FC = () => {
                     transition: 'all var(--transition-fast)',
                   }}
                   onFocus={(e) => {
-                    e.currentTarget.style.borderColor = '#f59e0b';
-                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.2)';
+                    e.currentTarget.style.borderColor = '#ff9f0a';
+                    e.currentTarget.style.boxShadow = '0 0 0 3px rgba(255,159,10,0.2)';
                   }}
                   onBlur={(e) => {
                     e.currentTarget.style.borderColor = 'var(--border-color)';
@@ -1063,7 +1063,7 @@ const SkillRegistry: React.FC = () => {
                   aria-label="确认执行技能"
                   style={{
                     padding: '8px 16px',
-                    background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                    background: 'linear-gradient(135deg, #ff9f0a, #ff9500)',
                     color: 'white',
                     border: 'none',
                     borderRadius: 'var(--radius-md)',

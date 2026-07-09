@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useCallback } from 'react';
+﻿import React, { useState, createContext, useContext, useCallback } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -36,26 +36,26 @@ const TOAST_CONFIGS: Record<
   success: {
     icon: CheckCircle2,
     color: '#22c55e',
-    bgColor: 'rgba(34, 197, 94, 0.08)',
-    borderColor: 'rgba(34, 197, 94, 0.25)',
+    bgColor: 'rgba(52, 199, 89, 0.08)',
+    borderColor: 'rgba(52, 199, 89, 0.25)',
   },
   error: {
     icon: XCircle,
-    color: '#ef4444',
-    bgColor: 'rgba(239, 68, 68, 0.08)',
-    borderColor: 'rgba(239, 68, 68, 0.25)',
+    color: '#ff3b30',
+    bgColor: 'rgba(255, 59, 48, 0.08)',
+    borderColor: 'rgba(255, 59, 48, 0.25)',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#f59e0b',
-    bgColor: 'rgba(245, 158, 11, 0.08)',
-    borderColor: 'rgba(245, 158, 11, 0.25)',
+    color: '#ff9f0a',
+    bgColor: 'rgba(255, 159, 10, 0.08)',
+    borderColor: 'rgba(255, 159, 10, 0.25)',
   },
   info: {
     icon: Info,
-    color: '#6366f1',
-    bgColor: 'rgba(99, 102, 241, 0.08)',
-    borderColor: 'rgba(99, 102, 241, 0.25)',
+    color: '#007aff',
+    bgColor: 'rgba(0, 122, 255, 0.08)',
+    borderColor: 'rgba(0, 122, 255, 0.25)',
   },
 };
 

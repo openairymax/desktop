@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
   BarChart3,
@@ -78,7 +78,7 @@ const SystemMonitor: React.FC = () => {
             })
           : t('systemMonitorExtended.browserNotSupported'),
         icon: <MemoryStick size={18} />,
-        color: memPct > 80 ? '#f59e0b' : '#10b981',
+        color: memPct > 80 ? '#ff9f0a' : '#34c759',
         progress: memPct,
       },
       {
@@ -88,7 +88,7 @@ const SystemMonitor: React.FC = () => {
           ? t('systemMonitorExtended.tauriDesktop')
           : t('systemMonitorExtended.webBrowser'),
         icon: <Cpu size={18} />,
-        color: '#8b5cf6',
+        color: '#af52de',
         progress: 50,
       },
       {
@@ -98,7 +98,7 @@ const SystemMonitor: React.FC = () => {
           tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
         }),
         icon: <Zap size={18} />,
-        color: '#06b6d4',
+        color: '#5ac8fa',
         progress: 100,
       },
       {
@@ -110,7 +110,7 @@ const SystemMonitor: React.FC = () => {
           ? t('systemMonitorExtended.networkAvailable')
           : t('systemMonitorExtended.networkUnavailable'),
         icon: navigator.onLine ? <Wifi size={18} /> : <WifiOff size={18} />,
-        color: navigator.onLine ? '#10b981' : '#ef4444',
+        color: navigator.onLine ? '#34c759' : '#ff3b30',
         progress: navigator.onLine ? 100 : 0,
       },
     ]);
@@ -124,11 +124,11 @@ const SystemMonitor: React.FC = () => {
       setError(null);
 
       const cpuColor =
-        data.cpu.usagePercent > 80 ? '#ef4444' : data.cpu.usagePercent > 60 ? '#f59e0b' : '#10b981';
+        data.cpu.usagePercent > 80 ? '#ff3b30' : data.cpu.usagePercent > 60 ? '#ff9f0a' : '#34c759';
       const memColor =
-        data.memory.percent > 80 ? '#ef4444' : data.memory.percent > 60 ? '#f59e0b' : '#10b981';
+        data.memory.percent > 80 ? '#ff3b30' : data.memory.percent > 60 ? '#ff9f0a' : '#34c759';
       const diskColor =
-        data.disk.percent > 80 ? '#ef4444' : data.disk.percent > 60 ? '#f59e0b' : '#10b981';
+        data.disk.percent > 80 ? '#ff3b30' : data.disk.percent > 60 ? '#ff9f0a' : '#34c759';
 
       setMetrics([
         {
@@ -166,7 +166,7 @@ const SystemMonitor: React.FC = () => {
           value: formatUptime(data.uptimeSeconds),
           sub: t('systemMonitorExtended.sinceBoot'),
           icon: <Clock size={18} />,
-          color: '#6366f1',
+          color: '#007aff',
           progress: Math.min((data.uptimeSeconds / 86400) * 100, 100),
         },
         {
@@ -176,7 +176,7 @@ const SystemMonitor: React.FC = () => {
           }),
           sub: t('systemMonitorExtended.totalInterfaces', { count: data.network.length }),
           icon: data.network.some((n) => n.isUp) ? <Wifi size={18} /> : <WifiOff size={18} />,
-          color: data.network.some((n) => n.isUp) ? '#10b981' : '#ef4444',
+          color: data.network.some((n) => n.isUp) ? '#34c759' : '#ff3b30',
           progress:
             data.network.length > 0
               ? (data.network.filter((n) => n.isUp).length / data.network.length) * 100
@@ -231,7 +231,7 @@ const SystemMonitor: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+              background: 'linear-gradient(135deg, #5ac8fa, #007aff)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -263,7 +263,7 @@ const SystemMonitor: React.FC = () => {
                     alignItems: 'center',
                     gap: '4px',
                     fontSize: '11px',
-                    color: '#10b981',
+                    color: '#34c759',
                   }}
                 >
                   <CheckCircle2 size={12} /> {t('systemMonitorExtended.backendConnected')}
@@ -276,7 +276,7 @@ const SystemMonitor: React.FC = () => {
                     alignItems: 'center',
                     gap: '4px',
                     fontSize: '11px',
-                    color: '#f59e0b',
+                    color: '#ff9f0a',
                   }}
                 >
                   <AlertTriangle size={12} /> {t('systemMonitorExtended.browserMode')}
@@ -471,7 +471,7 @@ const SystemMonitor: React.FC = () => {
                     padding: '8px 4px',
                     borderRadius: '8px',
                     background:
-                      core.usage > 80 ? '#ef444415' : core.usage > 50 ? '#f59e0b15' : '#10b98115',
+                      core.usage > 80 ? '#ff3b3015' : core.usage > 50 ? '#ff9f0a15' : '#34c75915',
                   }}
                 >
                   <div
@@ -483,7 +483,7 @@ const SystemMonitor: React.FC = () => {
                     style={{
                       fontSize: '16px',
                       fontWeight: '700',
-                      color: core.usage > 80 ? '#ef4444' : core.usage > 50 ? '#f59e0b' : '#10b981',
+                      color: core.usage > 80 ? '#ff3b30' : core.usage > 50 ? '#ff9f0a' : '#34c759',
                     }}
                   >
                     {core.usage}%
@@ -540,7 +540,7 @@ const SystemMonitor: React.FC = () => {
                       {iface.ipv4}
                     </span>
                   </div>
-                  <span style={{ fontSize: '12px', color: iface.isUp ? '#10b981' : '#ef4444' }}>
+                  <span style={{ fontSize: '12px', color: iface.isUp ? '#34c759' : '#ff3b30' }}>
                     {iface.isUp ? 'UP' : 'DOWN'}
                   </span>
                 </div>

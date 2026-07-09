@@ -34,15 +34,15 @@ const MEMORY_TYPES = [
   {
     key: 'conversation',
     icon: MessageSquare,
-    color: '#6366f1',
+    color: '#007aff',
     label: '对话记忆',
     desc: '多轮对话上下文',
   },
   { key: 'fact', icon: Database, color: '#22c55e', label: '事实记忆', desc: '已确认的知识' },
-  { key: 'skill', icon: Zap, color: '#f59e0b', label: '技能记忆', desc: '习得的能力模式' },
+  { key: 'skill', icon: Zap, color: '#ff9f0a', label: '技能记忆', desc: '习得的能力模式' },
   { key: 'preference', icon: Shield, color: '#a855f7', label: '偏好记忆', desc: '用户习惯与偏好' },
-  { key: 'error', icon: FileText, color: '#ef4444', label: '错误记忆', desc: '失败经验教训' },
-  { key: 'observation', icon: Eye, color: '#06b6d4', label: '观察记忆', desc: '环境状态感知' },
+  { key: 'error', icon: FileText, color: '#ff3b30', label: '错误记忆', desc: '失败经验教训' },
+  { key: 'observation', icon: Eye, color: '#5ac8fa', label: '观察记忆', desc: '环境状态感知' },
 ];
 
 const TokenRing: React.FC<{
@@ -51,7 +51,7 @@ const TokenRing: React.FC<{
   size?: number;
   label?: string;
   color?: string;
-}> = ({ value, max, size = 60, label, color = '#6366f1' }) => {
+}> = ({ value, max, size = 60, label, color = '#007aff' }) => {
   const pct = Math.min((value / max) * 100, 100);
   const radius = (size - 6) / 2;
   const circ = radius * 2 * Math.PI;
@@ -236,11 +236,11 @@ const MemorySystem: React.FC = () => {
                 width: '48px',
                 height: '48px',
                 borderRadius: 'var(--radius-lg)',
-                background: 'linear-gradient(135deg, #6366f1, #a78bfa)',
+                background: 'linear-gradient(135deg, #007aff, #af52de)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.3)',
+                boxShadow: '0 4px 16px rgba(0,122,255,0.3)',
               }}
             >
               <Brain size="24" color="white" />
@@ -262,7 +262,7 @@ const MemorySystem: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-            <TokenRing value={memories.length} max={50} size={56} label="条目" color="#6366f1" />
+            <TokenRing value={memories.length} max={50} size={56} label="条目" color="#007aff" />
             <TokenRing value={totalTokens} max={5000} size={56} label="tokens" color="#22c55e" />
             <TokenRing
               value={Math.round(contextWindow.usedPercent)}
@@ -271,9 +271,9 @@ const MemorySystem: React.FC = () => {
               label="上下文"
               color={
                 contextWindow.usedPercent > 70
-                  ? '#ef4444'
+                  ? '#ff3b30'
                   : contextWindow.usedPercent > 40
-                    ? '#f59e0b'
+                    ? '#ff9f0a'
                     : '#22c55e'
               }
             />
@@ -414,10 +414,10 @@ const MemorySystem: React.FC = () => {
               }}
             >
               {[
-                { label: '感知输入', icon: Eye, color: '#06b6d4', sub: '观察/对话/事件' },
-                { label: '工作记忆', icon: Brain, color: '#6366f1', sub: '短期缓存/推理' },
+                { label: '感知输入', icon: Eye, color: '#5ac8fa', sub: '观察/对话/事件' },
+                { label: '工作记忆', icon: Brain, color: '#007aff', sub: '短期缓存/推理' },
                 { label: '长期存储', icon: Database, color: '#22c55e', sub: '向量索引/持久化' },
-                { label: '检索召回', icon: Search, color: '#f59e0b', sub: '语义相似度匹配' },
+                { label: '检索召回', icon: Search, color: '#ff9f0a', sub: '语义相似度匹配' },
               ].map((node, i) => (
                 <React.Fragment key={node.label}>
                   <div
@@ -469,8 +469,8 @@ const MemorySystem: React.FC = () => {
                   gap: '10px',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                 }}
               >
                 <CheckCircle size={16} style={{ color: 'var(--success-color)' }} />
@@ -486,7 +486,7 @@ const MemorySystem: React.FC = () => {
                   fontSize: '11px',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(16,185,129,0.15)',
+                  backgroundColor: 'rgba(52,199,89,0.15)',
                   color: 'var(--success-color)',
                   fontWeight: '600',
                 }}>
@@ -504,8 +504,8 @@ const MemorySystem: React.FC = () => {
                   gap: '10px',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                 }}
               >
                 <CheckCircle size={16} style={{ color: 'var(--success-color)' }} />
@@ -521,7 +521,7 @@ const MemorySystem: React.FC = () => {
                   fontSize: '11px',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(16,185,129,0.15)',
+                  backgroundColor: 'rgba(52,199,89,0.15)',
                   color: 'var(--success-color)',
                   fontWeight: '600',
                 }}>
@@ -539,11 +539,11 @@ const MemorySystem: React.FC = () => {
                   gap: '10px',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(245,158,11,0.06)',
-                  border: '1px solid rgba(245,158,11,0.2)',
+                  backgroundColor: 'rgba(255,159,10,0.06)',
+                  border: '1px solid rgba(255,159,10,0.2)',
                 }}
               >
-                <AlertTriangle size={16} style={{ color: '#f59e0b' }} />
+                <AlertTriangle size={16} style={{ color: '#ff9f0a' }} />
                 <div style={{ flex: 1 }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: 'var(--text-primary)' }}>
                     L3 知识图谱实体消歧
@@ -556,8 +556,8 @@ const MemorySystem: React.FC = () => {
                   fontSize: '11px',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(245,158,11,0.15)',
-                  color: '#f59e0b',
+                  backgroundColor: 'rgba(255,159,10,0.15)',
+                  color: '#ff9f0a',
                   fontWeight: '600',
                 }}>
                   已启用
@@ -574,8 +574,8 @@ const MemorySystem: React.FC = () => {
                   gap: '10px',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                 }}
               >
                 <CheckCircle size={16} style={{ color: 'var(--success-color)' }} />
@@ -591,7 +591,7 @@ const MemorySystem: React.FC = () => {
                   fontSize: '11px',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(16,185,129,0.15)',
+                  backgroundColor: 'rgba(52,199,89,0.15)',
                   color: 'var(--success-color)',
                   fontWeight: '600',
                 }}>
@@ -609,8 +609,8 @@ const MemorySystem: React.FC = () => {
                   gap: '10px',
                   padding: '12px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16,185,129,0.06)',
-                  border: '1px solid rgba(16,185,129,0.2)',
+                  backgroundColor: 'rgba(52,199,89,0.06)',
+                  border: '1px solid rgba(52,199,89,0.2)',
                 }}
               >
                 <CheckCircle size={16} style={{ color: 'var(--success-color)' }} />
@@ -626,7 +626,7 @@ const MemorySystem: React.FC = () => {
                   fontSize: '11px',
                   padding: '2px 8px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(16,185,129,0.15)',
+                  backgroundColor: 'rgba(52,199,89,0.15)',
                   color: 'var(--success-color)',
                   fontWeight: '600',
                 }}>
@@ -847,9 +847,9 @@ const MemorySystem: React.FC = () => {
                   label={`/${(contextWindow.maxTokens / 1000).toFixed(0)}K`}
                   color={
                     contextWindow.usedPercent > 70
-                      ? '#ef4444'
+                      ? '#ff3b30'
                       : contextWindow.usedPercent > 40
-                        ? '#f59e0b'
+                        ? '#ff9f0a'
                         : '#22c55e'
                   }
                 />
@@ -879,13 +879,13 @@ const MemorySystem: React.FC = () => {
                   {
                     label: '对话历史',
                     value: contextWindow.breakdown.history,
-                    color: '#6366f1',
+                    color: '#007aff',
                     max: 96000,
                   },
                   {
                     label: '工具定义',
                     value: contextWindow.breakdown.tools,
-                    color: '#f59e0b',
+                    color: '#ff9f0a',
                     max: 4096,
                   },
                   {
@@ -959,7 +959,7 @@ const MemorySystem: React.FC = () => {
                   title: '滑动窗口',
                   desc: '保持最近 N 轮对话，自动裁剪超长历史',
                   icon: Clock,
-                  color: '#6366f1',
+                  color: '#007aff',
                 },
                 {
                   title: '摘要压缩',
@@ -971,7 +971,7 @@ const MemorySystem: React.FC = () => {
                   title: '优先级遗忘',
                   desc: '按相关性评分淘汰低价值记忆条目',
                   icon: TrendingUp,
-                  color: '#f59e0b',
+                  color: '#ff9f0a',
                 },
                 {
                   title: '向量召回',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wrench,
@@ -34,12 +34,12 @@ interface Tool {
 const _CATEGORIES = ['general', 'web', 'file', 'code', 'data', 'system'];
 
 const CATEGORY_ICONS: Record<string, { icon: React.ReactNode; color: string }> = {
-  general: { icon: <Wrench size={14} />, color: '#6366f1' },
-  web: { icon: <Globe size={14} />, color: '#3b82f6' },
-  file: { icon: <FileText size={14} />, color: '#10b981' },
-  code: { icon: <Code2 size={14} />, color: '#f59e0b' },
-  data: { icon: <Database size={14} />, color: '#ef4444' },
-  system: { icon: <Terminal size={14} />, color: '#8b5cf6' },
+  general: { icon: <Wrench size={14} />, color: '#007aff' },
+  web: { icon: <Globe size={14} />, color: '#007aff' },
+  file: { icon: <FileText size={14} />, color: '#34c759' },
+  code: { icon: <Code2 size={14} />, color: '#ff9f0a' },
+  data: { icon: <Database size={14} />, color: '#ff3b30' },
+  system: { icon: <Terminal size={14} />, color: '#af52de' },
 };
 
 const STATUS_COLORS: Record<string, { color: string; bg: string }> = {
@@ -219,7 +219,7 @@ const ToolManager: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              background: 'linear-gradient(135deg, #ff9f0a, #d97706)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -280,7 +280,7 @@ const ToolManager: React.FC = () => {
               padding: '8px 16px',
               border: 'none',
               borderRadius: '8px',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+              background: 'linear-gradient(135deg, #ff9f0a, #d97706)',
               color: 'white',
               cursor: 'pointer',
               fontSize: '13px',
@@ -309,8 +309,8 @@ const ToolManager: React.FC = () => {
             label: t('toolManager.statTotal'),
             value: tools.length,
             icon: <Wrench size={16} />,
-            bg: 'rgba(99,102,241,0.1)',
-            color: '#6366f1',
+            bg: 'rgba(0,122,255,0.1)',
+            color: '#007aff',
           },
           {
             label: t('toolManager.statActive'),
@@ -629,7 +629,7 @@ const ToolManager: React.FC = () => {
                         borderRadius: '6px',
                         background:
                           tool.status === 'active'
-                            ? 'linear-gradient(135deg, #06b6d4, #0891b2)'
+                            ? 'linear-gradient(135deg, #5ac8fa, #007aff)'
                             : 'var(--bg-tertiary)',
                         color: tool.status === 'active' ? 'white' : 'var(--text-muted)',
                         cursor: tool.status === 'disabled' ? 'not-allowed' : 'pointer',
@@ -884,7 +884,7 @@ const ToolManager: React.FC = () => {
                     padding: '8px 16px',
                     border: 'none',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    background: 'linear-gradient(135deg, #ff9f0a, #d97706)',
                     color: 'white',
                     cursor: !newName.trim() ? 'not-allowed' : 'pointer',
                     fontSize: '13px',
@@ -1029,7 +1029,7 @@ const ToolManager: React.FC = () => {
                     padding: '8px 16px',
                     border: 'none',
                     borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #06b6d4, #0891b2)',
+                    background: 'linear-gradient(135deg, #5ac8fa, #007aff)',
                     color: 'white',
                     cursor: actionLoading === 'exec' ? 'not-allowed' : 'pointer',
                     fontSize: '13px',

@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { motion } from 'framer-motion';
 import { MessageSquare } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -20,7 +20,7 @@ const AIChatPage: React.FC = () => {
               width: '48px',
               height: '48px',
               borderRadius: 'var(--radius-lg)',
-              background: 'linear-gradient(135deg, #ec4899, #f472b6)',
+              background: 'linear-gradient(135deg, #ff2d55, #ff2d55)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

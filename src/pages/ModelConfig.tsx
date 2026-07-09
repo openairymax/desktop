@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   Brain,
   Plus,
@@ -37,7 +37,7 @@ const PROVIDER_TEMPLATES = {
     baseUrl: 'https://api.openai.com/v1',
     models: ['gpt-4o', 'gpt-4-turbo', 'gpt-4', 'gpt-3.5-turbo'],
     icon: <Zap size={16} />,
-    color: '#10b981',
+    color: '#34c759',
   },
   anthropic: {
     label: 'Anthropic Claude',
@@ -51,7 +51,7 @@ const PROVIDER_TEMPLATES = {
     baseUrl: import.meta.env.VITE_OLLAMA_URL || 'http://localhost:11434/v1',
     models: ['llama3', 'qwen2.5', 'mistral', 'codellama'],
     icon: <Cpu size={16} />,
-    color: '#6366f1',
+    color: '#007aff',
   },
   deepseek: {
     label: 'DeepSeek',
