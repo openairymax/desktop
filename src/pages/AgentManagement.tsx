@@ -298,7 +298,7 @@ const AgentManagement: React.FC = () => {
             value: stats.total,
             icon: <Bot size={18} />,
             color: '#af52de',
-            bg: 'rgba(139,92,246,0.1)',
+            bg: 'rgba(88,86,214,0.1)',
           },
           {
             label: t('agents.running'),

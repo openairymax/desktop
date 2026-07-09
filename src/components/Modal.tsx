@@ -48,7 +48,7 @@ const MODAL_CONFIGS: Record<
   },
   success: {
     icon: CheckCircle2,
-    color: '#22c55e',
+    color: '#34c759',
     bg: 'rgba(52,199,89,0.08)',
     borderColor: 'rgba(52,199,89,0.25)',
   },
@@ -101,15 +101,15 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         <div className="modal-overlay" onClick={handleCancel}>
           <div
             className="modal-content"
-            style={{ maxWidth: '420px', padding: '28px 30px' }}
+            style={{ maxWidth: '420px', padding: '28px 32px' }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Icon */}
             <div
               style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: 'var(--radius-md)',
+                width: '44px',
+                height: '44px',
+                borderRadius: 'var(--radius-lg)',
                 background: MODAL_CONFIGS[modal.type || 'confirm'].bg,
                 display: 'flex',
                 alignItems: 'center',
@@ -118,7 +118,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               }}
             >
               {React.createElement(MODAL_CONFIGS[modal.type || 'confirm'].icon, {
-                size: 24,
+                size: 22,
                 color: MODAL_CONFIGS[modal.type || 'confirm'].color,
               })}
             </div>
@@ -126,10 +126,10 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             {/* Title */}
             <h2
               style={{
-                fontSize: '18px',
+                fontSize: '17px',
                 fontWeight: 700,
                 margin: '0 0 10px',
-                letterSpacing: '-0.01em',
+                letterSpacing: '-0.022em',
               }}
             >
               {modal.title}
@@ -139,22 +139,22 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             <p
               style={{
                 fontSize: '14px',
-                lineHeight: '1.6',
+                lineHeight: '1.55',
                 color: 'var(--text-secondary)',
-                margin: '0 0 26px',
+                margin: '0 0 24px',
               }}
             >
               {modal.message}
             </p>
 
             {/* Actions */}
-            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button
                 className="btn btn-secondary"
                 onClick={handleCancel}
                 style={{ minWidth: '88px' }}
               >
-                {modal.cancelText || 'Cancel'}
+                {modal.cancelText || '取消'}
               </button>
               <button
                 className={`btn ${modal.variant === 'danger' ? 'btn-danger' : modal.variant === 'warning' ? 'btn-warning' : 'btn-primary'}`}

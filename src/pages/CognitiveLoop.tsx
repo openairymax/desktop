@@ -57,13 +57,13 @@ const PHASE_CONFIG: Record<
   perception: {
     icon: <Eye size={14} />,
     color: '#007aff',
-    bgColor: 'rgba(59,130,246,0.1)',
+    bgColor: 'rgba(0,122,255,0.1)',
     label: '感知',
   },
   reasoning: {
     icon: <Brain size={14} />,
     color: '#af52de',
-    bgColor: 'rgba(139,92,246,0.1)',
+    bgColor: 'rgba(88,86,214,0.1)',
     label: '推理',
   },
   action: {
@@ -838,8 +838,8 @@ const CognitiveLoop: React.FC = () => {
               style={{
                 padding: '2px 8px',
                 borderRadius: '6px',
-                backgroundColor: 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.2)',
+                backgroundColor: 'rgba(0,122,255,0.08)',
+                border: '1px solid rgba(0,122,255,0.2)',
                 fontFamily: 'monospace',
                 color: '#007aff',
               }}

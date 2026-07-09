@@ -56,8 +56,8 @@ const PHASES: Record<CyclePhase, StepData> = {
     title: '行动 (Act)',
     description: '执行工具调用、系统操作、生成响应',
     icon: Zap,
-    color: '#22c55e',
-    gradient: 'linear-gradient(135deg, #22c55e, #4ade80)',
+    color: '#34c759',
+    gradient: 'linear-gradient(135deg, #34c759, #4ade80)',
     duration: 1500,
   },
   reflection: {
@@ -270,7 +270,7 @@ const CognitiveLoop: React.FC = () => {
                   </span>
                 )}
                 {thoughts.length > 0 && (
-                  <span role="status" style={{ marginLeft: '10px', color: '#22c55e', fontWeight: 600 }}>
+                  <span role="status" style={{ marginLeft: '10px', color: '#34c759', fontWeight: 600 }}>
                     · 已连接后端
                   </span>
                 )}
@@ -630,7 +630,7 @@ const CognitiveLoop: React.FC = () => {
                         borderRadius: 'var(--radius-sm)',
                         background:
                           tool.status === 'success'
-                            ? 'linear-gradient(135deg,#22c55e,#4ade80)'
+                            ? 'linear-gradient(135deg,#34c759,#4ade80)'
                             : tool.status === 'error'
                               ? 'linear-gradient(135deg,#ff3b30,#ff453a)'
                               : 'linear-gradient(135deg,#007aff,#5856d6)',
@@ -673,7 +673,7 @@ const CognitiveLoop: React.FC = () => {
                                   : 'rgba(0,122,255,0.1)',
                             color:
                               tool.status === 'success'
-                                ? '#22c55e'
+                                ? '#34c759'
                                 : tool.status === 'error'
                                   ? '#ff3b30'
                                   : '#007aff',

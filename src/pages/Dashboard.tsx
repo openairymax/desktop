@@ -296,9 +296,9 @@ const Dashboard: React.FC = () => {
               key={stat.title}
               whileHover={{ y: -3 }}
               style={{
-                padding: '20px 22px',
+                padding: '22px 24px',
                 backgroundColor: 'var(--bg-secondary)',
-                borderRadius: '14px',
+                borderRadius: '16px',
                 border: '1px solid var(--border-subtle)',
                 cursor: 'default',
               }}
@@ -340,9 +340,9 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '12px',
                     background: `${stat.color}15`,
                     display: 'flex',
                     alignItems: 'center',
@@ -356,9 +356,9 @@ const Dashboard: React.FC = () => {
               <div
                 style={{
                   marginTop: '12px',
-                  height: '3px',
+                  height: '4px',
                   backgroundColor: 'var(--bg-tertiary)',
-                  borderRadius: '3px',
+                  borderRadius: '4px',
                   overflow: 'hidden',
                 }}
               >
@@ -368,7 +368,7 @@ const Dashboard: React.FC = () => {
                   transition={{ duration: 1, ease: 'easeOut' }}
                   style={{
                     height: '100%',
-                    borderRadius: '3px',
+                    borderRadius: '4px',
                     background: `linear-gradient(90deg, ${stat.color}, ${stat.color}88)`,
                   }}
                 />

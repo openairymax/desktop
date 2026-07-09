@@ -22,7 +22,7 @@ const STATUS_CONFIG: Record<
   }
 > = {
   connected: {
-    color: 'var(--success-color, #22c55e)',
+    color: 'var(--success-color, #34c759)',
     bgColor: 'rgba(52, 199, 89, 0.1)',
     label: 'Connected',
     labelCn: '已连接',
