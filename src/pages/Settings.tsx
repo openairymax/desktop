@@ -107,7 +107,7 @@ const Settings: React.FC = () => {
           style={{
             width: '48px',
             height: '48px',
-            borderRadius: '12px',
+            borderRadius: '16px',
             background: 'linear-gradient(135deg, #64748b, #475569)',
             display: 'flex',
             alignItems: 'center',
@@ -152,14 +152,14 @@ const Settings: React.FC = () => {
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === tab.key ? 'white' : 'transparent',
-              color: activeTab === tab.key ? 'var(--text-primary)' : 'var(--text-secondary)',
+              background: activeTab === tab.key ? 'var(--primary-color)' : 'transparent',
+              color: activeTab === tab.key ? 'white' : 'var(--text-secondary)',
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: activeTab === tab.key ? '500' : '400',
               fontFamily: 'inherit',
               transition: 'all 150ms ease',
-              boxShadow: activeTab === tab.key ? 'var(--shadow-sm)' : 'none',
+              boxShadow: activeTab === tab.key ? '0 2px 8px rgba(0,0,0,0.15)' : 'none',
             }}
           >
             {tab.icon}
@@ -176,7 +176,7 @@ const Settings: React.FC = () => {
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               padding: '24px',
               maxWidth: '600px',
             }}
@@ -339,7 +339,7 @@ const Settings: React.FC = () => {
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               padding: '24px',
               maxWidth: '600px',
             }}
@@ -433,7 +433,7 @@ const Settings: React.FC = () => {
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               padding: '24px',
               maxWidth: '600px',
             }}
@@ -513,7 +513,7 @@ const Settings: React.FC = () => {
             style={{
               backgroundColor: 'var(--bg-secondary)',
               border: '1px solid var(--border-subtle)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               padding: '32px',
               maxWidth: '600px',
               textAlign: 'center',

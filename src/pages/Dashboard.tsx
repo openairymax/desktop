@@ -222,7 +222,7 @@ const Dashboard: React.FC = () => {
       style={{ maxWidth: '1280px', margin: '0 auto' }}
     >
       {/* Header */}
-      <motion.div variants={itemVariants} style={{ marginBottom: '32px' }}>
+      <motion.div variants={itemVariants} style={{ marginBottom: '36px' }}>
         <div
           style={{
             display: 'flex',
@@ -244,7 +244,7 @@ const Dashboard: React.FC = () => {
             >
               {greeting}，欢迎使用 Airymax AgentRT
             </h1>
-            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px' }}>
+            <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginTop: '6px', opacity: 0.7 }}>
               {currentTime.toLocaleDateString('zh-CN', {
                 weekday: 'long',
                 year: 'numeric',
@@ -301,6 +301,9 @@ const Dashboard: React.FC = () => {
                 borderRadius: '16px',
                 border: '1px solid var(--border-subtle)',
                 cursor: 'default',
+                ...(stat.title === '网关状态' && connection.status === 'connected'
+                  ? { borderLeft: `3px solid ${stat.color}` }
+                  : {}),
               }}
               role="status"
               aria-label={stat.title}
@@ -412,18 +415,18 @@ const Dashboard: React.FC = () => {
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-            gap: '14px',
+            gap: '16px',
           }}
         >
           {QUICK_ACTIONS.map((action) => (
             <Link to={action.path} key={action.label} style={{ textDecoration: 'none' }} aria-label={action.desc}>
               <motion.div
-                whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                whileHover={{ y: -3, boxShadow: 'var(--shadow-card-hover)', filter: 'brightness(1.02)' }}
                 whileTap={{ scale: 0.97 }}
                 style={{
-                  padding: '20px',
+                  padding: '22px',
                   backgroundColor: 'var(--bg-secondary)',
-                  borderRadius: '14px',
+                  borderRadius: '16px',
                   border: '1px solid var(--border-subtle)',
                   cursor: 'pointer',
                   transition: 'all 200ms ease',
@@ -433,15 +436,15 @@ const Dashboard: React.FC = () => {
               >
                 <div
                   style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '12px',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '14px',
                     background: `${action.color}15`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     color: action.color,
-                    marginBottom: '14px',
+                    marginBottom: '16px',
                   }}
                 >
                   {action.icon}
@@ -485,7 +488,7 @@ const Dashboard: React.FC = () => {
           <div
             style={{
               backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
             }}
@@ -500,9 +503,9 @@ const Dashboard: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
                     background: 'linear-gradient(135deg, #007aff, #5856d6)',
                     display: 'flex',
                     alignItems: 'center',
@@ -573,7 +576,7 @@ const Dashboard: React.FC = () => {
           <div
             style={{
               backgroundColor: 'var(--bg-secondary)',
-              borderRadius: '12px',
+              borderRadius: '16px',
               border: '1px solid var(--border-subtle)',
               overflow: 'hidden',
             }}
@@ -588,9 +591,9 @@ const Dashboard: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '8px',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
                     background: 'linear-gradient(135deg, #34c759, #5ac8fa)',
                     display: 'flex',
                     alignItems: 'center',

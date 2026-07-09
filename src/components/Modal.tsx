@@ -161,7 +161,7 @@ export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 onClick={handleConfirm}
                 style={{ minWidth: '88px' }}
               >
-                {modal.confirmText || (modal.type === 'danger' ? 'Delete' : 'Confirm')}
+                {modal.confirmText || (modal.type === 'danger' ? '删除' : '确认')}
               </button>
             </div>
           </div>
