@@ -3,5 +3,5 @@
 fn main() {
     env_logger::init();
 
-    agentos_desktop_lib::run();
+    agentrt_desktop_lib::run();
 }

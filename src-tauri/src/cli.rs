@@ -14,7 +14,7 @@ pub struct CliCommandResult {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CliConfig {
-    pub agentos_cli_path: Option<String>,
+    pub agentrt_cli_path: Option<String>,
     pub project_root: Option<String>,
     pub docker_compose_path: Option<String>,
     pub timeout_seconds: u64,
@@ -25,7 +25,7 @@ pub struct CliConfig {
 impl Default for CliConfig {
     fn default() -> Self {
         Self {
-            agentos_cli_path: None,
+            agentrt_cli_path: None,
             project_root: None,
             docker_compose_path: None,
             timeout_seconds: 300,
@@ -37,18 +37,18 @@ impl Default for CliConfig {
 
 impl CliConfig {
     #[allow(dead_code)]
-    pub fn detect_agentos_cli(&self) -> Result<String> {
-        if let Some(ref path) = self.agentos_cli_path {
+    pub fn detect_agentrt_cli(&self) -> Result<String> {
+        if let Some(ref path) = self.agentrt_cli_path {
             if std::path::Path::new(path).exists() {
                 return Ok(path.clone());
             }
         }
 
         let possible_paths = vec![
-            "agentos-cli".to_string(),
-            "agentos".to_string(),
-            "/usr/local/bin/agentos-cli".to_string(),
-            "/usr/bin/agentos-cli".to_string(),
+            "agentrt-cli".to_string(),
+            "agentrt".to_string(),
+            "/usr/local/bin/agentrt-cli".to_string(),
+            "/usr/bin/agentrt-cli".to_string(),
         ];
 
         for path in &possible_paths {
@@ -57,7 +57,7 @@ impl CliConfig {
             }
         }
 
-        Err(anyhow::anyhow!("AgentOS CLI not found in PATH"))
+        Err(anyhow::anyhow!("AgentRT CLI not found in PATH"))
     }
 
     pub fn detect_project_root(&self) -> Result<String> {
@@ -77,7 +77,7 @@ impl CliConfig {
         }
 
         Err(anyhow::anyhow!(
-            "AgentOS project root not found (looking for docker/docker-compose.yml)"
+            "AgentRT project root not found (looking for docker/docker-compose.yml)"
         ))
     }
 

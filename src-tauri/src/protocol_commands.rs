@@ -245,7 +245,7 @@ fn get_default_protocols() -> Vec<ProtocolInfo> {
         ProtocolInfo {
             id: "jsonrpc".to_string(),
             name: "JSON-RPC 2.0".to_string(),
-            description: "AgentOS native JSON-RPC protocol".to_string(),
+            description: "AgentRT native JSON-RPC protocol".to_string(),
             version: "2.0".to_string(),
             status: "active".to_string(),
             endpoint: "/jsonrpc".to_string(),
