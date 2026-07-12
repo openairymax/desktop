@@ -2,7 +2,7 @@
   "$schema": "https://raw.githubusercontent.com/nicehash/tauri/dev/tooling/cli/schema.json",
   "productName": "Airymax AgentRT",
   "version": "0.1.0",
-  "identifier": "com.airmax.agentos",
+  "identifier": "com.airymax.agentrt",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:1420",

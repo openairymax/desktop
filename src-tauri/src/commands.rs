@@ -6,7 +6,7 @@ use tauri::State;
 
 const ALLOWED_CLI_COMMANDS: &[&str] = &[
     "docker", "git", "cargo", "npm", "node", "python3", "python", "pip", "make", "cmake",
-    "agentos", "airymax",
+    "agentrt", "airymax",
 ];
 
 fn validate_path(path: &str) -> Result<std::path::PathBuf, String> {
@@ -561,7 +561,7 @@ pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
-    let release_url = "https://api.github.com/repos/SpharxTeam/AgentOS/releases/latest";
+    let release_url = "https://api.github.com/repos/SpharxTeam/AgentRT/releases/latest";
 
     match client.get(release_url).send().await {
         Ok(resp) => {
@@ -587,7 +587,7 @@ pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo
                 let html_url = json
                     .get("html_url")
                     .and_then(|v| v.as_str())
-                    .unwrap_or("https://github.com/SpharxTeam/AgentOS/releases")
+                    .unwrap_or("https://github.com/SpharxTeam/AgentRT/releases")
                     .to_string();
 
                 let update_available = current_version != latest_version;
@@ -612,7 +612,7 @@ pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo
                     current_version,
                     latest_version: "unknown".to_string(),
                     update_available: false,
-                    release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                    release_url: "https://github.com/SpharxTeam/AgentRT/releases".to_string(),
                     release_notes: format!("Unable to check for updates (HTTP {})", resp.status()),
                 })
             }
@@ -623,7 +623,7 @@ pub async fn check_for_updates(_state: State<'_, AppState>) -> Result<UpdateInfo
                 current_version,
                 latest_version: "unknown".to_string(),
                 update_available: false,
-                release_url: "https://github.com/SpharxTeam/AgentOS/releases".to_string(),
+                release_url: "https://github.com/SpharxTeam/AgentRT/releases".to_string(),
                 release_notes: format!("Unable to check for updates: {}", e),
             })
         }
@@ -740,7 +740,7 @@ pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String
         "openai" => std::env::var("OPENAI_API_KEY").ok(),
         "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
         "ollama" | "localai" => None, // Ollama/LocalAI typically don't require API keys
-        _ => std::env::var("AGENTOS_LLM_API_KEY").ok(),
+        _ => std::env::var("AGENTRT_LLM_API_KEY").ok(),
     };
 
     let config = match request.provider_id.as_str() {
@@ -812,7 +812,7 @@ pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Valu
         "openai" => std::env::var("OPENAI_API_KEY").ok(),
         "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
         "ollama" | "localai" => None,
-        _ => std::env::var("AGENTOS_LLM_API_KEY").ok(),
+        _ => std::env::var("AGENTRT_LLM_API_KEY").ok(),
     };
 
     let config = match provider_id.as_str() {
@@ -988,7 +988,7 @@ pub async fn memory_store(
         Err(e) => {
             log::error!("Backend unavailable for memory_store: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1037,7 +1037,7 @@ pub async fn memory_search(
         Err(e) => {
             log::error!("Backend unavailable for memory_search: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1083,7 +1083,7 @@ pub async fn memory_list(
         Err(e) => {
             log::error!("Backend unavailable for memory_list: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1102,7 +1102,7 @@ pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Res
         Err(e) => {
             log::error!("Backend unavailable for memory_delete: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1125,7 +1125,7 @@ pub async fn memory_clear(
         Err(e) => {
             log::error!("Backend unavailable for memory_clear: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1143,7 +1143,7 @@ pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_js
         Err(e) => {
             log::error!("Backend unavailable for context_window_stats: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1230,7 +1230,7 @@ pub async fn run_cognitive_loop(
                 "Backend cognitive loop unavailable, returning structured error: {}",
                 e
             );
-            Err(format!("Cognitive loop failed: {}. Ensure AgentOS Gateway is running at the configured endpoint.", e))
+            Err(format!("Cognitive loop failed: {}. Ensure AgentRT Gateway is running at the configured endpoint.", e))
         }
     }
 }
@@ -1263,7 +1263,7 @@ pub async fn call_tool(
                 .cloned()
                 .unwrap_or_else(|| {
                     serde_json::Value::String(format!(
-                        "Tool '{}' executed successfully via AgentOS Gateway",
+                        "Tool '{}' executed successfully via AgentRT Gateway",
                         name
                     ))
                 });
@@ -1358,7 +1358,7 @@ pub async fn runtime_metrics(state: State<'_, AppState>) -> Result<serde_json::V
         Err(e) => {
             log::error!("Backend unavailable for runtime_metrics: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1689,7 +1689,7 @@ pub async fn get_agent_config(
         Err(e) => {
             log::error!("Backend unavailable for get_agent_config: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentOS Gateway is running.",
+                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }

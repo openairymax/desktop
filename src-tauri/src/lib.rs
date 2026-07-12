@@ -91,7 +91,7 @@ pub fn run() {
             protocol_commands::get_protocol_capabilities,
         ])
         .setup(|app| {
-            log::info!("Airymax AgentOS Desktop Client starting...");
+            log::info!("Airymax AgentRT Desktop Client starting...");
 
             let show = MenuItem::with_id(app, "show", "显示窗口", true, None::<&str>)?;
             let hide = MenuItem::with_id(app, "hide", "隐藏到托盘", true, None::<&str>)?;
@@ -102,7 +102,7 @@ pub fn run() {
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
-                .tooltip("Airymax AgentOS")
+                .tooltip("Airymax AgentRT")
                 .menu(&tray_menu)
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
@@ -142,10 +142,10 @@ pub fn run() {
                 })
                 .build(app)?;
 
-            log::info!("Airymax AgentOS ready - System tray active");
+            log::info!("Airymax AgentRT ready - System tray active");
 
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("error while running Airymax AgentOS");
+        .expect("error while running Airymax AgentRT");
 }
