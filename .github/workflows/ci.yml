@@ -10,12 +10,18 @@ permissions:
   contents: read
 
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
 
       - name: License check
         run: |
@@ -25,34 +31,12 @@ jobs:
             echo "[NO] LICENSE missing" && exit 1
           fi
 
-      - name: README check
-        run: |
-          if [ -f "README.md" ] || [ -f "README_zh.md" ]; then
-            echo "[OK] README present"
-          else
-            echo "[WARN] README missing"
-          fi
+      - name: Install dependencies (npm ci)
+        run: npm ci
 
-      - name: NOTICE check
+      - name: Run tests (vitest)
         run: |
-          if [ -f "NOTICE" ]; then
-            echo "[OK] NOTICE present"
-          else
-            echo "[WARN] NOTICE missing"
-          fi
-
-      - name: Dockerfile check
-        run: |
-          if [ -f "Dockerfile" ]; then
-            echo "[OK] Dockerfile present"
-            # 语法检查（不实际构建）
-            docker run --rm -i hadolint/hadolint < Dockerfile 2>&1 || echo "[WARN] hadolint issues (non-blocking)"
-          else
-            echo "[INFO] No Dockerfile, skipping"
-          fi
-
-      - name: docker-compose check
-        run: |
-          if [ -f "docker-compose.yml" ]; then
-            echo "[OK] docker-compose.yml present"
-          fi
+          # 真实运行桌面前端单元测试（vitest run 非监听模式，CI 下不会挂起）。
+          # 注意：package.json 的 `npm run test` 是 vitest 监听模式，CI 请使用
+          # `test:run`（vitest run），任何失败都会使 job 失败。
+          npm run test:run
