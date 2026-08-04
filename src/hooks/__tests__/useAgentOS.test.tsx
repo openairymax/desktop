@@ -5,7 +5,7 @@ import { AgentOSProvider, useAgentOS } from '../useAgentOS';
 vi.mock('../../services/agentos.service', () => {
   const mockTestConnection = vi.fn().mockResolvedValue({
     status: 'healthy',
-    version: '0.1.0',
+    version: '0.1.1',
     services: [],
   });
   const mockGetEndpoint = vi.fn().mockReturnValue('http://localhost:8080');

@@ -40,7 +40,7 @@ vi.mock('lucide-react', () => ({
 }));
 
 declare let __APP_VERSION__: string;
-(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.1.0';
+(globalThis as Record<string, unknown>).__APP_VERSION__ = '0.1.1';
 
 import Settings from '../Settings';
 

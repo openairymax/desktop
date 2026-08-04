@@ -129,7 +129,7 @@ export default defineConfig(async () => ({
     },
   },
   define: {
-    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.0'),
+    __APP_VERSION__: JSON.stringify(process.env.npm_package_version || '0.1.1'),
   },
   build: {
     rollupOptions: {
