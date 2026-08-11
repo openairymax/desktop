@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
 import React from 'react';
 
 vi.mock('framer-motion', () => ({
@@ -46,6 +46,63 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
 }));
 
+// OpenLab 数据来自 AgentRT Gateway 市场（market.search_agents / market.search_skills），
+// 测试中 mock tauriCompat 的 invoke 返回真实市场数据结构。
+// 注意：测试文件位于 src/pages/__tests__/，到 src/utils/ 需上溯两级。
+vi.mock('../../utils/tauriCompat', () => ({
+  invoke: vi.fn(async (cmd: string) => {
+    if (cmd === 'market.search_agents') {
+      return {
+        agents: [
+          {
+            id: 'doc-gen',
+            name: '文档生成器',
+            category: '生产力',
+            description: '自动生成 Markdown 文档',
+            version: '2.1.0',
+            rating: 4.8,
+            downloads: 12540,
+            author: 'AgentRT Team',
+            tags: ['文档', '自动化'],
+            last_updated: '2026-01-01',
+          },
+          {
+            id: 'ecommerce',
+            name: '电商助手',
+            category: '商业',
+            description: '电商运营自动化',
+            version: '1.3.0',
+            rating: 4.5,
+            downloads: 8200,
+            author: 'AgentRT Team',
+            tags: ['电商'],
+            last_updated: '2026-01-01',
+          },
+          {
+            id: 'code-review',
+            name: '代码审查',
+            category: '开发',
+            description: 'AI 代码审查',
+            version: '2.0.0',
+            rating: 4.9,
+            downloads: 15600,
+            author: 'AgentRT Team',
+            tags: ['代码'],
+            last_updated: '2026-01-01',
+          },
+        ],
+      };
+    }
+    if (cmd === 'market.search_skills') {
+      return { skills: [] };
+    }
+    if (cmd === 'call_tool') {
+      return undefined;
+    }
+    return undefined;
+  }),
+}));
+
 vi.mock('lucide-react', () => ({
   Sparkles: () => React.createElement('svg'),
   Download: () => React.createElement('svg'),
@@ -84,46 +141,52 @@ describe('OpenLab', () => {
     expect(within(filterBar).getByText('开发')).toBeInTheDocument();
   });
 
-  it('renders default app cards', () => {
+  // 市场数据为异步加载（market.search_agents / market.search_skills），依赖数据的测试需等待
+  it('renders default app cards', async () => {
     render(<OpenLab />);
-    expect(screen.getByText('文档生成器')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('文档生成器')).toBeInTheDocument());
     expect(screen.getByText('电商助手')).toBeInTheDocument();
     expect(screen.getByText('代码审查')).toBeInTheDocument();
   });
 
-  it('renders install button', () => {
+  it('renders install button', async () => {
     render(<OpenLab />);
-    const installButtons = screen.getAllByText('安装');
+    const installButtons = await screen.findAllByText('安装');
     expect(installButtons.length).toBeGreaterThan(0);
   });
 
-  it('renders rating for apps', () => {
+  it('renders rating for apps', async () => {
     render(<OpenLab />);
+    await screen.findByText('文档生成器');
     expect(screen.getByText('4.8')).toBeInTheDocument();
   });
 
-  it('renders download count', () => {
+  it('renders download count', async () => {
     render(<OpenLab />);
+    await screen.findByText('文档生成器');
     expect(screen.getByText('12,540')).toBeInTheDocument();
   });
 
-  it('filters apps by search text', () => {
+  it('filters apps by search text', async () => {
     render(<OpenLab />);
+    await screen.findByText('文档生成器');
     const input = screen.getByPlaceholderText('搜索应用...');
     fireEvent.change(input, { target: { value: '文档' } });
     expect(screen.getByText('文档生成器')).toBeInTheDocument();
     expect(screen.queryByText('电商助手')).not.toBeInTheDocument();
   });
 
-  it('shows no results when search matches nothing', () => {
+  it('shows no results when search matches nothing', async () => {
     render(<OpenLab />);
+    await screen.findByText('文档生成器');
     const input = screen.getByPlaceholderText('搜索应用...');
     fireEvent.change(input, { target: { value: 'zzzznomatch9999' } });
     expect(screen.getByText('未找到匹配的应用')).toBeInTheDocument();
   });
 
-  it('opens detail dialog when app card is clicked', () => {
+  it('opens detail dialog when app card is clicked', async () => {
     render(<OpenLab />);
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0));
     const appCards = screen.getAllByRole('listitem');
     fireEvent.click(appCards[0]);
     const dialog = screen.getByRole('dialog');
@@ -132,8 +195,9 @@ describe('OpenLab', () => {
     expect(within(dialog).getByText(/AgentRT Team/)).toBeInTheDocument();
   });
 
-  it('shows tag chips in detail dialog', () => {
+  it('shows tag chips in detail dialog', async () => {
     render(<OpenLab />);
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0));
     const appCards = screen.getAllByRole('listitem');
     fireEvent.click(appCards[0]);
     const dialog = screen.getByRole('dialog');
@@ -141,8 +205,9 @@ describe('OpenLab', () => {
     expect(within(dialog).getByText('自动化')).toBeInTheDocument();
   });
 
-  it('closes detail dialog when clicking backdrop', () => {
+  it('closes detail dialog when clicking backdrop', async () => {
     render(<OpenLab />);
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0));
     const appCards = screen.getAllByRole('listitem');
     fireEvent.click(appCards[0]);
     const dialog = screen.getByRole('dialog');
@@ -151,22 +216,24 @@ describe('OpenLab', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('renders installed state correctly', () => {
+  it('renders install buttons for market apps', async () => {
     render(<OpenLab />);
-    const installedButtons = screen.getAllByText('已安装');
-    expect(installedButtons.length).toBeGreaterThan(0);
+    const installButtons = await screen.findAllByText('安装');
+    expect(installButtons.length).toBeGreaterThan(0);
   });
 
-  it('filters by category', () => {
+  it('filters by category', async () => {
     render(<OpenLab />);
+    await screen.findByText('文档生成器');
     const devButton = screen.getByRole('button', { name: '筛选分类: 开发' });
     fireEvent.click(devButton);
     expect(screen.getByText('代码审查')).toBeInTheDocument();
     expect(screen.queryByText('文档生成器')).not.toBeInTheDocument();
   });
 
-  it('renders version info in detail dialog', () => {
+  it('renders version info in detail dialog', async () => {
     render(<OpenLab />);
+    await waitFor(() => expect(screen.getAllByRole('listitem').length).toBeGreaterThan(0));
     const appCards = screen.getAllByRole('listitem');
     fireEvent.click(appCards[0]);
     const dialog = screen.getByRole('dialog');

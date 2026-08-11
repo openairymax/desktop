@@ -667,6 +667,19 @@ export function useAgents() {
     [client],
   );
 
+  // agent.run 详细结果（含真实 token 用量，无则 usage 为 undefined）
+  const invokeAgentDetailed = useCallback(
+    async (agentId: string, input: string) => {
+      try {
+        return await client.agents.invokeDetailed(agentId, input);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to invoke agent');
+        return null;
+      }
+    },
+    [client],
+  );
+
   return {
     agents,
     loading,
@@ -675,6 +688,7 @@ export function useAgents() {
     spawnAgent,
     terminateAgent,
     invokeAgent,
+    invokeAgentDetailed,
   };
 }
 

@@ -116,7 +116,8 @@ const MemorySystem: React.FC = () => {
       const data = await sdk.memoryList();
       setMemories(data || []);
     } catch (error) {
-      // Intentionally empty: graceful degradation
+      // 记忆加载失败：保留空状态容错，记录日志
+      logger.warn('记忆数据加载失败', error);
     }
   }, []);
 
@@ -130,7 +131,8 @@ const MemorySystem: React.FC = () => {
         breakdown: stats.breakdown,
       });
     } catch (error) {
-      // Intentionally empty: graceful degradation
+      // 记忆加载失败：保留空状态容错，记录日志
+      logger.warn('记忆数据加载失败', error);
     }
   }, []);
 

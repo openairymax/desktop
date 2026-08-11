@@ -47,12 +47,14 @@ pub struct ProtocolResponse {
 pub async fn list_protocols(state: State<'_, AppState>) -> Result<Vec<ProtocolInfo>, String> {
     let client = get_backend_client(&state)?;
 
+    // 说明：gateway 契约无“协议适配器列表”方法，此处返回的是基于
+    // info.system 推导的能力描述（非 gateway 后端协议数据）
     match client.list_protocol_adapters().await {
         Ok(adapters) => {
             let protocols = adapters.into_iter().map(|a| adapter_to_info(&a)).collect();
             Ok(protocols)
         }
-        Err(_) => Ok(get_default_protocols()),
+        Err(e) => Err(format!("Failed to list protocols: {}", e)),
     }
 }
 
@@ -64,37 +66,20 @@ pub async fn test_protocol_connection(
 ) -> Result<ProtocolConnectionTest, String> {
     let client = get_backend_client(&state)?;
 
-    match client
+    // gateway 契约无 protocol.translate：仅验证 gateway 连通性（info.health），
+    // 协议适配状态由 gateway 内部管理；移除“本地直连端点”兜底降级
+    let result = client
         .test_protocol_connection(&protocol_id, &endpoint)
-        .await
-    {
-        Ok(result) => Ok(ProtocolConnectionTest {
-            protocol_id: result.protocol,
-            endpoint: result.endpoint,
-            success: result.success,
-            latency_ms: result.latency_ms,
-            message: result.message,
-            details: result.details,
-        }),
-        Err(e) => {
-            let start = std::time::Instant::now();
-            let success = test_local_connection(&endpoint).await;
-            let latency = start.elapsed().as_millis() as u64;
+        .await?;
 
-            Ok(ProtocolConnectionTest {
-                protocol_id,
-                endpoint,
-                success,
-                latency_ms: latency,
-                message: if success {
-                    "Connection successful (local test)".to_string()
-                } else {
-                    format!("Connection failed: {}", e)
-                },
-                details: None,
-            })
-        }
-    }
+    Ok(ProtocolConnectionTest {
+        protocol_id: result.protocol,
+        endpoint: result.endpoint,
+        success: result.success,
+        latency_ms: result.latency_ms,
+        message: result.message,
+        details: result.details,
+    })
 }
 
 #[tauri::command]
@@ -106,31 +91,15 @@ pub async fn send_protocol_message(
     let start = std::time::Instant::now();
 
     let result = match message.protocol.as_str() {
+        // jsonrpc：直接透传到 gateway JSON-RPC 接口（POST /api/）
         "jsonrpc" | "json-rpc" => client.send_jsonrpc(&message.method, message.params).await,
-        "mcp" => {
-            let params = serde_json::json!({
-                "protocol": "mcp",
-                "method": message.method,
-                "params": message.params
-            });
-            client.send_jsonrpc("protocol.translate", params).await
-        }
-        "a2a" => {
-            let params = serde_json::json!({
-                "protocol": "a2a",
-                "method": message.method,
-                "params": message.params
-            });
-            client.send_jsonrpc("protocol.translate", params).await
-        }
-        "openai" => {
-            let params = serde_json::json!({
-                "protocol": "openai",
-                "method": message.method,
-                "params": message.params
-            });
-            client.send_jsonrpc("protocol.translate", params).await
-        }
+        // gateway 契约无 protocol.translate：mcp / a2a / openai 协议适配
+        // 由 gateway 内部完成，桌面端不支持直接透传，返回明确错误
+        "mcp" | "a2a" | "openai" => Err(format!(
+            "协议 '{}' 不支持桌面端直接透传：gateway 契约无 protocol.translate 方法，\
+             {} 适配由 gateway 内部完成，请通过 agent.run / a2a.* 等白名单方法使用对应能力",
+            message.protocol, message.protocol
+        )),
         _ => Err(format!("Unsupported protocol: {}", message.protocol)),
     };
 
@@ -159,17 +128,32 @@ pub async fn get_protocol_capabilities(
     protocol_id: String,
     _state: State<'_, AppState>,
 ) -> Result<Vec<serde_json::Value>, String> {
+    // 说明：以下为本地能力描述（非 gateway 后端数据）。gateway 契约
+    // 无“能力列表”方法，此表仅用于 UI 展示协议规范支持的方法集合。
     let capabilities = match protocol_id.as_str() {
         "jsonrpc" | "json-rpc" => vec![
-            serde_json::json!({"name": "agent.list", "description": "List registered agents", "params": []}),
-            serde_json::json!({"name": "agent.register", "description": "Register new agent", "params": ["name", "type"]}),
-            serde_json::json!({"name": "task.submit", "description": "Submit task to agent", "params": ["agent_id", "description"]}),
-            serde_json::json!({"name": "task.list", "description": "List tasks", "params": []}),
-            serde_json::json!({"name": "service.status", "description": "Get service status", "params": []}),
-            serde_json::json!({"name": "config.get", "description": "Get configuration", "params": ["key"]}),
-            serde_json::json!({"name": "config.set", "description": "Set configuration", "params": ["key", "value"]}),
-            serde_json::json!({"name": "memory.store", "description": "Store memory entry", "params": ["type", "content"]}),
-            serde_json::json!({"name": "memory.search", "description": "Search memory", "params": ["query"]}),
+            serde_json::json!({"name": "agent.run", "description": "运行 agent 对话（完整链路 gateway→think_d→llm_d）", "params": ["prompt", "session_id?"]}),
+            serde_json::json!({"name": "agent.cancel", "description": "取消 agent 会话", "params": ["session_id"]}),
+            serde_json::json!({"name": "llm.list_models", "description": "列出 gateway 可用的模型", "params": []}),
+            serde_json::json!({"name": "mem.write", "description": "写入记忆", "params": ["content", "metadata?"]}),
+            serde_json::json!({"name": "mem.search", "description": "搜索记忆", "params": ["query", "top_k?"]}),
+            serde_json::json!({"name": "mem.get", "description": "按 id 获取记忆", "params": ["id"]}),
+            serde_json::json!({"name": "mem.delete", "description": "按 id 删除记忆", "params": ["id"]}),
+            serde_json::json!({"name": "mem.count", "description": "记忆条目计数", "params": []}),
+            serde_json::json!({"name": "sched.dag_submit", "description": "提交 DAG 任务", "params": ["dag"]}),
+            serde_json::json!({"name": "sched.dag_status", "description": "查询 DAG 任务状态", "params": ["dag_id"]}),
+            serde_json::json!({"name": "sched.dag_cancel", "description": "取消 DAG 任务", "params": ["dag_id"]}),
+            serde_json::json!({"name": "a2a.discover_agents", "description": "发现已注册 agent", "params": []}),
+            serde_json::json!({"name": "a2a.register_agent", "description": "注册 agent", "params": ["name?", "url?"]}),
+            serde_json::json!({"name": "a2a.unregister_agent", "description": "注销 agent", "params": []}),
+            serde_json::json!({"name": "plugin.list", "description": "列出插件", "params": []}),
+            serde_json::json!({"name": "plugin.execute", "description": "执行插件", "params": ["id", "params"]}),
+            serde_json::json!({"name": "think.process", "description": "思考处理", "params": ["prompt"]}),
+            serde_json::json!({"name": "info.health", "description": "网关健康检查", "params": []}),
+            serde_json::json!({"name": "info.system", "description": "系统服务信息", "params": []}),
+            serde_json::json!({"name": "info.history", "description": "历史记录", "params": []}),
+            serde_json::json!({"name": "observe.query_metrics", "description": "查询运行指标", "params": ["name?"]}),
+            serde_json::json!({"name": "ping", "description": "网关连通性探测", "params": []}),
         ],
         "mcp" => vec![
             serde_json::json!({"name": "tools/list", "description": "List available MCP tools", "params": []}),
@@ -213,7 +197,7 @@ fn get_backend_client(state: &AppState) -> Result<BackendClient, String> {
         gateway_url: config
             .gateway_url
             .clone()
-            .unwrap_or_else(|| format!("http://localhost:{}", 18789)),
+            .unwrap_or_else(|| format!("http://127.0.0.1:{}", 8080)),
         timeout_seconds: config.timeout_seconds,
         api_key: config.api_key.clone(),
     }))
@@ -238,83 +222,4 @@ fn adapter_to_info(adapter: &ProtocolAdapter) -> ProtocolInfo {
         color: color.to_string(),
         icon: icon.to_string(),
     }
-}
-
-fn get_default_protocols() -> Vec<ProtocolInfo> {
-    vec![
-        ProtocolInfo {
-            id: "jsonrpc".to_string(),
-            name: "JSON-RPC 2.0".to_string(),
-            description: "AgentRT native JSON-RPC protocol".to_string(),
-            version: "2.0".to_string(),
-            status: "active".to_string(),
-            endpoint: "/jsonrpc".to_string(),
-            capabilities: vec![
-                "agent.list".to_string(),
-                "task.submit".to_string(),
-                "config.get".to_string(),
-            ],
-            color: "#4CAF50".to_string(),
-            icon: "⚡".to_string(),
-        },
-        ProtocolInfo {
-            id: "mcp".to_string(),
-            name: "MCP v1.0".to_string(),
-            description: "Model Context Protocol - tool & resource integration".to_string(),
-            version: "1.0".to_string(),
-            status: "active".to_string(),
-            endpoint: "/mcp".to_string(),
-            capabilities: vec![
-                "tools/list".to_string(),
-                "tools/call".to_string(),
-                "resources/list".to_string(),
-            ],
-            color: "#4CAF50".to_string(),
-            icon: "🔌".to_string(),
-        },
-        ProtocolInfo {
-            id: "a2a".to_string(),
-            name: "A2A v0.3".to_string(),
-            description: "Agent-to-Agent Protocol - inter-agent communication".to_string(),
-            version: "0.3.0".to_string(),
-            status: "active".to_string(),
-            endpoint: "/a2a".to_string(),
-            capabilities: vec![
-                "agent/discover".to_string(),
-                "task/create".to_string(),
-                "message/send".to_string(),
-            ],
-            color: "#2196F3".to_string(),
-            icon: "🤝".to_string(),
-        },
-        ProtocolInfo {
-            id: "openai".to_string(),
-            name: "OpenAI API v1".to_string(),
-            description: "OpenAI-compatible API - chat completions & models".to_string(),
-            version: "1.0".to_string(),
-            status: "active".to_string(),
-            endpoint: "/v1".to_string(),
-            capabilities: vec![
-                "chat.completions.create".to_string(),
-                "models.list".to_string(),
-            ],
-            color: "#FF9800".to_string(),
-            icon: "🧠".to_string(),
-        },
-    ]
-}
-
-async fn test_local_connection(endpoint: &str) -> bool {
-    let url = if endpoint.starts_with("http") {
-        endpoint.to_string()
-    } else {
-        format!("http://localhost{}", endpoint)
-    };
-
-    reqwest::Client::new()
-        .get(&url)
-        .timeout(std::time::Duration::from_secs(5))
-        .send()
-        .await
-        .is_ok()
 }

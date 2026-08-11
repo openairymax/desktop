@@ -100,7 +100,7 @@ describe('ModalProvider', () => {
       expect(screen.getByText('Hello')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
 
     await waitFor(() => {
       expect(onResolve).toHaveBeenCalledWith(true);
@@ -136,7 +136,7 @@ describe('ModalProvider', () => {
       expect(screen.getByText('Cancel Test')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
 
     await waitFor(() => {
       expect(onResolve).toHaveBeenCalledWith(false);
@@ -307,7 +307,7 @@ describe('ModalProvider', () => {
       expect(screen.getByText('Are you sure?')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    fireEvent.click(screen.getByRole('button', { name: '确认' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Are you sure?')).not.toBeInTheDocument();
@@ -327,7 +327,7 @@ describe('ModalProvider', () => {
       expect(screen.getByText('Are you sure?')).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(screen.getByRole('button', { name: '取消' }));
 
     await waitFor(() => {
       expect(screen.queryByText('Are you sure?')).not.toBeInTheDocument();

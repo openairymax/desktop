@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Wrench,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 interface Tool {
   id: string;
@@ -95,8 +96,9 @@ const ToolManager: React.FC = () => {
               if (stored) {
                 setTools(JSON.parse(stored));
               }
-            } catch {
-              // Intentionally empty: graceful degradation
+            } catch (e) {
+              // 本地缓存解析失败：保留空列表容错，记录日志
+              logger.warn('解析本地工具缓存失败', e);
             }
           }
         }
@@ -107,8 +109,9 @@ const ToolManager: React.FC = () => {
             if (stored) {
               setTools(JSON.parse(stored));
             }
-          } catch {
-            // Intentionally empty: graceful degradation
+          } catch (e) {
+            // 本地缓存解析失败：保留空列表容错，记录日志
+            logger.warn('解析本地工具缓存失败', e);
           }
         }
       } finally {
@@ -253,7 +256,8 @@ const ToolManager: React.FC = () => {
                 const result = await invoke<Tool[]>('list_tools');
                 if (Array.isArray(result) && result.length > 0) setTools(result);
               } catch (e) {
-                // Intentionally empty: graceful degradation
+                // 工具列表刷新失败：保留 UI 容错，记录日志
+                logger.warn('刷新工具列表失败', e);
               }
               setLoading(false);
             }}

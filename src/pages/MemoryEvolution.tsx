@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useMemory } from '../hooks/useAgentOS';
 import { MemoryLayer as ServiceMemoryLayer } from '../services/agentos.service';
+import { logger } from '../utils/logger';
 
 type MemoryLayer = 'L1' | 'L2' | 'L3' | 'L4';
 
@@ -107,7 +108,8 @@ const MemoryEvolution: React.FC = () => {
       await writeMemory(newContent.trim(), newLayer as ServiceMemoryLayer);
       await fetchMemories();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 记忆操作失败：保留 UI 容错，记录日志
+      logger.warn('记忆操作失败', e);
     }
     setNewContent('');
     setShowStoreModal(false);
@@ -120,7 +122,8 @@ const MemoryEvolution: React.FC = () => {
       await deleteMemory(id);
       await fetchMemories();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 记忆操作失败：保留 UI 容错，记录日志
+      logger.warn('记忆操作失败', e);
     }
     setActionLoading(null);
   };
@@ -131,7 +134,8 @@ const MemoryEvolution: React.FC = () => {
       await evolveMemory();
       await fetchMemories();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 记忆操作失败：保留 UI 容错，记录日志
+      logger.warn('记忆操作失败', e);
     }
     setActionLoading(null);
   };
@@ -142,7 +146,8 @@ const MemoryEvolution: React.FC = () => {
       await clearMemories();
       await fetchMemories();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 记忆操作失败：保留 UI 容错，记录日志
+      logger.warn('记忆操作失败', e);
     }
   };
 

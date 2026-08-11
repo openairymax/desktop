@@ -1,9 +1,17 @@
+import { logger } from '../utils/logger';
+
 // ============================================================
 // AgentOS SDK — Frontend Service Layer for Tauri Desktop
 // ============================================================
 // Provides a unified TypeScript API that wraps all Tauri invoke()
 // calls, type-safe interfaces, and optional Web API fallback for
 // browser-based development.
+// ============================================================
+// 说明：本文件的全部 invoke 命令均由 Rust 端（src-tauri）处理，
+// 前端不直连任何外部 LLM API（openai/anthropic/ollama/deepseek 均已移除）。
+// 浏览器模式下通过 tauriCompat 的 JSON-RPC 客户端转发到 AgentRT Gateway
+// （POST {base}/api/），Gateway 不可达时抛错，不做降级假数据。
+// LLM 聊天统一入口为 gateway 的 agent.run，见 agentos.service.ts。
 // ============================================================
 
 // ==================== Core Types ====================
@@ -239,7 +247,8 @@ export async function autoInit(): Promise<void> {
       const { invoke } = await import('@tauri-apps/api/core');
       invokeFn = invoke;
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Tauri 自动初始化失败：记录日志，调用方需显式 initSdk
+      logger.warn('Tauri SDK 自动初始化失败', e);
     }
   }
 }
@@ -369,6 +378,9 @@ export async function restartTask(taskId: string): Promise<TaskInfo> {
 
 // ==================== LLM / AI Chat Commands ====================
 
+// 注意：LLM 聊天统一走 gateway 的 agent.run（见 agentos.service.ts），
+// 前端禁止直连任何外部 LLM API。以下 llm_chat / list_llm_providers 等
+// 为 Tauri 命令，由 Rust 端（src-tauri）实现，浏览器模式不可用。
 export async function llmChat(request: LLMChatRequest): Promise<LLMChatResponse> {
   return invoke<LLMChatResponse>('llm_chat', { request });
 }

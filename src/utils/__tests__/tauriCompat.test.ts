@@ -4,7 +4,7 @@ describe('tauriCompat invoke', () => {
   beforeEach(() => {
     vi.resetModules();
     localStorage.clear();
-    localStorage.setItem('agentos-endpoint', 'http://localhost:18789');
+    localStorage.setItem('agentos-endpoint', 'http://localhost:8080');
     vi.doMock('@tauri-apps/api/core', () => ({
       invoke: vi.fn().mockRejectedValue(new Error('Tauri not available in test')),
     }));
@@ -23,7 +23,7 @@ describe('tauriCompat invoke', () => {
     expect(result).toEqual({ data: 'test-result' });
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const url = mockFetch.mock.calls[0][0];
-    expect(url).toContain('/jsonrpc');
+    expect(url).toContain('/api/');
     const body = JSON.parse(mockFetch.mock.calls[0][1].body);
     expect(body.method).toBe('test.command');
     expect(body.params).toEqual({ key: 'value' });

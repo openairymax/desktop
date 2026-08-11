@@ -9,6 +9,11 @@ import {
 
 const mockFetch = vi.fn();
 
+// 构造 JSON-RPC 成功响应
+function rpcResult(result: unknown) {
+  return { ok: true, json: () => Promise.resolve({ jsonrpc: '2.0', result, id: 1 }) };
+}
+
 describe('AgentOSClient Service', () => {
   beforeEach(() => {
     global.fetch = mockFetch;
@@ -22,7 +27,7 @@ describe('AgentOSClient Service', () => {
   describe('Constructor', () => {
     it('creates client with default config', () => {
       const client = new AgentOSClient();
-      expect(client.config.endpoint).toBe('http://localhost:18789');
+      expect(client.config.endpoint).toBe('http://localhost:8080');
       expect(client.config.timeout).toBe(30000);
     });
 
@@ -63,25 +68,21 @@ describe('AgentOSClient Service', () => {
   });
 
   describe('TaskService', () => {
-    it('submits a task successfully', async () => {
+    it('submits a task via sched.dag_submit', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { task_id: 'task-123', description: 'Test task' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ dag_id: 'task-123' }));
 
       const task = await client.tasks.submit('Test task');
 
       expect(task.id).toBe('task-123');
       expect(task.description).toBe('Test task');
       expect(task.status).toBe(TaskStatus.PENDING);
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/tasks'),
-        expect.objectContaining({ method: 'POST' }),
-      );
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const url = mockFetch.mock.calls[0][0];
+      expect(url).toContain('/api/');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('sched.dag_submit');
+      expect(body.params.dag.nodes[0].goal).toBe('Test task');
     });
 
     it('throws error for empty task description', async () => {
@@ -90,102 +91,90 @@ describe('AgentOSClient Service', () => {
       await expect(client.tasks.submit('')).rejects.toThrow('任务描述 不能为空');
     });
 
-    it('lists tasks successfully', async () => {
+    it('lists tasks via sched.get_stats', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: {
-              tasks: [
-                { id: '1', description: 'Task 1', status: 'completed', priority: 1 },
-                { id: '2', description: 'Task 2', status: 'pending', priority: 2 },
-              ],
-            },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        rpcResult({
+          tasks: [
+            { id: '1', description: 'Task 1', status: 'completed', priority: 1 },
+            { id: '2', description: 'Task 2', status: 'pending', priority: 2 },
+          ],
+        }),
+      );
 
       const tasks = await client.tasks.list();
 
       expect(tasks).toHaveLength(2);
       expect(tasks[0].id).toBe('1');
       expect(tasks[1].status).toBe(TaskStatus.PENDING);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('sched.get_stats');
     });
 
-    it('gets task by ID', async () => {
+    it('gets task by ID via sched.dag_status', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { id: 'task-456', description: 'Get task', status: 'running', priority: 5 },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        rpcResult({ id: 'task-456', description: 'Get task', status: 'running', priority: 5 }),
+      );
 
       const task = await client.tasks.get('task-456');
 
       expect(task.id).toBe('task-456');
       expect(task.status).toBe(TaskStatus.RUNNING);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('sched.dag_status');
+      expect(body.params.dag_id).toBe('task-456');
     });
 
-    it('cancels a task', async () => {
+    it('cancels a task via sched.dag_cancel', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       await client.tasks.cancel('task-789');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/tasks/task-789/cancel'),
-        expect.objectContaining({ method: 'POST' }),
-      );
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('sched.dag_cancel');
+      expect(body.params.dag_id).toBe('task-789');
     });
 
-    it('deletes a task', async () => {
+    it('deletes a task (falls back to dag_cancel)', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       await client.tasks.delete('task-999');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/tasks/task-999'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('sched.dag_cancel');
+      expect(body.params.dag_id).toBe('task-999');
     });
   });
 
   describe('MemoryService', () => {
-    it('writes memory successfully', async () => {
+    it('writes memory via mem.write', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { memory_id: 'mem-1', content: 'Test memory', layer: 'L2' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ id: 'mem-1', content: 'Test memory' }));
 
       const memory = await client.memories.write('Test memory', MemoryLayer.L2);
 
       expect(memory.id).toBe('mem-1');
       expect(memory.content).toBe('Test memory');
       expect(memory.layer).toBe(MemoryLayer.L2);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('mem.write');
+      expect(body.params.content).toBe('Test memory');
     });
 
-    it('searches memories by query', async () => {
+    it('searches memories via mem.search', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: {
-              memories: [
-                { id: 'm1', content: 'Memory about AI', layer: 'L1', score: 0.95 },
-                { id: 'm2', content: 'Another memory', layer: 'L2', score: 0.85 },
-              ],
-              total: 2,
-            },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        rpcResult({
+          memories: [
+            { id: 'm1', content: 'Memory about AI', layer: 'L1', score: 0.95 },
+            { id: 'm2', content: 'Another memory', layer: 'L2', score: 0.85 },
+          ],
+          total: 2,
+        }),
+      );
 
       const result = await client.memories.search('AI', 10);
 
@@ -193,18 +182,20 @@ describe('AgentOSClient Service', () => {
       expect(result.total).toBe(2);
       expect(result.query).toBe('AI');
       expect(result.topK).toBe(10);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('mem.search');
+      expect(body.params.top_k).toBe(10);
     });
 
-    it('deletes memory by ID', async () => {
+    it('deletes memory via mem.delete', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       await client.memories.delete('mem-delete');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/memories/mem-delete'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('mem.delete');
+      expect(body.params.id).toBe('mem-delete');
     });
 
     it('throws error for empty memory content', async () => {
@@ -215,67 +206,50 @@ describe('AgentOSClient Service', () => {
   });
 
   describe('SessionService', () => {
-    it('creates session successfully', async () => {
+    it('creates session locally and writes session memory via mem.write', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { session_id: 'sess-1', user_id: 'user-123' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ id: 'session-record' }));
 
       const session = await client.sessions.create('user-123');
 
-      expect(session.id).toBe('sess-1');
+      expect(session.id).toContain('session-');
       expect(session.userId).toBe('user-123');
       expect(session.status).toBe(SessionStatus.ACTIVE);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('mem.write');
+      expect(body.params.metadata.session_id).toBe(session.id);
     });
 
-    it('lists sessions', async () => {
+    it('lists sessions from localStorage', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: {
-              sessions: [
-                { id: 's1', user_id: 'u1', status: 'active' },
-                { id: 's2', user_id: 'u2', status: 'inactive' },
-              ],
-            },
-          }),
-      });
+      // create 写 mem.write（第 0 次调用），list 调 mem.search（第 1 次调用），各 mock 一次
+      mockFetch.mockResolvedValueOnce(rpcResult({ id: 'session-record' }));
+      mockFetch.mockResolvedValueOnce(rpcResult({ memories: [] }));
+      await client.sessions.create('u1');
 
       const sessions = await client.sessions.list();
 
-      expect(sessions).toHaveLength(2);
-      expect(sessions[0].status).toBe(SessionStatus.ACTIVE);
+      expect(sessions.length).toBeGreaterThanOrEqual(1);
+      const body = JSON.parse(mockFetch.mock.calls[1][1].body);
+      expect(body.method).toBe('mem.search');
     });
 
-    it('closes session', async () => {
+    it('closes session locally', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValue(rpcResult({}));
+      const session = await client.sessions.create('u-close');
 
-      await client.sessions.close('sess-close');
+      await client.sessions.close(session.id);
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/sessions/sess-close'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      const loaded = await client.sessions.get(session.id);
+      expect(loaded.status).toBe(SessionStatus.INACTIVE);
     });
   });
 
   describe('SkillService', () => {
-    it('loads skill successfully', async () => {
+    it('loads skill via plugin.load', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { skill_id: 'skill-1', name: 'Test Skill', version: '1.0.0' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ name: 'Test Skill', version: '1.0.0' }));
 
       const skill = await client.skills.load('skill-1');
 
@@ -283,124 +257,123 @@ describe('AgentOSClient Service', () => {
       expect(skill.name).toBe('Test Skill');
       expect(skill.version).toBe('1.0.0');
       expect(skill.status).toBe(SkillStatus.ACTIVE);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('plugin.load');
+      expect(body.params.name).toBe('skill-1');
     });
 
-    it('executes skill and returns result', async () => {
+    it('executes skill via plugin.execute and returns result', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { success: true, output: { result: 'done' } },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ success: true, output: { result: 'done' } }));
 
       const result = await client.skills.execute('skill-exec', { param: 'value' });
 
       expect(result.success).toBe(true);
       expect(result.output).toEqual({ result: 'done' });
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('plugin.execute');
+      expect(body.params.params).toEqual({ param: 'value' });
     });
 
-    it('registers new skill', async () => {
+    it('registers new skill (falls back to plugin.load)', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { skill_id: 'new-skill', name: 'New Skill' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       const skill = await client.skills.register('New Skill', 'A new test skill');
 
       expect(skill.name).toBe('New Skill');
       expect(skill.description).toBe('A new test skill');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('plugin.load');
     });
 
-    it('unloads skill', async () => {
+    it('unloads skill via plugin.unload', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       await client.skills.unload('skill-unload');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/skills/skill-unload/unload'),
-        expect.objectContaining({ method: 'POST' }),
-      );
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('plugin.unload');
+      expect(body.params.name).toBe('skill-unload');
     });
   });
 
   describe('AgentService', () => {
-    it('lists agents', async () => {
+    it('lists agents via a2a.discover_agents', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: {
-              agents: [
-                { agent_id: 'a1', name: 'Agent 1', status: 'running' },
-                { agent_id: 'a2', name: 'Agent 2', status: 'idle' },
-              ],
-            },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        rpcResult({
+          agents: [
+            { agent_id: 'a1', name: 'Agent 1', status: 'running' },
+            { agent_id: 'a2', name: 'Agent 2', status: 'idle' },
+          ],
+        }),
+      );
 
       const agents = await client.agents.list();
 
       expect(agents).toHaveLength(2);
       expect(agents[0].name).toBe('Agent 1');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('a2a.discover_agents');
     });
 
-    it('spawns new agent', async () => {
+    it('spawns new agent via a2a.register_agent', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: { agent_id: 'new-agent', name: 'New Agent' },
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(rpcResult({ agent_id: 'new-agent', name: 'New Agent' }));
 
       const agent = await client.agents.spawn('New Agent');
 
       expect(agent.id).toBe('new-agent');
       expect(agent.name).toBe('New Agent');
-      expect(agent.status).toBe('running');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('a2a.register_agent');
     });
 
-    it('terminates agent', async () => {
+    it('invokes agent via agent.run', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
+      mockFetch.mockResolvedValueOnce(rpcResult({ output: 'hello from agent' }));
+
+      const output = await client.agents.invoke('agent-a', 'hi');
+
+      expect(output).toBe('hello from agent');
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('agent.run');
+      expect(body.params.prompt).toBe('hi');
+    });
+
+    it('terminates agent via a2a.unregister_agent', async () => {
+      const client = new AgentOSClient();
+      mockFetch.mockResolvedValueOnce(rpcResult({}));
 
       await client.agents.terminate('agent-term');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/agents/agent-term'),
-        expect.objectContaining({ method: 'DELETE' }),
-      );
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('a2a.unregister_agent');
+      expect(body.params.agent_id).toBe('agent-term');
     });
   });
 
   describe('Health & Metrics', () => {
-    it('returns health status on successful request', async () => {
+    it('returns health status via info.health', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            status: 'healthy',
-            version: '1.0.0',
-            uptime: 3600,
-            timestamp: '2024-01-01T00:00:00Z',
-          }),
-      });
+      mockFetch.mockResolvedValueOnce(
+        rpcResult({
+          status: 'healthy',
+          version: '1.0.0',
+          uptime: 3600,
+          timestamp: '2024-01-01T00:00:00Z',
+        }),
+      );
 
       const health = await client.health();
 
       expect(health.status).toBe('healthy');
       expect(health.version).toBe('1.0.0');
       expect(health.uptime).toBe(3600);
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+      expect(body.method).toBe('info.health');
     });
 
     it('returns unreachable status on fetch failure', async () => {
@@ -412,25 +385,27 @@ describe('AgentOSClient Service', () => {
       expect(health.status).toBe('unreachable');
     });
 
-    it('returns metrics data', async () => {
+    it('returns metrics data aggregated from gateway stats', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({
-            data: {
-              tasks_total: 100,
-              tasks_completed: 80,
-              tasks_failed: 10,
-              memories_total: 50,
-              sessions_active: 5,
-              skills_loaded: 12,
-              cpu_usage: 65,
-              memory_usage: 1024,
-              request_count: 1000,
-              average_latency_ms: 150,
-            },
-          }),
+      // metrics() 并行调用 info.get_stats / sched.get_stats / mem.count / info.system
+      mockFetch.mockImplementation((_url: unknown, init: RequestInit) => {
+        const body = JSON.parse(String(init.body));
+        switch (body.method) {
+          case 'info.get_stats':
+            return Promise.resolve(
+              rpcResult({ tasks_total: 100, tasks_completed: 80, tasks_failed: 10, cpu_usage: 65, memory_usage: 1024 }),
+            );
+          case 'sched.get_stats':
+            return Promise.resolve(rpcResult({ total: 100, completed: 80, failed: 10 }));
+          case 'mem.count':
+            return Promise.resolve(rpcResult({ count: 50 }));
+          case 'info.system':
+            return Promise.resolve(
+              rpcResult({ cpu: { usage_percent: 65 }, memory: { used_percent: 1024 } }),
+            );
+          default:
+            return Promise.resolve(rpcResult({}));
+        }
       });
 
       const metrics = await client.metrics();
@@ -439,11 +414,12 @@ describe('AgentOSClient Service', () => {
       expect(metrics.tasksCompleted).toBe(80);
       expect(metrics.cpuUsage).toBe(65);
       expect(metrics.memoryUsage).toBe(1024);
+      expect(metrics.memoriesTotal).toBe(50);
     });
 
     it('returns zero metrics on failure', async () => {
       const client = new AgentOSClient();
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
+      mockFetch.mockRejectedValue(new Error('Network error'));
 
       const metrics = await client.metrics();
 
@@ -462,7 +438,24 @@ describe('AgentOSClient Service', () => {
         text: () => Promise.resolve('Server error details'),
       });
 
-      await expect(client.tasks.submit('Test')).rejects.toThrow('AgentOS API error 500');
+      await expect(client.tasks.submit('Test')).rejects.toThrow('AgentOS Gateway error 500');
+    });
+
+    it('handles JSON-RPC error responses', async () => {
+      const client = new AgentOSClient();
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            jsonrpc: '2.0',
+            error: { code: -32601, message: 'Method not found' },
+            id: 1,
+          }),
+      });
+
+      await expect(client.tasks.submit('Test')).rejects.toThrow(
+        "Gateway method 'sched.dag_submit' error: Method not found",
+      );
     });
 
     it('handles request timeout', async () => {

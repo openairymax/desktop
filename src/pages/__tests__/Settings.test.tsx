@@ -23,7 +23,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 vi.mock('../../constants/endpoints', () => ({
-  AGENTOS_GATEWAY_URL: 'http://localhost:18789',
+  AGENTOS_GATEWAY_URL: 'http://localhost:8080',
 }));
 
 vi.mock('lucide-react', () => ({

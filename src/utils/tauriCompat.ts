@@ -1,3 +1,5 @@
+import { logger } from './logger';
+
 type InvokeFn = {
   <T = unknown>(cmd: string, args?: Record<string, unknown>): Promise<T>;
 };
@@ -9,7 +11,8 @@ const GATEWAY_URL = () => {
 };
 
 async function gatewayInvoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const url = `${GATEWAY_URL()}/jsonrpc`;
+  // AgentRT Gateway 统一 JSON-RPC 端点：POST {base}/api/
+  const url = `${GATEWAY_URL()}/api/`;
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -27,9 +30,14 @@ async function gatewayInvoke<T>(cmd: string, args?: Record<string, unknown>): Pr
 
   const json = await response.json();
   if (json.error) {
-    throw new Error(json.error.message || json.error.toString());
+    throw new Error(
+      typeof json.error === 'object'
+        ? json.error.message || JSON.stringify(json.error)
+        : String(json.error),
+    );
   }
-  return (json.result ?? json.data) as T;
+  // JSON-RPC 2.0：统一取 result 字段，不做多层猜测解析
+  return json.result as T;
 }
 
 const fallbackInvoke = async <T = unknown>(
@@ -57,14 +65,14 @@ const invoke: InvokeFn = async <T = unknown>(
     try {
       return await tauriInvoke<T>(cmd, args);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      logger.warn(`Tauri invoke '${cmd}' 失败，回退到 Gateway`, e);
     }
   }
 
   try {
     return await gatewayInvoke<T>(cmd, args);
   } catch (e) {
-    // Intentionally empty: graceful degradation
+    logger.warn(`Gateway JSON-RPC '${cmd}' 调用失败`, e);
   }
 
   return fallbackInvoke<T>(cmd, args);

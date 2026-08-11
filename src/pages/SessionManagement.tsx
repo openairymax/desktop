@@ -18,6 +18,7 @@ import { useSessions, useAgentOS, useAgents } from '../hooks/useAgentOS';
 import type { Session } from '../services/agentos.service';
 import { SessionStatus } from '../services/agentos.service';
 import { useTranslation } from 'react-i18next';
+import { logger } from '../utils/logger';
 
 interface DisplaySession {
   id: string;
@@ -103,7 +104,8 @@ export default function SessionManagement() {
     try {
       await createSession(newSession.agent === 'auto' ? 'default' : newSession.agent);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 会话操作失败：保留 UI 容错，记录日志
+      logger.warn('会话操作失败', e);
     }
     setShowCreateModal(false);
     setNewSession({ name: '', agent: 'auto', description: '' });
@@ -114,7 +116,8 @@ export default function SessionManagement() {
       try {
         await closeSession(id);
       } catch (e) {
-        // Intentionally empty: graceful degradation
+        // 会话操作失败：保留 UI 容错，记录日志
+      logger.warn('会话操作失败', e);
       }
     },
   [closeSession],
@@ -126,7 +129,8 @@ export default function SessionManagement() {
         try {
           await closeSession(id);
         } catch (e) {
-          // Intentionally empty: graceful degradation
+          // 会话操作失败：保留 UI 容错，记录日志
+      logger.warn('会话操作失败', e);
         }
       }
     },
