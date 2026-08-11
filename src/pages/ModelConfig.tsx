@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Brain,
   Plus,
@@ -20,6 +20,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAgentOS } from '../hooks/useAgentOS';
+import { logger } from '../utils/logger';
 
 interface LLMProviderConfig {
   id: string;
@@ -29,6 +30,26 @@ interface LLMProviderConfig {
   apiKey?: string;
   model: string;
   configured: boolean;
+}
+
+// 从 llm.list_models 的 JSON-RPC result 中提取模型名数组（兼容数组/对象包裹结构）
+function toModelNames(result: unknown): string[] {
+  if (Array.isArray(result)) {
+    return result
+      .map((m) =>
+        typeof m === 'string'
+          ? m
+          : ((m as Record<string, unknown>)?.name ?? (m as Record<string, unknown>)?.id ?? ''),
+      )
+      .filter((name): name is string => typeof name === 'string' && name.length > 0);
+  }
+  if (result && typeof result === 'object') {
+    for (const key of ['models', 'items', 'results', 'list']) {
+      const v = (result as Record<string, unknown>)[key];
+      if (Array.isArray(v)) return toModelNames(v);
+    }
+  }
+  return [];
 }
 
 const PROVIDER_TEMPLATES = {
@@ -102,54 +123,43 @@ const ModelConfig: React.FC = () => {
     defaultModel: '',
   });
   const [envVars, setEnvVars] = useState<Array<{ key: string; value: string }>>([]);
+  // llm.list_models 从 gateway 拉取的真实可用模型（供"默认模型"下拉参考）
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
 
+  // 配置存储为本地 localStorage（gateway 无配置读写 REST 接口，配置由
+  // $AIRY_HOME/config/model.yaml 管理）；gateway 仅用于 llm.list_models 拉取真实模型参考。
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      if (client) {
+      const stored = localStorage.getItem('agentos-config');
+      if (stored) {
         try {
-          const configResp = await client.rawRequest<{
-            providers?: LLMProviderConfig[];
-            systemParams?: Record<string, string | number | boolean>;
-            envVars?: Array<{ key: string; value: string }>;
-          }>('/api/v1/config', { method: 'GET' });
-          if (configResp?.providers) setProviders(configResp.providers);
-          if (configResp?.systemParams)
-            setSystemParams((prev) => ({ ...prev, ...configResp.systemParams }));
-          if (configResp?.envVars) setEnvVars(configResp.envVars);
-        } catch {
-          try {
-            const stored = localStorage.getItem('agentos-config');
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed.providers?.length > 0) setProviders(parsed.providers);
-              if (parsed.systemParams)
-                setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
-              if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
-            }
-          } catch {
-            void 0;
-          }
-        }
-      } else {
-        try {
-          const stored = localStorage.getItem('agentos-config');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            if (parsed.providers?.length > 0) setProviders(parsed.providers);
-            if (parsed.systemParams)
-              setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
-            if (parsed.envVars) setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
-          }
-        } catch {
-          void 0;
+          const parsed = JSON.parse(stored);
+          if (parsed.providers?.length > 0) setProviders(parsed.providers);
+          if (parsed.systemParams)
+            setSystemParams((prev) => ({ ...prev, ...(parsed.systemParams as object) }));
+          if (parsed.envVars)
+            setEnvVars(parsed.envVars as Array<{ key: string; value: string }>);
+        } catch (e) {
+          logger.warn('解析本地 agentos-config 失败', e);
         }
       }
-    } catch {
-      void 0;
-    } finally {
-      setLoading(false);
+    } catch (e) {
+      logger.warn('读取本地 agentos-config 失败', e);
     }
+    if (client) {
+      try {
+        // llm.list_models：拉取 gateway 真实可用模型，失败不影响本地配置展示
+        const modelsResp = await client.rawRequest<unknown>('llm.list_models', {
+          method: 'GET',
+        });
+        const models = toModelNames(modelsResp);
+        if (models.length > 0) setAvailableModels(models);
+      } catch (e) {
+        logger.warn('llm.list_models 拉取失败，使用模板默认模型', e);
+      }
+    }
+    setLoading(false);
   }, [client]);
 
   useEffect(() => {
@@ -158,19 +168,10 @@ const ModelConfig: React.FC = () => {
     return () => { cancelled = true; };
   }, [loadAllData]);
 
+  // 配置仅存本地（gateway 无配置写入方法，不再发任何 REST 请求）
   const saveAll = async () => {
     localStorage.setItem('agentos-config', JSON.stringify({ providers, systemParams, envVars }));
     localStorage.setItem('agentos-llm-providers', JSON.stringify(providers));
-    if (client) {
-      try {
-        await client.rawRequest('/api/v1/config', {
-          method: 'PUT',
-          body: JSON.stringify({ providers, systemParams, envVars }),
-        });
-      } catch (e) {
-        // Intentionally empty: graceful degradation
-      }
-    }
   };
 
   const handleAddProvider = async () => {
@@ -190,7 +191,8 @@ const ModelConfig: React.FC = () => {
       setProviders((prev) => [...prev, newProv]);
       await saveAll();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 本地保存失败：记录日志（不影响 UI 状态）
+      logger.warn('保存提供商配置失败', e);
     }
     setShowAddModal(false);
     setNewApiKey('');
@@ -1110,9 +1112,15 @@ const ModelConfig: React.FC = () => {
                     cursor: 'pointer',
                   }}
                 >
-                  {PROVIDER_TEMPLATES[
-                    newProviderType as keyof typeof PROVIDER_TEMPLATES
-                  ]?.models.map((m) => (
+                  {/* 模板默认模型 + gateway llm.list_models 真实可用模型（去重） */}
+                  {[
+                    ...new Set([
+                      ...(PROVIDER_TEMPLATES[
+                        newProviderType as keyof typeof PROVIDER_TEMPLATES
+                      ]?.models || []),
+                      ...availableModels,
+                    ]),
+                  ].map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { registerSW } from 'virtual:pwa-register';
+import { logger } from '../utils/logger';
 
 export function ServiceWorkerRegistration() {
   useEffect(() => {
@@ -10,7 +11,7 @@ export function ServiceWorkerRegistration() {
         }
       },
       onOfflineReady() {
-        void 0;
+        logger.info('PWA 已可离线使用');
       },
       onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
         if (registration) {
@@ -19,8 +20,9 @@ export function ServiceWorkerRegistration() {
           }, 60 * 60 * 1000);
         }
       },
-      onRegisterError(_error: Error) {
-        void 0;
+      onRegisterError(error: Error) {
+        // PWA 注册失败不影响应用主流程，记录日志
+        logger.warn('PWA ServiceWorker 注册失败', error);
       },
     });
   }, []);

@@ -11,7 +11,8 @@ import {
   Package,
   Tag,
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import { invoke } from '../utils/tauriCompat';
+import { logger } from '../utils/logger';
 
 interface OpenLabApp {
   id: string;
@@ -19,8 +20,8 @@ interface OpenLabApp {
   category: string;
   description: string;
   version: string;
-  rating: number;
-  downloads: number;
+  rating?: number;
+  downloads?: number;
   author: string;
   tags: string[];
   status: 'installed' | 'available' | 'updating';
@@ -28,104 +29,83 @@ interface OpenLabApp {
   icon: string;
 }
 
-const defaultApps: OpenLabApp[] = [
-  {
-    id: 'docgen',
-    name: '文档生成器',
-    category: '生产力',
-    description: '自动生成项目文档、API 文档和代码注释文档，支持多种格式输出',
-    version: '2.1.0',
-    rating: 4.8,
-    downloads: 12540,
-    author: 'AgentRT Team',
-    tags: ['文档', '自动化', 'markdown'],
+// 从 JSON-RPC result 中提取对象数组（兼容 gateway market.* 的返回结构）
+function toMarketArray(result: unknown): Array<Record<string, unknown>> {
+  if (Array.isArray(result)) return result as Array<Record<string, unknown>>;
+  if (result && typeof result === 'object') {
+    const obj = result as Record<string, unknown>;
+    for (const key of ['agents', 'skills', 'items', 'results']) {
+      const v = obj[key];
+      if (Array.isArray(v)) return v as Array<Record<string, unknown>>;
+    }
+  }
+  return [];
+}
+
+function getString(obj: Record<string, unknown>, key: string): string {
+  const v = obj[key];
+  return typeof v === 'string' ? v : String(v ?? '');
+}
+
+// 将 market.search_agents / market.search_skills 的真实数据归一化为市场应用条目。
+// 不编造假下载量/评分：真实数据缺失时字段为 undefined。
+function normalizeMarketData(result: unknown): OpenLabApp[] {
+  return toMarketArray(result).map((item) => ({
+    id: getString(item, 'id') || getString(item, 'name') || `item-${Date.now()}`,
+    name: getString(item, 'name'),
+    category: getString(item, 'category') || getString(item, 'type') || '其他',
+    description: getString(item, 'description') || '',
+    version: getString(item, 'version') || '1.0.0',
+    rating: typeof item['rating'] === 'number' ? (item['rating'] as number) : undefined,
+    downloads: typeof item['downloads'] === 'number' ? (item['downloads'] as number) : undefined,
+    author: getString(item, 'author') || getString(item, 'author_name') || '',
+    tags: Array.isArray(item['tags']) ? (item['tags'] as string[]) : [],
     status: 'available',
-    lastUpdated: '2026-04-20',
-    icon: '📄',
-  },
-  {
-    id: 'ecommerce',
-    name: '电商助手',
-    category: '商业',
-    description: '智能电商运营助手，支持商品管理、订单处理、客户服务和数据分析',
-    version: '1.5.3',
-    rating: 4.6,
-    downloads: 8923,
-    author: 'Commerce AI',
-    tags: ['电商', '订单', '客服'],
-    status: 'installed',
-    lastUpdated: '2026-04-15',
-    icon: '🛒',
-  },
-  {
-    id: 'research',
-    name: '研究助理',
-    category: '研究',
-    description: '学术研究与数据分析助手，支持文献检索、论文摘要和趋势分析',
-    version: '3.0.1',
-    rating: 4.9,
-    downloads: 15670,
-    author: 'Research Labs',
-    tags: ['研究', '论文', '数据'],
-    status: 'available',
-    lastUpdated: '2026-04-22',
-    icon: '🔬',
-  },
-  {
-    id: 'videoedit',
-    name: '视频编辑',
-    category: '创意',
-    description: 'AI 驱动的视频编辑工具，支持自动剪辑、字幕生成和特效添加',
-    version: '1.2.0',
-    rating: 4.4,
-    downloads: 6780,
-    author: 'Media AI',
-    tags: ['视频', '剪辑', 'AI'],
-    status: 'available',
-    lastUpdated: '2026-04-18',
-    icon: '🎬',
-  },
-  {
-    id: 'code-review',
-    name: '代码审查',
-    category: '开发',
-    description: '智能代码审查工具，支持多种编程语言，提供代码质量评估和改进建议',
-    version: '2.3.1',
-    rating: 4.7,
-    downloads: 11230,
-    author: 'DevTools',
-    tags: ['代码', '审查', '质量'],
-    status: 'available',
-    lastUpdated: '2026-04-24',
-    icon: '🔍',
-  },
-  {
-    id: 'data-viz',
-    name: '数据可视化',
-    category: '数据',
-    description: '强大的数据可视化工具，支持图表生成、仪表盘创建和交互式报表',
-    version: '1.8.0',
-    rating: 4.5,
-    downloads: 9450,
-    author: 'DataViz Inc',
-    tags: ['数据', '图表', '报表'],
-    status: 'installed',
-    lastUpdated: '2026-04-19',
-    icon: '📊',
-  },
-];
+    lastUpdated: getString(item, 'last_updated') || getString(item, 'updated_at') || '',
+    icon: getString(item, 'icon') || getString(item, 'emoji') || '🧩',
+  }));
+}
 
 const categories = ['全部', '生产力', '商业', '研究', '创意', '开发', '数据'];
 
 const OpenLab: React.FC = () => {
   const { t } = useTranslation();
-  const [apps, setApps] = useState<OpenLabApp[]>(() => {
-    const saved = localStorage.getItem('agentos-openlab-apps');
-    return saved ? JSON.parse(saved) : defaultApps;
-  });
+  const [apps, setApps] = useState<OpenLabApp[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filterCategory, setFilterCategory] = useState('全部');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<OpenLabApp | null>(null);
+
+  // 应用市场数据来自 gateway market.search_agents / market.search_skills；
+  // 无数据时显示空态，不提供任何本地编造的默认应用。
+  useEffect(() => {
+    let cancelled = false;
+    const loadMarket = async () => {
+      try {
+        const [agentResult, skillResult] = await Promise.all([
+          invoke('market.search_agents', {}),
+          invoke('market.search_skills', {}),
+        ]);
+        if (cancelled) return;
+        const marketApps = [
+          ...normalizeMarketData(agentResult),
+          ...normalizeMarketData(skillResult),
+        ];
+        setApps(marketApps);
+        localStorage.setItem('agentos-openlab-apps', JSON.stringify(marketApps));
+      } catch (e) {
+        // Gateway 不可达或市场为空：显示空态，不降级为假数据，记录日志
+        logger.warn('market.search_agents / market.search_skills 拉取失败', e);
+        if (!cancelled) setApps([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void loadMarket();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('agentos-openlab-apps', JSON.stringify(apps));
@@ -381,8 +361,10 @@ const OpenLab: React.FC = () => {
             </p>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ display: 'flex', gap: '2px' }}>{renderStars(app.rating)}</div>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{app.rating}</span>
+                <div style={{ display: 'flex', gap: '2px' }}>{renderStars(app.rating ?? 0)}</div>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  {app.rating ?? '—'}
+                </span>
               </div>
               <div
                 style={{
@@ -394,7 +376,7 @@ const OpenLab: React.FC = () => {
                 }}
               >
                 <Download size={12} />
-                {app.downloads.toLocaleString()}
+                {(app.downloads ?? 0).toLocaleString()}
               </div>
             </div>
           </motion.div>
@@ -404,8 +386,12 @@ const OpenLab: React.FC = () => {
       {filteredApps.length === 0 && (
         <div role="status" style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-muted)' }}>
           <Package size={48} style={{ marginBottom: '12px', opacity: 0.5 }} />
-          <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>未找到匹配的应用</p>
-          <p style={{ margin: 0, fontSize: '13px' }}>尝试调整搜索条件或分类筛选</p>
+          <p style={{ margin: '0 0 8px 0', fontSize: '14px' }}>
+            {loading ? '正在加载应用市场...' : '未找到匹配的应用'}
+          </p>
+          <p style={{ margin: 0, fontSize: '13px' }}>
+            {loading ? '正在从 AgentRT 市场获取数据' : '尝试调整搜索条件或分类筛选'}
+          </p>
         </div>
       )}
 
@@ -529,7 +515,7 @@ const OpenLab: React.FC = () => {
                   <span
                     style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}
                   >
-                    {selectedApp.rating}
+                    {selectedApp.rating ?? '—'}
                   </span>
                 </div>
               </div>
@@ -540,7 +526,7 @@ const OpenLab: React.FC = () => {
                   下载量
                 </div>
                 <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                  {selectedApp.downloads.toLocaleString()}
+                  {(selectedApp.downloads ?? 0).toLocaleString()}
                 </div>
               </div>
               <div

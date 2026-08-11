@@ -449,7 +449,7 @@
       "connectionTest": {
         "title": "连接测试",
         "endpointAddress": "端点地址",
-        "endpointPlaceholder": "http://localhost:18789",
+        "endpointPlaceholder": "http://localhost:8080",
         "testButton": "测试 {protocol} 连接",
         "testing": "测试中...",
         "success": "✅",

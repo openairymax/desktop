@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTasks } from '../hooks/useAgentOS';
 import type { Task as AgentOSTask } from '../services/agentos.service';
+import { logger } from '../utils/logger';
 
 const STATUS_CONFIG: Record<
   string,
@@ -120,7 +121,8 @@ const TaskManagement: React.FC = () => {
       setNewPriority(50);
       setShowCreateModal(false);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 任务操作失败：保留 UI 容错，记录日志
+      logger.warn('任务操作失败', e);
     } finally {
       setActionLoading(null);
     }
@@ -131,7 +133,8 @@ const TaskManagement: React.FC = () => {
     try {
       await cancelTask(taskId);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 任务操作失败：保留 UI 容错，记录日志
+      logger.warn('任务操作失败', e);
     } finally {
       setActionLoading(null);
     }
@@ -142,7 +145,8 @@ const TaskManagement: React.FC = () => {
     try {
       await deleteTask(taskId);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 任务操作失败：保留 UI 容错，记录日志
+      logger.warn('任务操作失败', e);
     } finally {
       setActionLoading(null);
     }
@@ -153,7 +157,8 @@ const TaskManagement: React.FC = () => {
     try {
       await waitForTask(taskId, 60000);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 任务操作失败：保留 UI 容错，记录日志
+      logger.warn('任务操作失败', e);
     } finally {
       setActionLoading(null);
     }
@@ -167,7 +172,8 @@ const TaskManagement: React.FC = () => {
       const detail = await getTask(task.id);
       setSelectedTask(detail);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 任务操作失败：保留 UI 容错，记录日志
+      logger.warn('任务操作失败', e);
     } finally {
       setDetailLoading(false);
     }

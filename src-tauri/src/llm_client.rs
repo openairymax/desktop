@@ -2,92 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LLMProviderConfig {
-    pub id: String,
-    pub name: String,
-    pub provider_type: String,
-    pub base_url: String,
-    pub api_key: Option<String>,
-    pub model: String,
-    #[serde(default = "default_timeout")]
-    pub timeout_seconds: u64,
-}
-
-fn default_timeout() -> u64 {
-    120
-}
-
-impl LLMProviderConfig {
-    pub fn openai(api_key: Option<String>, model: Option<String>) -> Self {
-        Self {
-            id: "openai".to_string(),
-            name: "OpenAI".to_string(),
-            provider_type: "openai".to_string(),
-            base_url: "https://api.openai.com/v1".to_string(),
-            api_key,
-            model: model.unwrap_or_else(|| "gpt-4o".to_string()),
-            timeout_seconds: 120,
-        }
-    }
-
-    pub fn anthropic(api_key: Option<String>, model: Option<String>) -> Self {
-        Self {
-            id: "anthropic".to_string(),
-            name: "Anthropic".to_string(),
-            provider_type: "anthropic".to_string(),
-            base_url: "https://api.anthropic.com/v1".to_string(),
-            api_key,
-            model: model.unwrap_or_else(|| "claude-3-5-sonnet-20241022".to_string()),
-            timeout_seconds: 120,
-        }
-    }
-
-    pub fn ollama(base_url: Option<String>, model: Option<String>) -> Self {
-        Self {
-            id: "localai".to_string(),
-            name: "Local AI (Ollama)".to_string(),
-            provider_type: "ollama".to_string(),
-            base_url: base_url.unwrap_or_else(|| format!("http://localhost:{}/v1", 11434)),
-            api_key: None,
-            model: model.unwrap_or_else(|| "llama3".to_string()),
-            timeout_seconds: 300,
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn from_json(value: &serde_json::Value) -> Option<Self> {
-        let provider_type = value
-            .get("type")
-            .or_else(|| value.get("provider_type"))
-            .and_then(|v| v.as_str())
-            .unwrap_or("openai");
-        Some(Self {
-            id: value.get("id")?.as_str()?.to_string(),
-            name: value
-                .get("name")
-                .and_then(|v| v.as_str())
-                .unwrap_or_default()
-                .to_string(),
-            provider_type: provider_type.to_string(),
-            base_url: value.get("base_url")?.as_str()?.to_string(),
-            api_key: value
-                .get("api_key")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string()),
-            model: value
-                .get("model")
-                .and_then(|v| v.as_str())
-                .unwrap_or("gpt-4o")
-                .to_string(),
-            timeout_seconds: value
-                .get("timeout_seconds")
-                .and_then(|v| v.as_u64())
-                .unwrap_or(120),
-        })
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
@@ -113,6 +27,9 @@ pub struct ChatRequest {
     pub tools: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub top_p: Option<f64>,
+    /// agent.run 会话 ID（可选，多轮对话上下文延续）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -134,145 +51,165 @@ pub struct UsageInfo {
     pub total_tokens: u32,
 }
 
+/// LLM 客户端：不再直连 OpenAI / Anthropic / Ollama，
+/// 所有对话请求统一通过 gateway 的 JSON-RPC（agent.run）转发，secrets 由 gateway 管理。
 pub struct LLMClient {
     http: reqwest::Client,
+    gateway_url: String,
 }
 
 impl LLMClient {
-    pub fn new() -> Self {
+    pub fn new(gateway_url: String) -> Self {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_secs(120))
             .connect_timeout(Duration::from_secs(10))
             .build()
             .unwrap_or_default();
 
-        Self { http }
+        Self { http, gateway_url }
     }
 
-    pub async fn chat(
-        &self,
-        config: &LLMProviderConfig,
-        request: &ChatRequest,
-    ) -> Result<ChatResponse, String> {
+    /// 对话：调用 gateway agent.run（JSON-RPC POST {gateway_url}/api/），解析对话结果
+    pub async fn chat(&self, request: &ChatRequest) -> Result<ChatResponse, String> {
         log::info!(
-            "LLM API call: provider={}, model={}, messages={}",
-            config.provider_type,
-            config.model,
+            "LLM chat via gateway agent.run: model={}, messages={}",
+            request.model,
             request.messages.len()
         );
 
-        match config.provider_type.as_str() {
-            "anthropic" => self.chat_anthropic(config, request).await,
-            "ollama" => self.chat_openai_compat(config, request).await,
-            _ => self.chat_openai(config, request).await,
+        let prompt = Self::build_prompt(&request.messages);
+        let mut params = serde_json::json!({
+            "prompt": prompt
+        });
+        // 可选参数：会话 ID（gateway 契约 agent.run {prompt, session_id?}，无 agent_id）
+        if let Some(session_id) = &request.session_id {
+            params["session_id"] = serde_json::Value::String(session_id.clone());
         }
+
+        let result = self.send_jsonrpc("agent.run", params).await?;
+        Ok(Self::parse_chat_response(&result, &request.model))
     }
 
-    async fn chat_openai(
-        &self,
-        config: &LLMProviderConfig,
-        request: &ChatRequest,
-    ) -> Result<ChatResponse, String> {
-        let url = format!("{}/chat/completions", config.base_url);
-        let body = serde_json::to_value(request)
-            .map_err(|e| format!("Failed to serialize request: {}", e))?;
+    /// 连接测试：调用 gateway llm.list_models 验证连通。
+    ///
+    /// 说明：不提供本地兜底——gateway 不可达时返回明确错误，由前端展示真实状态。
+    pub async fn test_connection(&self) -> Result<ConnectionTestResult, String> {
+        let start = std::time::Instant::now();
 
-        #[allow(unused_mut)]
-        let mut req_builder = self
-            .http
-            .post(&url)
-            .header("Content-Type", "application/json");
+        let result = self
+            .send_jsonrpc("llm.list_models", serde_json::json!({}))
+            .await?;
 
-        if let Some(ref key) = config.api_key {
-            req_builder = req_builder.header("Authorization", format!("Bearer {}", key));
-        }
+        let latency_ms = start.elapsed().as_millis() as u64;
+        let models = Self::parse_models(&result);
 
-        let resp = req_builder
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("OpenAI API request failed: {}", e))?;
-
-        let status = resp.status();
-        let response_text = resp
-            .text()
-            .await
-            .map_err(|e| format!("Failed to read response: {}", e))?;
-
-        if !status.is_success() {
-            return Err(format!("OpenAI API error {}: {}", status, response_text));
-        }
-
-        let json: serde_json::Value = serde_json::from_str(&response_text)
-            .map_err(|e| format!("Failed to parse OpenAI response: {}", e))?;
-
-        self.parse_openai_response(&json, &config.model)
+        Ok(ConnectionTestResult {
+            success: true,
+            latency_ms,
+            models,
+            message: "Gateway connection successful (JSON-RPC /api/)".to_string(),
+        })
     }
 
-    async fn chat_anthropic(
-        &self,
-        config: &LLMProviderConfig,
-        request: &ChatRequest,
-    ) -> Result<ChatResponse, String> {
-        let url = format!("{}/messages", config.base_url);
-
-        let anthropic_messages: Vec<serde_json::Value> = request
-            .messages
+    /// 构建 agent.run 的 prompt 文本（将消息列表拼成 “role: content” 形式）
+    fn build_prompt(messages: &[ChatMessage]) -> String {
+        messages
             .iter()
-            .map(|m| {
-                serde_json::json!({
-                    "role": m.role,
-                    "content": m.content
-                })
-            })
-            .collect();
+            .map(|m| format!("{}: {}", m.role, m.content))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
 
-        let body = serde_json::json!({
-            "model": config.model,
-            "max_tokens": request.max_tokens.unwrap_or(4096),
-            "messages": anthropic_messages,
-            "temperature": request.temperature.unwrap_or(0.7),
-            "stream": false
+    /// 解析 llm.list_models 返回的模型列表
+    fn parse_models(result: &serde_json::Value) -> Vec<String> {
+        let items = result
+            .as_array()
+            .or_else(|| result.get("models").and_then(|v| v.as_array()))
+            .cloned()
+            .unwrap_or_default();
+        items
+            .iter()
+            .filter_map(|m| {
+                m.get("id")
+                    .or_else(|| m.get("name"))
+                    .or_else(|| m.get("model"))
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+            })
+            .collect()
+    }
+
+    /// 解析 agent.run 返回的对话结果（容错：兼容 response/content/output/result 等字段）
+    fn parse_chat_response(result: &serde_json::Value, model: &str) -> ChatResponse {
+        // 结果可能是纯字符串，也可能是对象
+        let content = if let Some(s) = result.as_str() {
+            s.to_string()
+        } else {
+            result
+                .get("response")
+                .or_else(|| result.get("content"))
+                .or_else(|| result.get("output"))
+                .or_else(|| result.get("result"))
+                .map(|v| match v {
+                    serde_json::Value::String(s) => s.clone(),
+                    other => other.to_string(),
+                })
+                .unwrap_or_default()
+        };
+
+        let usage = result.get("usage").map(|u| UsageInfo {
+            prompt_tokens: u.get("prompt_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
+            completion_tokens: u
+                .get("completion_tokens")
+                .and_then(|t| t.as_u64())
+                .unwrap_or(0) as u32,
+            total_tokens: u.get("total_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
         });
 
-        #[allow(unused_mut)]
-        let mut req_builder = self
-            .http
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .header("x-api-key", config.api_key.as_deref().unwrap_or(""))
-            .header("anthropic-version", "2023-06-01");
-
-        let resp = req_builder
-            .json(&body)
-            .send()
-            .await
-            .map_err(|e| format!("Anthropic API request failed: {}", e))?;
-
-        let status = resp.status();
-        let response_text = resp
-            .text()
-            .await
-            .map_err(|e| format!("Failed to read response: {}", e))?;
-
-        if !status.is_success() {
-            return Err(format!("Anthropic API error {}: {}", status, response_text));
+        ChatResponse {
+            id: result
+                .get("id")
+                .and_then(|i| i.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| format!("agentrun_{}", uuid::Uuid::new_v4())),
+            content,
+            role: result
+                .get("role")
+                .and_then(|r| r.as_str())
+                .unwrap_or("assistant")
+                .to_string(),
+            model: result
+                .get("model")
+                .and_then(|m| m.as_str())
+                .unwrap_or(model)
+                .to_string(),
+            finish_reason: result
+                .get("finish_reason")
+                .and_then(|f| f.as_str())
+                .unwrap_or("stop")
+                .to_string(),
+            usage: usage.unwrap_or(UsageInfo {
+                prompt_tokens: 0,
+                completion_tokens: 0,
+                total_tokens: 0,
+            }),
+            tool_calls: result.get("tool_calls").cloned(),
         }
-
-        let json: serde_json::Value = serde_json::from_str(&response_text)
-            .map_err(|e| format!("Failed to parse Anthropic response: {}", e))?;
-
-        self.parse_anthropic_response(&json, &config.model)
     }
 
-    async fn chat_openai_compat(
+    /// 发送 JSON-RPC 请求到 gateway（POST {gateway_url}/api/）
+    async fn send_jsonrpc(
         &self,
-        config: &LLMProviderConfig,
-        request: &ChatRequest,
-    ) -> Result<ChatResponse, String> {
-        let url = format!("{}/chat/completions", config.base_url);
-        let body = serde_json::to_value(request)
-            .map_err(|e| format!("Failed to serialize request: {}", e))?;
+        method: &str,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value, String> {
+        let url = format!("{}/api/", self.gateway_url);
+        let body = serde_json::json!({
+            "jsonrpc": "2.0",
+            "id": uuid::Uuid::new_v4().to_string(),
+            "method": method,
+            "params": params
+        });
 
         let resp = self
             .http
@@ -281,176 +218,29 @@ impl LLMClient {
             .json(&body)
             .send()
             .await
-            .map_err(|e| format!("Ollama API request failed: {}", e))?;
+            .map_err(|e| format!("Gateway JSON-RPC request failed: {}", e))?;
 
         let status = resp.status();
         let response_text = resp
             .text()
             .await
-            .map_err(|e| format!("Failed to read response: {}", e))?;
+            .map_err(|e| format!("Failed to read gateway response: {}", e))?;
 
         if !status.is_success() {
-            return Err(format!("Ollama API error {}: {}", status, response_text));
+            return Err(format!("Gateway JSON-RPC error {}: {}", status, response_text));
         }
 
         let json: serde_json::Value = serde_json::from_str(&response_text)
-            .map_err(|e| format!("Failed to parse Ollama response: {}", e))?;
+            .map_err(|e| format!("Failed to parse gateway JSON-RPC response: {}", e))?;
 
-        self.parse_openai_response(&json, &config.model)
-    }
-
-    fn parse_openai_response(
-        &self,
-        json: &serde_json::Value,
-        model: &str,
-    ) -> Result<ChatResponse, String> {
-        let choice = json
-            .get("choices")
-            .and_then(|c| c.as_array())
-            .and_then(|arr| arr.first())
-            .ok_or_else(|| "No choices in OpenAI response".to_string())?;
-
-        let message = choice
-            .get("message")
-            .ok_or_else(|| "No message in choice".to_string())?;
-
-        let content = message
-            .get("content")
-            .and_then(|c| c.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        let finish_reason = choice
-            .get("finish_reason")
-            .and_then(|f| f.as_str())
-            .unwrap_or("stop")
-            .to_string();
-
-        let usage = json
-            .get("usage")
-            .map(|u| UsageInfo {
-                prompt_tokens: u.get("prompt_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-                completion_tokens: u
-                    .get("completion_tokens")
-                    .and_then(|t| t.as_u64())
-                    .unwrap_or(0) as u32,
-                total_tokens: u.get("total_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-            })
-            .unwrap_or(UsageInfo {
-                prompt_tokens: 0,
-                completion_tokens: 0,
-                total_tokens: 0,
-            });
-
-        Ok(ChatResponse {
-            id: json
-                .get("id")
-                .and_then(|i| i.as_str())
-                .unwrap_or("unknown")
-                .to_string(),
-            content,
-            role: "assistant".to_string(),
-            model: model.to_string(),
-            finish_reason,
-            usage,
-            tool_calls: message.get("tool_calls").cloned(),
-        })
-    }
-
-    fn parse_anthropic_response(
-        &self,
-        json: &serde_json::Value,
-        model: &str,
-    ) -> Result<ChatResponse, String> {
-        let content_block = json
-            .get("content")
-            .and_then(|c| c.as_array())
-            .and_then(|arr| {
-                arr.iter()
-                    .find(|b| b.get("type").and_then(|t| t.as_str()) == Some("text"))
-            })
-            .ok_or_else(|| "No text content in Anthropic response".to_string())?;
-
-        let content = content_block
-            .get("text")
-            .and_then(|t| t.as_str())
-            .unwrap_or("")
-            .to_string();
-
-        let usage = json
-            .get("usage")
-            .map(|u| UsageInfo {
-                prompt_tokens: u.get("input_tokens").and_then(|t| t.as_u64()).unwrap_or(0) as u32,
-                completion_tokens: u.get("output_tokens").and_then(|t| t.as_u64()).unwrap_or(0)
-                    as u32,
-                total_tokens: 0,
-            })
-            .unwrap_or(UsageInfo {
-                prompt_tokens: 0,
-                completion_tokens: 0,
-                total_tokens: 0,
-            });
-
-        Ok(ChatResponse {
-            id: json
-                .get("id")
-                .and_then(|i| i.as_str())
-                .unwrap_or("unknown")
-                .to_string(),
-            content,
-            role: "assistant".to_string(),
-            model: model.to_string(),
-            finish_reason: "stop".to_string(),
-            usage,
-            tool_calls: None,
-        })
-    }
-
-    pub async fn test_connection(
-        &self,
-        config: &LLMProviderConfig,
-    ) -> Result<ConnectionTestResult, String> {
-        let start = std::time::Instant::now();
-
-        let test_request = ChatRequest {
-            model: config.model.clone(),
-            messages: vec![ChatMessage {
-                role: "user".to_string(),
-                content: "ping".to_string(),
-                name: None,
-                tool_calls: None,
-                tool_call_id: None,
-            }],
-            temperature: Some(0.0),
-            max_tokens: Some(5),
-            stream: Some(false),
-            tools: None,
-            top_p: None,
-        };
-
-        match self.chat(config, &test_request).await {
-            Ok(resp) => {
-                let latency_ms = start.elapsed().as_millis() as u64;
-                Ok(ConnectionTestResult {
-                    success: true,
-                    latency_ms,
-                    models: vec![config.model.clone()],
-                    message: format!(
-                        "Connection successful. Model: {}, Tokens: {}",
-                        config.model, resp.usage.total_tokens
-                    ),
-                })
-            }
-            Err(e) => {
-                let latency_ms = start.elapsed().as_millis() as u64;
-                Ok(ConnectionTestResult {
-                    success: false,
-                    latency_ms,
-                    models: vec![],
-                    message: format!("Connection failed: {}", e),
-                })
-            }
+        if let Some(error) = json.get("error") {
+            return Err(format!("JSON-RPC error: {}", error));
         }
+
+        Ok(json
+            .get("result")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null))
     }
 }
 

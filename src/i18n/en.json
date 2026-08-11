@@ -449,7 +449,7 @@
       "connectionTest": {
         "title": "Connection Test",
         "endpointAddress": "Endpoint Address",
-        "endpointPlaceholder": "http://localhost:18789",
+        "endpointPlaceholder": "http://localhost:8080",
         "testButton": "Test {protocol} Connection",
         "testing": "Testing...",
         "success": "✅",

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wrench,
   Plus,
@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSkills } from '../hooks/useAgentOS';
 import type { Skill } from '../services/agentos.service';
+import { logger } from '../utils/logger';
 
 const STATUS_CONFIG: Record<string, { color: string; bg: string; label: string }> = {
   active: { color: 'var(--success-color)', bg: 'var(--success-light)', label: '活跃' },
@@ -92,7 +93,8 @@ const SkillRegistry: React.FC = () => {
       await executeSkill(selectedSkill.id, params);
       setShowExecuteModal(false);
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 技能操作失败：保留 UI 容错，记录日志
+      logger.warn('技能操作失败', e);
     } finally {
       setActionLoading(null);
     }

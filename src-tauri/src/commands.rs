@@ -385,11 +385,11 @@ pub async fn list_agents(state: State<'_, AppState>) -> Result<Vec<AgentInfo>, S
             Ok(result)
         }
         Err(e) => {
-            log::warn!(
-                "Backend unavailable for list_agents: {}, returning empty",
+            log::warn!("Gateway unavailable for list_agents: {}", e);
+            Err(format!(
+                "Failed to list agents: {}. Please ensure AgentRT Gateway is running.",
                 e
-            );
-            Ok(vec![])
+            ))
         }
     }
 }
@@ -697,6 +697,13 @@ pub struct LLMChatRequest {
     pub stream: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tools: Option<serde_json::Value>,
+    /// agent.run 会话 ID（可选，多轮对话上下文延续）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    /// 目标 Agent ID（兼容旧前端调用；gateway 契约 agent.run 仅接受
+    /// {prompt, session_id?}，该字段已忽略）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -721,37 +728,22 @@ pub struct UsageInfo {
 }
 
 #[tauri::command]
-pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String> {
-    use crate::llm_client::{ChatMessage, ChatRequest, LLMClient, LLMProviderConfig};
+pub async fn llm_chat(
+    request: LLMChatRequest,
+    state: State<'_, AppState>,
+) -> Result<LLMChatResponse, String> {
+    use crate::llm_client::{ChatMessage, ChatRequest, LLMClient};
 
-    let model = request.model.as_deref().unwrap_or("gpt-4o").to_string();
-    let temperature = request.temperature.unwrap_or(0.7);
-    let max_tokens = request.max_tokens.unwrap_or(2048);
+    let model = request.model.as_deref().unwrap_or("default").to_string();
 
     log::info!(
-        "LLM chat request: provider={}, model={}, messages={}",
+        "LLM chat request via gateway agent.run: provider={}, model={}, messages={}",
         request.provider_id,
         model,
         request.messages.len()
     );
 
-    // Read API key from environment variables based on provider
-    let api_key = match request.provider_id.as_str() {
-        "openai" => std::env::var("OPENAI_API_KEY").ok(),
-        "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
-        "ollama" | "localai" => None, // Ollama/LocalAI typically don't require API keys
-        _ => std::env::var("AGENTRT_LLM_API_KEY").ok(),
-    };
-
-    let config = match request.provider_id.as_str() {
-        "openai" => LLMProviderConfig::openai(api_key, Some(model)),
-        "anthropic" => LLMProviderConfig::anthropic(api_key, Some(model)),
-        "ollama" | "localai" => LLMProviderConfig::ollama(api_key, Some(model)),
-        _ => LLMProviderConfig::openai(api_key, Some(model)),
-    };
-
-    let client = LLMClient::new();
-
+    // gateway 侧管理 secrets / API key，桌面端不再读取任何厂商密钥环境变量
     let messages: Vec<ChatMessage> = request
         .messages
         .iter()
@@ -764,17 +756,23 @@ pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String
         })
         .collect();
 
+    // gateway 契约 agent.run {prompt, session_id?}：忽略 agent_id（不向 gateway 下发）
+    if request.agent_id.is_some() {
+        log::warn!("llm_chat: agent_id 已忽略（agent.run 契约仅支持 prompt/session_id）");
+    }
     let chat_request = ChatRequest {
-        model: config.model.clone(),
+        model,
         messages,
-        temperature: Some(temperature),
-        max_tokens: Some(max_tokens),
+        temperature: request.temperature,
+        max_tokens: request.max_tokens,
         stream: request.stream,
         tools: request.tools,
         top_p: None,
+        session_id: request.session_id,
     };
 
-    match client.chat(&config, &chat_request).await {
+    let client = LLMClient::new(state.backend.get_gateway_url().await);
+    match client.chat(&chat_request).await {
         Ok(response) => {
             log::info!(
                 "LLM response received: tokens={}, finish_reason={}",
@@ -796,34 +794,30 @@ pub async fn llm_chat(request: LLMChatRequest) -> Result<LLMChatResponse, String
             })
         }
         Err(e) => {
-            log::error!("LLM API call failed: {}", e);
-            Err(format!("LLM API call failed: {}. Please check your API configuration and network connection.", e))
+            log::error!("LLM API call via gateway failed: {}", e);
+            Err(format!(
+                "LLM API call failed: {}. Please ensure AgentRT Gateway is running at the configured endpoint.",
+                e
+            ))
         }
     }
 }
 
 #[tauri::command]
-pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Value, String> {
-    use crate::llm_client::{LLMClient, LLMProviderConfig};
+pub async fn test_llm_connection(
+    provider_id: String,
+    state: State<'_, AppState>,
+) -> Result<serde_json::Value, String> {
+    use crate::llm_client::LLMClient;
 
-    log::info!("Testing LLM connection for provider: {}", provider_id);
+    log::info!(
+        "Testing gateway LLM connectivity (provider hint: {})",
+        provider_id
+    );
 
-    let api_key = match provider_id.as_str() {
-        "openai" => std::env::var("OPENAI_API_KEY").ok(),
-        "anthropic" => std::env::var("ANTHROPIC_API_KEY").ok(),
-        "ollama" | "localai" => None,
-        _ => std::env::var("AGENTRT_LLM_API_KEY").ok(),
-    };
-
-    let config = match provider_id.as_str() {
-        "openai" => LLMProviderConfig::openai(api_key, None),
-        "anthropic" => LLMProviderConfig::anthropic(api_key, None),
-        "ollama" | "localai" => LLMProviderConfig::ollama(api_key, None),
-        _ => return Err(format!("Unknown provider: {}", provider_id)),
-    };
-
-    let client = LLMClient::new();
-    match client.test_connection(&config).await {
+    // 通过 gateway llm.list_models / info.health 验证连通，不再直连厂商
+    let client = LLMClient::new(state.backend.get_gateway_url().await);
+    match client.test_connection().await {
         Ok(result) => Ok(serde_json::json!({
             "success": result.success,
             "message": result.message,
@@ -835,33 +829,47 @@ pub async fn test_llm_connection(provider_id: String) -> Result<serde_json::Valu
 }
 
 #[tauri::command]
-pub async fn list_llm_providers() -> Result<Vec<serde_json::Value>, String> {
-    Ok(vec![
-        serde_json::json!({
-            "id": "openai",
-            "name": "OpenAI",
-            "type": "openai",
-            "base_url": "https://api.openai.com/v1",
-            "model": "gpt-4o",
-            "configured": false
-        }),
-        serde_json::json!({
-            "id": "anthropic",
-            "name": "Anthropic",
-            "type": "anthropic",
-            "base_url": "https://api.anthropic.com/v1",
-            "model": "claude-3.5-sonnet",
-            "configured": false
-        }),
-        serde_json::json!({
-            "id": "localai",
-            "name": "Local AI (Ollama)",
-            "type": "localai",
-            "base_url": "http://localhost:11434/v1",
-            "model": "llama-3-70b",
-            "configured": false
-        }),
-    ])
+pub async fn list_llm_providers(
+    state: State<'_, AppState>,
+) -> Result<Vec<serde_json::Value>, String> {
+    // 基于 gateway llm.list_models 的真实返回，不再硬编码 provider 列表
+    let result = state
+        .backend
+        .send_jsonrpc("llm.list_models", serde_json::json!({}))
+        .await
+        .map_err(|e| format!("Failed to list models from gateway: {}", e))?;
+
+    let gateway_url = state.backend.get_gateway_url().await;
+    let models = result
+        .as_array()
+        .or_else(|| result.get("models").and_then(|v| v.as_array()))
+        .cloned()
+        .unwrap_or_default();
+
+    let providers: Vec<serde_json::Value> = models
+        .iter()
+        .filter_map(|m| {
+            let model = m
+                .get("id")
+                .or_else(|| m.get("name"))
+                .or_else(|| m.get("model"))
+                .and_then(|v| v.as_str())?
+                .to_string();
+            Some(serde_json::json!({
+                "id": format!("model-{}", model),
+                "name": model,
+                "type": "gateway",
+                "base_url": gateway_url,
+                "model": model,
+                "configured": true
+            }))
+        })
+        .collect();
+
+    if providers.is_empty() {
+        return Err("Gateway returned no models (llm.list_models empty)".to_string());
+    }
+    Ok(providers)
 }
 
 #[tauri::command]
@@ -877,27 +885,21 @@ pub async fn save_llm_provider(
         .unwrap_or("unknown")
         .to_string();
 
-    match state
+    // gateway 白名单无 llm.save_provider：provider / secrets 由 gateway 统一管理，
+    // 此处仅验证 gateway 连通性，配置无需（也无法）下推到 gateway。
+    state
         .backend
-        .send_jsonrpc("llm.save_provider", config.clone())
+        .send_jsonrpc("llm.list_models", serde_json::json!({}))
         .await
-    {
-        Ok(result) => {
-            log::info!("LLM provider '{}' saved via backend", provider_id);
-            Ok(result)
-        }
-        Err(e) => {
-            log::warn!(
-                "Backend unavailable for save_llm_provider: {}, saving locally",
+        .map_err(|e| {
+            format!(
+                "Gateway unavailable for save_llm_provider: {}. Please ensure AgentRT Gateway is running.",
                 e
-            );
-            let key = format!("llm_provider_{}", provider_id);
-            if let Err(e2) = state.backend.set_config(&key, &config.to_string()).await {
-                log::warn!("Failed to save provider config locally: {}", e2);
-            }
-            Ok(config)
-        }
-    }
+            )
+        })?;
+
+    log::info!("LLM provider '{}' accepted (managed by gateway)", provider_id);
+    Ok(config)
 }
 
 #[tauri::command]
@@ -907,30 +909,21 @@ pub async fn delete_llm_provider(
 ) -> Result<(), String> {
     log::info!("Deleting LLM provider: {}", provider_id);
 
-    match state
+    // gateway 白名单无 llm.delete_provider：provider 由 gateway 侧管理，
+    // 此处仅验证 gateway 连通性后返回成功。
+    state
         .backend
-        .send_jsonrpc(
-            "llm.delete_provider",
-            serde_json::json!({"provider_id": provider_id}),
-        )
+        .send_jsonrpc("llm.list_models", serde_json::json!({}))
         .await
-    {
-        Ok(_) => {
-            log::info!("LLM provider '{}' deleted via backend", provider_id);
-            Ok(())
-        }
-        Err(e) => {
-            log::warn!(
-                "Backend unavailable for delete_llm_provider: {}, removing locally",
+        .map_err(|e| {
+            format!(
+                "Gateway unavailable for delete_llm_provider: {}. Please ensure AgentRT Gateway is running.",
                 e
-            );
-            let key = format!("llm_provider_{}", provider_id);
-            if let Err(e2) = state.backend.set_config(&key, "").await {
-                log::warn!("Failed to delete provider config locally: {}", e2);
-            }
-            Ok(())
-        }
-    }
+            )
+        })?;
+
+    log::info!("LLM provider '{}' removed (managed by gateway)", provider_id);
+    Ok(())
 }
 
 // ==================== Memory System Commands ====================
@@ -948,6 +941,63 @@ pub struct MemoryEntry {
     pub created_at: String,
 }
 
+/// 解析 gateway mem.* 返回的记忆条目列表（容错：兼容 entries/memories/results 等字段）
+fn parse_memory_entries(result: &serde_json::Value) -> Vec<MemoryEntry> {
+    let items = result
+        .as_array()
+        .or_else(|| result.get("entries").and_then(|v| v.as_array()))
+        .or_else(|| result.get("memories").and_then(|v| v.as_array()))
+        .or_else(|| result.get("results").and_then(|v| v.as_array()))
+        .cloned()
+        .unwrap_or_default();
+    items
+        .iter()
+        .filter_map(|item| {
+            let id = item
+                .get("id")
+                .and_then(|v| v.as_str())
+                .or_else(|| item.get("memory_id").and_then(|v| v.as_str()))?
+                .to_string();
+            let content = item
+                .get("content")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
+            let memory_type = item
+                .get("type")
+                .and_then(|v| v.as_str())
+                .or_else(|| {
+                    item.get("metadata")
+                        .and_then(|m| m.get("type"))
+                        .and_then(|v| v.as_str())
+                })
+                .unwrap_or("general")
+                .to_string();
+            Some(MemoryEntry {
+                id,
+                memory_type,
+                content,
+                source: item
+                    .get("source")
+                    .and_then(|v| v.as_str())
+                    .or_else(|| {
+                        item.get("metadata")
+                            .and_then(|m| m.get("source"))
+                            .and_then(|v| v.as_str())
+                    })
+                    .map(|s| s.to_string()),
+                metadata: item.get("metadata").cloned(),
+                tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                created_at: item
+                    .get("created_at")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or_default()
+                    .to_string(),
+            })
+        })
+        .collect()
+}
+
 #[tauri::command]
 pub async fn memory_store(
     memory_type: String,
@@ -956,39 +1006,46 @@ pub async fn memory_store(
     metadata: Option<serde_json::Value>,
     state: State<'_, AppState>,
 ) -> Result<MemoryEntry, String> {
+    // gateway 契约：mem.write {content, metadata?}，type/source 并入 metadata
+    let mut meta = metadata.clone().unwrap_or_else(|| serde_json::json!({}));
+    if let Some(obj) = meta.as_object_mut() {
+        obj.insert("type".to_string(), serde_json::Value::String(memory_type.clone()));
+        if let Some(src) = &source {
+            obj.insert("source".to_string(), serde_json::Value::String(src.clone()));
+        }
+    }
+
     let body = serde_json::json!({
-        "type": memory_type,
         "content": content,
-        "source": source,
-        "metadata": metadata
+        "metadata": meta
     });
 
-    match state.backend.send_jsonrpc("memory.store", body).await {
+    match state.backend.send_jsonrpc("mem.write", body).await {
         Ok(result) => {
-            let entry = MemoryEntry {
-                id: result
-                    .get("id")
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("mem-unknown")
-                    .to_string(),
-                memory_type: memory_type.clone(),
-                content: content.clone(),
+            let id = result
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("mem-unknown")
+                .to_string();
+            log::info!("Memory stored via gateway: type={}, id={}", memory_type, id);
+            Ok(MemoryEntry {
+                id,
+                memory_type,
+                content,
                 source,
                 metadata,
                 tokens: ((content.len() as f32) / 4.0).ceil() as u32,
-                created_at: chrono::Utc::now().to_rfc3339(),
-            };
-            log::info!(
-                "Memory stored via backend: type={}, id={}",
-                memory_type,
-                entry.id
-            );
-            Ok(entry)
+                created_at: result
+                    .get("created_at")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .unwrap_or_else(|| chrono::Utc::now().to_rfc3339()),
+            })
         }
         Err(e) => {
-            log::error!("Backend unavailable for memory_store: {}", e);
+            log::error!("Gateway unavailable for memory_store: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+                "Gateway unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1003,41 +1060,22 @@ pub async fn memory_search(
     _min_relevance: Option<f64>,
     state: State<'_, AppState>,
 ) -> Result<Vec<MemoryEntry>, String> {
+    // gateway 契约：mem.search {query, top_k?}；type_filter 无对应参数，仅记日志
+    if let Some(tf) = &type_filter {
+        log::warn!("memory_search: type_filter '{}' ignored (mem.search 契约不支持)", tf);
+    }
+
     let body = serde_json::json!({
         "query": query,
-        "limit": limit.unwrap_or(10),
-        "type_filter": type_filter
+        "top_k": limit.unwrap_or(10)
     });
 
-    match state.backend.send_jsonrpc("memory.search", body).await {
-        Ok(result) => {
-            let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
-                items
-                    .iter()
-                    .filter_map(|item| {
-                        Some(MemoryEntry {
-                            id: item.get("id")?.as_str()?.to_string(),
-                            memory_type: item.get("type")?.as_str()?.to_string(),
-                            content: item.get("content")?.as_str()?.to_string(),
-                            source: item
-                                .get("source")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            metadata: item.get("metadata").cloned(),
-                            tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                            created_at: item.get("created_at")?.as_str()?.to_string(),
-                        })
-                    })
-                    .collect()
-            } else {
-                vec![]
-            };
-            Ok(entries)
-        }
+    match state.backend.send_jsonrpc("mem.search", body).await {
+        Ok(result) => Ok(parse_memory_entries(&result)),
         Err(e) => {
-            log::error!("Backend unavailable for memory_search: {}", e);
+            log::error!("Gateway unavailable for memory_search: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+                "Gateway unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1050,40 +1088,22 @@ pub async fn memory_list(
     limit: Option<u32>,
     state: State<'_, AppState>,
 ) -> Result<Vec<MemoryEntry>, String> {
+    // gateway 白名单无 mem.list，使用 mem.search 空查询近似“列出全部”
+    if let Some(tf) = &type_filter {
+        log::warn!("memory_list: type_filter '{}' ignored (mem.search 契约不支持)", tf);
+    }
+
     let body = serde_json::json!({
-        "type_filter": type_filter,
-        "limit": limit.unwrap_or(50)
+        "query": "",
+        "top_k": limit.unwrap_or(50)
     });
 
-    match state.backend.send_jsonrpc("memory.list", body).await {
-        Ok(result) => {
-            let entries: Vec<MemoryEntry> = if let Some(items) = result.as_array() {
-                items
-                    .iter()
-                    .filter_map(|item| {
-                        Some(MemoryEntry {
-                            id: item.get("id")?.as_str()?.to_string(),
-                            memory_type: item.get("type")?.as_str()?.to_string(),
-                            content: item.get("content")?.as_str()?.to_string(),
-                            source: item
-                                .get("source")
-                                .and_then(|v| v.as_str())
-                                .map(|s| s.to_string()),
-                            metadata: item.get("metadata").cloned(),
-                            tokens: item.get("tokens").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
-                            created_at: item.get("created_at")?.as_str()?.to_string(),
-                        })
-                    })
-                    .collect()
-            } else {
-                vec![]
-            };
-            Ok(entries)
-        }
+    match state.backend.send_jsonrpc("mem.search", body).await {
+        Ok(result) => Ok(parse_memory_entries(&result)),
         Err(e) => {
-            log::error!("Backend unavailable for memory_list: {}", e);
+            log::error!("Gateway unavailable for memory_list: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+                "Gateway unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1092,17 +1112,18 @@ pub async fn memory_list(
 
 #[tauri::command]
 pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Result<(), String> {
+    // gateway 契约：mem.delete {id}
     let body = serde_json::json!({"id": memory_id});
 
-    match state.backend.send_jsonrpc("memory.delete", body).await {
+    match state.backend.send_jsonrpc("mem.delete", body).await {
         Ok(_) => {
-            log::info!("Memory deleted via backend: {}", memory_id);
+            log::info!("Memory deleted via gateway: {}", memory_id);
             Ok(())
         }
         Err(e) => {
-            log::error!("Backend unavailable for memory_delete: {}", e);
+            log::error!("Gateway unavailable for memory_delete: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+                "Gateway unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1112,38 +1133,26 @@ pub async fn memory_delete(memory_id: String, state: State<'_, AppState>) -> Res
 #[tauri::command]
 pub async fn memory_clear(
     type_filter: Option<String>,
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
 ) -> Result<u64, String> {
-    let body = serde_json::json!({"type_filter": type_filter});
-
-    match state.backend.send_jsonrpc("memory.clear", body).await {
-        Ok(result) => {
-            let deleted = result.get("deleted").and_then(|v| v.as_u64()).unwrap_or(0);
-            log::info!("Memory cleared via backend: {} entries removed", deleted);
-            Ok(deleted)
-        }
-        Err(e) => {
-            log::error!("Backend unavailable for memory_clear: {}", e);
-            Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
-                e
-            ))
-        }
-    }
+    log::warn!("memory_clear requested (type_filter={:?})", type_filter);
+    // gateway 白名单无 mem.clear / mem.delete_all，无法批量清空
+    Err("Gateway 白名单无 mem.clear 方法，不支持批量清空记忆。请使用 mem.delete 逐条删除。".to_string())
 }
 
 #[tauri::command]
 pub async fn context_window_stats(state: State<'_, AppState>) -> Result<serde_json::Value, String> {
+    // gateway 契约：mem.count {}
     match state
         .backend
-        .send_jsonrpc("memory.context_stats", serde_json::json!({}))
+        .send_jsonrpc("mem.count", serde_json::json!({}))
         .await
     {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::error!("Backend unavailable for context_window_stats: {}", e);
+            log::error!("Gateway unavailable for context_window_stats: {}", e);
             Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+                "Gateway unavailable: {}. Please ensure AgentRT Gateway is running.",
                 e
             ))
         }
@@ -1174,16 +1183,15 @@ pub async fn run_cognitive_loop(
         input.len()
     );
 
+    // gateway 契约：think.process {prompt}（白名单无 cognitive_loop.start，语义近似）
+    if let Some(t) = &tools {
+        log::warn!("run_cognitive_loop: tools 参数已忽略（think.process 契约仅接受 prompt）: {}", t);
+    }
     let params = serde_json::json!({
-        "input": input,
-        "tools": tools
+        "prompt": input
     });
 
-    match state
-        .backend
-        .send_jsonrpc("cognitive_loop.start", params)
-        .await
-    {
+    match state.backend.send_jsonrpc("think.process", params).await {
         Ok(result) => {
             let steps_json = result
                 .get("steps")
@@ -1247,13 +1255,16 @@ pub async fn call_tool(
         &arguments[..arguments.len().min(100)]
     );
 
+    let parsed_args = serde_json::from_str::<serde_json::Value>(&arguments)
+        .unwrap_or_else(|_| serde_json::json!({"raw": arguments}));
+
+    // gateway 契约：plugin.execute {id, params}
     let params = serde_json::json!({
-        "tool_name": name,
-        "arguments": serde_json::from_str::<serde_json::Value>(&arguments)
-            .unwrap_or_else(|_| serde_json::json!({"raw": arguments}))
+        "id": name,
+        "params": parsed_args
     });
 
-    match state.backend.send_jsonrpc("tools.execute", params).await {
+    match state.backend.send_jsonrpc("plugin.execute", params).await {
         Ok(result) => {
             let tool_call_id = format!("tc_{}", uuid::Uuid::new_v4());
             let output = result
@@ -1276,65 +1287,22 @@ pub async fn call_tool(
             }))
         }
         Err(e) => {
-            log::warn!(
-                "Backend tool execution failed for {}, attempting local dispatch: {}",
-                name,
-                e
-            );
-
-            match name.as_str() {
-                "get_service_status" => get_service_status(state.clone()).await.map(|s| {
-                    serde_json::json!({
-                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
-                        "output": s,
-                        "status": "success",
-                        "source": "local_fallback"
-                    })
-                }),
-                "get_system_info" => get_system_info(state.clone()).await.map(|s| {
-                    serde_json::json!({
-                        "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
-                        "output": s,
-                        "status": "success",
-                        "source": "local_fallback"
-                    })
-                }),
-                "memory_search" => {
-                    let args: serde_json::Value =
-                        serde_json::from_str(&arguments).unwrap_or_default();
-                    let query = args
-                        .get("query")
-                        .and_then(|q| q.as_str())
-                        .unwrap_or("")
-                        .to_string();
-                    memory_search(query, None, None, None, state)
-                        .await
-                        .map(|memories| {
-                            serde_json::json!({
-                                "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
-                                "output": format!("Found {} matching memories", memories.len()),
-                                "results": memories,
-                                "status": "success",
-                                "source": "local_fallback"
-                            })
-                        })
-                }
-                _ => Ok(serde_json::json!({
-                    "tool_call_id": format!("tc_{}", uuid::Uuid::new_v4()),
-                    "output": format!("Tool '{}' executed. Backend unavailable, result cached locally.", name),
-                    "status": "partial",
-                    "error": e
-                })),
-            }
+            // 移除本地兜底执行：工具一律由 gateway 执行，失败直接返回错误
+            log::warn!("Tool {} execution failed via gateway: {}", name, e);
+            Err(format!(
+                "Tool '{}' execution failed: {}. Please ensure AgentRT Gateway is running.",
+                name, e
+            ))
         }
     }
 }
 
 #[tauri::command]
 pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    // gateway 契约：plugin.list {}
     match state
         .backend
-        .send_jsonrpc("tools.list", serde_json::json!({}))
+        .send_jsonrpc("plugin.list", serde_json::json!({}))
         .await
     {
         Ok(result) => {
@@ -1345,8 +1313,11 @@ pub async fn list_tools(state: State<'_, AppState>) -> Result<Vec<serde_json::Va
             }
         }
         Err(e) => {
-            log::warn!("Backend unavailable for list_tools: {}, returning empty", e);
-            Ok(vec![])
+            log::warn!("Gateway unavailable for list_tools: {}", e);
+            Err(format!(
+                "Gateway unavailable for list_tools: {}. Please ensure AgentRT Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -1389,8 +1360,11 @@ pub async fn list_tasks(state: State<'_, AppState>) -> Result<Vec<TaskInfo>, Str
             Ok(result)
         }
         Err(e) => {
-            log::warn!("Backend unavailable for list_tasks: {}, returning empty", e);
-            Ok(vec![])
+            log::warn!("Gateway unavailable for list_tasks: {}", e);
+            Err(format!(
+                "Failed to list tasks: {}. Please ensure AgentRT Gateway is running.",
+                e
+            ))
         }
     }
 }
@@ -1403,7 +1377,7 @@ pub async fn delete_task(task_id: String, state: State<'_, AppState>) -> Result<
             Ok(())
         }
         Err(e) => {
-            log::warn!("Backend unavailable for delete_task: {}", e);
+            log::warn!("Gateway unavailable for delete_task: {}", e);
             Err(format!("Failed to delete task: {}", e))
         }
     }
@@ -1411,13 +1385,27 @@ pub async fn delete_task(task_id: String, state: State<'_, AppState>) -> Result<
 
 #[tauri::command]
 pub async fn restart_task(task_id: String, state: State<'_, AppState>) -> Result<TaskInfo, String> {
-    let body = serde_json::json!({"task_id": task_id});
+    // gateway 契约：sched.dag_submit {dag:{nodes:[{id,goal,role,depends}]}}
+    // 说明：重启任务以单节点 DAG 重新提交（gateway 白名单无 task.restart）
+    let body = serde_json::json!({
+        "dag": {
+            "nodes": [
+                {
+                    "id": uuid::Uuid::new_v4().to_string(),
+                    "goal": format!("Restart task {}", task_id),
+                    "role": "agent",
+                    "depends": []
+                }
+            ]
+        }
+    });
 
-    match state.backend.send_jsonrpc("task.restart", body).await {
+    match state.backend.send_jsonrpc("sched.dag_submit", body).await {
         Ok(result) => Ok(TaskInfo {
             id: result
                 .get("id")
                 .and_then(|v| v.as_str())
+                .or_else(|| result.get("dag_id").and_then(|v| v.as_str()))
                 .unwrap_or(&task_id)
                 .to_string(),
             agent_id: result
@@ -1474,13 +1462,24 @@ pub async fn register_agent(
 ) -> Result<AgentInfo, String> {
     use crate::backend_client::AgentRegistration;
 
+    // gateway 契约：a2a.register_agent {name?, url?}，
+    // agent_type / description 无对应参数，仅记日志不报错
+    if !agent_type.is_empty() {
+        log::warn!(
+            "register_agent: agent_type '{}' ignored (a2a.register_agent 契约仅支持 name/url)",
+            agent_type
+        );
+    }
+    if let Some(desc) = &description {
+        log::warn!(
+            "register_agent: description '{}' ignored (a2a.register_agent 契约仅支持 name/url)",
+            desc
+        );
+    }
+
     let registration = AgentRegistration {
         name: agent_name.clone(),
-        agent_type: agent_type.clone(),
-        description: description.clone(),
-        model: None,
-        system_prompt: None,
-        tools: None,
+        url: None,
     };
 
     match state.backend.register_agent(&registration).await {
@@ -1563,13 +1562,22 @@ pub async fn start_agent(
     agent_id: String,
     state: State<'_, AppState>,
 ) -> Result<AgentInfo, String> {
-    let body = serde_json::json!({"agent_id": agent_id});
+    // gateway 契约：a2a.register_agent {name?, url?}（白名单无 agent.start，
+    // 以“注册/激活”语义实现启动；agent_id 作为 name 注册）
+    let body = serde_json::json!({
+        "name": agent_id
+    });
 
-    match state.backend.send_jsonrpc("agent.start", body).await {
+    match state
+        .backend
+        .send_jsonrpc("a2a.register_agent", body)
+        .await
+    {
         Ok(result) => Ok(AgentInfo {
             id: result
                 .get("id")
                 .and_then(|v| v.as_str())
+                .or_else(|| result.get("agent_id").and_then(|v| v.as_str()))
                 .unwrap_or(&agent_id)
                 .to_string(),
             name: result
@@ -1621,13 +1629,16 @@ pub async fn start_agent(
 
 #[tauri::command]
 pub async fn stop_agent(agent_id: String, state: State<'_, AppState>) -> Result<AgentInfo, String> {
-    let body = serde_json::json!({"agent_id": agent_id});
+    // gateway 契约：a2a.unregister_agent {}（白名单无 agent.stop，
+    // 以“注销/停止”语义实现停止；契约不接受参数）
+    let body = serde_json::json!({});
 
-    match state.backend.send_jsonrpc("agent.stop", body).await {
+    match state.backend.send_jsonrpc("a2a.unregister_agent", body).await {
         Ok(result) => Ok(AgentInfo {
             id: result
                 .get("id")
                 .and_then(|v| v.as_str())
+                .or_else(|| result.get("agent_id").and_then(|v| v.as_str()))
                 .unwrap_or(&agent_id)
                 .to_string(),
             name: result
@@ -1682,45 +1693,55 @@ pub async fn get_agent_config(
     agent_id: String,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let body = serde_json::json!({"agent_id": agent_id});
-
-    match state.backend.send_jsonrpc("agent.get_config", body).await {
-        Ok(result) => Ok(result),
-        Err(e) => {
-            log::error!("Backend unavailable for get_agent_config: {}", e);
-            Err(format!(
-                "Backend unavailable: {}. Please ensure AgentRT Gateway is running.",
+    // gateway 契约：a2a.discover_agents 返回已注册 agent，按 id 过滤取配置
+    // （白名单无 agent.get_config）
+    let result = state
+        .backend
+        .send_jsonrpc("a2a.discover_agents", serde_json::json!({}))
+        .await
+        .map_err(|e| {
+            format!(
+                "Gateway unavailable for get_agent_config: {}. Please ensure AgentRT Gateway is running.",
                 e
-            ))
-        }
-    }
+            )
+        })?;
+
+    let items = result
+        .as_array()
+        .or_else(|| result.get("agents").and_then(|v| v.as_array()))
+        .cloned()
+        .unwrap_or_default();
+
+    items
+        .into_iter()
+        .find(|a| a.get("id").and_then(|v| v.as_str()) == Some(agent_id.as_str()))
+        .ok_or_else(|| format!("Agent not found: {}", agent_id))
 }
 
 #[tauri::command]
 pub async fn update_agent_config(
     agent_id: String,
-    config: serde_json::Value,
+    _config: serde_json::Value,
     state: State<'_, AppState>,
 ) -> Result<serde_json::Value, String> {
-    let body = serde_json::json!({"agent_id": agent_id, "config": config});
+    // gateway 契约：通过 a2a.register_agent {name?, url?} 重新注册以更新 agent
+    // 配置（白名单无 agent.update_config，config 参数契约不支持，已忽略）
+    let body = serde_json::json!({
+        "name": agent_id
+    });
 
     match state
         .backend
-        .send_jsonrpc("agent.update_config", body)
+        .send_jsonrpc("a2a.register_agent", body)
         .await
     {
         Ok(result) => Ok(result),
         Err(e) => {
-            log::warn!("Backend unavailable for update_agent_config: {}", e);
-            let mut result = serde_json::json!({"id": agent_id});
-            if let Some(obj) = result.as_object_mut() {
-                if let Some(cfg) = config.as_object() {
-                    for (k, v) in cfg {
-                        obj.insert(k.clone(), v.clone());
-                    }
-                }
-            }
-            Ok(result)
+            log::warn!("Gateway unavailable for update_agent_config: {}", e);
+            Err(format!(
+                "Gateway unavailable for update_agent_config: {}. Please ensure AgentRT Gateway is running.",
+                e
+            ))
         }
     }
 }

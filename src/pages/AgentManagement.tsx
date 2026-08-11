@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Bot,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAgents } from '../hooks/useAgentOS';
+import { logger } from '../utils/logger';
 
 interface Agent {
   id: string;
@@ -128,7 +129,8 @@ const AgentManagement: React.FC = () => {
       await spawnAgent(newName.trim(), { description: newDescription, model: newModel });
       await fetchAgents();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Agent 操作失败：保留 UI 容错，记录日志
+      logger.warn('Agent 操作失败', e);
     }
     setNewName('');
     setNewDescription('');
@@ -143,7 +145,8 @@ const AgentManagement: React.FC = () => {
       await terminateAgent(agentId);
       await fetchAgents();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Agent 操作失败：保留 UI 容错，记录日志
+      logger.warn('Agent 操作失败', e);
     }
     setActionLoading(null);
   };
@@ -154,7 +157,8 @@ const AgentManagement: React.FC = () => {
       await invokeAgent(agentId, 'start');
       await fetchAgents();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Agent 操作失败：保留 UI 容错，记录日志
+      logger.warn('Agent 操作失败', e);
     }
     setActionLoading(null);
   };
@@ -165,7 +169,8 @@ const AgentManagement: React.FC = () => {
       await terminateAgent(agentId);
       await fetchAgents();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Agent 操作失败：保留 UI 容错，记录日志
+      logger.warn('Agent 操作失败', e);
     }
     setActionLoading(null);
   };
@@ -183,7 +188,8 @@ const AgentManagement: React.FC = () => {
       await invokeAgent(selectedAgent.id, invokeInput.trim());
       await fetchAgents();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // Agent 操作失败：保留 UI 容错，记录日志
+      logger.warn('Agent 操作失败', e);
     }
     setInvokeInput('');
     setShowInvokeModal(false);

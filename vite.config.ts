@@ -107,22 +107,13 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
     proxy: {
+      // AgentRT Gateway 统一 JSON-RPC 端点（POST /api/），无任何 REST 资源路径
       '/api': {
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
+        target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
         changeOrigin: true,
-      },
-      '/health': {
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
-        changeOrigin: true,
-        rewrite: (_path: string) => '/api/v1/health',
-      },
-      '/metrics': {
-        target: process.env.VITE_API_BASE_URL || 'http://localhost:18789',
-        changeOrigin: true,
-        rewrite: (_path: string) => '/api/v1/metrics',
       },
       '/ws': {
-        target: process.env.VITE_WS_URL || 'ws://localhost:18789',
+        target: process.env.VITE_WS_URL || 'ws://localhost:8080',
         ws: true,
         changeOrigin: true,
       },

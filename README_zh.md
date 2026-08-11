@@ -31,7 +31,7 @@ Powered by OpenAirymax
 
 应用基于 **Tauri v2**（Rust 2021 edition 内核）构建的跨平台（Windows / macOS / Linux）
 原生外壳，前端采用 **React 18 + TypeScript 5.4 + Vite 5**。支持离线优先 PWA、系统托盘集成、
-全局快捷键，并内置连接到本地运行的 AgentRT 网关（默认 `http://localhost:18789`）。
+全局快捷键，并内置连接到本地运行的 AgentRT 网关（默认 `http://localhost:8080`）。
 Rust 内核通过类型化桥向前端暴露 IPC 命令，前端则将 AgentRT 后端模块
 （kernel、manager、agents、gateway、OpenLab）映射为分页式图形工作区。
 
@@ -195,7 +195,7 @@ cd desktop
 # 2. 安装 JS 依赖
 npm install
 
-# 3. 配置本地网关端点（默认已指向 localhost:18789）
+# 3. 配置本地网关端点（默认已指向 localhost:8080）
 cp .env.example .env
 
 # 4. 开发模式（启动 Vite + Tauri 原生窗口）

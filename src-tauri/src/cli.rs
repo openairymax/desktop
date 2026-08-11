@@ -29,7 +29,7 @@ impl Default for CliConfig {
             project_root: None,
             docker_compose_path: None,
             timeout_seconds: 300,
-            gateway_url: Some(format!("http://localhost:{}", 18789)),
+            gateway_url: Some(format!("http://127.0.0.1:{}", 8080)),
             api_key: None,
         }
     }

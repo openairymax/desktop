@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import sdk from '../services/agentos-sdk';
 import type { CognitiveStep } from '../services/agentos-sdk';
+import { invoke } from '../utils/tauriCompat';
 
 type CyclePhase = 'perception' | 'reasoning' | 'action' | 'reflection' | 'idle';
 
@@ -201,33 +202,53 @@ const CognitiveLoop: React.FC = () => {
     }
   };
 
+  // 演示模式：真实调用 gateway 的 think.process（不再伪造 UI 演示数据）。
+  // 输入为空时复用当前输入框内容；think.process 结果为思维链中的反思条目。
   const runDemoCycle = async () => {
     if (isRunning) return;
+    const prompt = inputText.trim();
+    if (!prompt) return;
+
     setIsRunning(true);
     setCycleCount((c) => c + 1);
+    setThoughts([]);
+    setTools([]);
+    setCurrentPhase('reasoning');
+    setPhaseProgress(30);
 
-    for (let i = 0; i < phases.length; i++) {
-      const phase = phases[i];
-      setCurrentPhase(phase);
+    try {
+      const result = await invoke<unknown>('think.process', { prompt });
+      const obj = result && typeof result === 'object' ? (result as Record<string, unknown>) : {};
+      const text =
+        typeof result === 'string'
+          ? result
+          : (obj['output'] as string) ||
+            (obj['result'] as string) ||
+            (obj['content'] as string) ||
+            'think.process 执行完成';
+      setThoughts([
+        {
+          phase: 'reflection',
+          thought: String(text).slice(0, 200),
+          detail: 'think.process（真实调用）',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      setThoughts([
+        {
+          phase: 'reflection',
+          thought: `think.process 调用失败: ${error instanceof Error ? error.message : String(error)}`,
+          detail: '请确认 gateway 已启动（POST http://localhost:8080/api/）',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    } finally {
+      setCurrentPhase('idle');
       setPhaseProgress(0);
-
-      const duration = PHASES[phase].duration;
-      const steps = Math.ceil(duration / 200);
-
-      for (let s = 0; s < steps; s++) {
-        await new Promise((r) => requestAnimationFrame(r));
-        setPhaseProgress(((s + 1) / steps) * 100);
-        if (i === 1 && s === Math.floor(steps * 0.5)) setActiveThoughtIdx(2);
-        if (i === 1 && s === Math.floor(steps * 0.85)) setActiveThoughtIdx(3);
-        if (i === 2 && s === Math.floor(steps * 0.7)) setActiveThoughtIdx(5);
-        if (i === 3 && s === Math.floor(steps * 0.5)) setActiveThoughtIdx(6);
-      }
+      setActiveThoughtIdx(-1);
+      setIsRunning(false);
     }
-
-    setCurrentPhase('idle');
-    setIsRunning(false);
-    setActiveThoughtIdx(-1);
-    setPhaseProgress(0);
   };
 
   return (
@@ -305,8 +326,9 @@ const CognitiveLoop: React.FC = () => {
             <button
               className="btn btn-secondary btn-lg"
               onClick={runDemoCycle}
-              disabled={isRunning}
+              disabled={isRunning || !inputText.trim()}
               aria-label="演示模式"
+              title="演示模式：真实调用 gateway 的 think.process（非伪造演示数据）"
             >
               <RotateCcw size={16} /> 演示模式
             </button>

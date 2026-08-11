@@ -83,7 +83,7 @@ const AIChat: React.FC<{
   onSendMessage?: (message: string) => void;
   compact?: boolean;
 }> = ({ onSendMessage, compact = false }) => {
-  const { agents, invokeAgent } = useAgents();
+  const { agents, invokeAgentDetailed } = useAgents();
   const { submitTask } = useTasks();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -96,8 +96,9 @@ const AIChat: React.FC<{
 
   /** BAN-133: 编码契约验证 - 复杂度评估 */
   const complexity = useMemo(() => assessComplexity(input), [input]);
-  /** BAN-135: 编码契约验证 - 成本追踪 (prompt_tokens / completion_tokens) */
-  const [tokenUsage, setTokenUsage] = useState<{ prompt: number; completion: number; cost: number } | null>(null);
+  /** BAN-135: 编码契约验证 - 成本追踪 (prompt_tokens / completion_tokens)。
+      仅展示 agent.run 响应的真实 token 用量，无则保持 null（不模拟）。 */
+  const [tokenUsage, setTokenUsage] = useState<{ prompt: number; completion: number; cost?: number } | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -120,22 +121,33 @@ const AIChat: React.FC<{
       content: input.trim(),
       timestamp: new Date(),
     };
-    /** BAN-133: 编码契约验证 - 记录发送时的复杂度评估结果 */
-    const routeAssessment = complexity;
+    /** BAN-133: 编码契约验证 - 复杂度评估结果用于 UI 指示器展示 */
     setInput('');
     setSending(true);
 
     try {
       if (agents.length > 0) {
         const targetAgent: Agent = agents.find((a: Agent) => a.status === 'running') || agents[0];
-        await invokeAgent(targetAgent.id, userMsg.content);
+        // agent.run：完整对话链路（think→llm），desktop 聊天唯一入口
+        const detail = await invokeAgentDetailed(targetAgent.id, userMsg.content);
         const assistantMsg: ChatMessage = {
           id: `msg-${Date.now()}-resp`,
           role: 'assistant',
-          content: `[${targetAgent.name}] 指令已发送到智能体 ${targetAgent.id.slice(0, 8)}。请查看任务管理页面获取执行结果。`,
+          content: detail?.output
+            ? `[${targetAgent.name}] ${detail.output}`
+            : `[${targetAgent.name}] 指令已发送到智能体 ${targetAgent.id.slice(0, 8)}。请查看任务管理页面获取执行结果。`,
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
+        // BAN-137: 模型切换必须记录审计日志 - 展示 agent.run 响应的真实 token 用量（无则移除，不模拟）
+        setTokenUsage(
+          detail?.usage
+            ? {
+                prompt: detail.usage.promptTokens,
+                completion: detail.usage.completionTokens,
+              }
+            : null,
+        );
       } else {
         const task: Task | null = await submitTask(userMsg.content);
         const assistantMsg: ChatMessage = {
@@ -147,16 +159,8 @@ const AIChat: React.FC<{
           timestamp: new Date(),
         };
         setMessages((prev) => [...prev, assistantMsg]);
+        setTokenUsage(null);
       }
-      /** BAN-137: 模型切换必须记录审计日志 - 模拟token使用量 */
-      const promptTokens = Math.ceil(userMsg.content.length / 4);
-      const completionTokens = Math.ceil(promptTokens * 0.3);
-      const costPerToken = routeAssessment.level === 'COMPLEX' ? 0.000015 : routeAssessment.level === 'MODERATE' ? 0.00001 : 0.000003;
-      setTokenUsage({
-        prompt: promptTokens,
-        completion: completionTokens,
-        cost: (promptTokens + completionTokens) * costPerToken,
-      });
       onSendMessage?.(userMsg.content);
     } catch (e) {
       const errMsg: ChatMessage = {
@@ -169,7 +173,7 @@ const AIChat: React.FC<{
     } finally {
       setSending(false);
     }
-  }, [input, sending, agents, invokeAgent, submitTask, onSendMessage, complexity]);
+  }, [input, sending, agents, invokeAgentDetailed, submitTask, onSendMessage, complexity]);
 
   const handleCopy = (text: string, id: string) => {
     if (copyTimeoutRef.current) {
@@ -675,9 +679,11 @@ const AIChat: React.FC<{
               <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
                 tokens: {tokenUsage.prompt}↑ / {tokenUsage.completion}↓
               </span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'monospace' }}>
-                ${tokenUsage.cost.toFixed(4)}
-              </span>
+              {tokenUsage.cost !== undefined && (
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'monospace' }}>
+                  ${tokenUsage.cost.toFixed(4)}
+                </span>
+              )}
             </>
           )}
         </div>

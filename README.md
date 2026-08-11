@@ -38,7 +38,7 @@ The application is a cross-platform (Windows / macOS / Linux) native wrapper
 built on **Tauri v2** (Rust 2021 edition core) with a **React 18 + TypeScript
 5.4 + Vite 5** frontend. It supports offline-first PWA behaviour, system tray
 integration, global shortcuts, and a built-in connection to a locally running
-AgentRT gateway (default `http://localhost:18789`). The Rust core exposes IPC
+AgentRT gateway (default `http://localhost:8080`). The Rust core exposes IPC
 commands to the frontend through a typed bridge, while the frontend mirrors
 the AgentRT backend modules (kernel, manager, agents, gateway, OpenLab) into
 tabbed graphical workspaces.
@@ -160,7 +160,7 @@ below maps each workspace tab to its upstream backend and a short description.
 
 - **`sdk/agentrt`** — AgentRT runtime & SDK exposes the gateway HTTP /
   WebSocket API consumed by the frontend at `VITE_AGENTOS_GATEWAY_HOST:PORT`
-  (default `http://localhost:18789`). The TypeScript API client in
+  (default `http://localhost:8080`). The TypeScript API client in
   `src/services/agentos-sdk.ts` is generated against this contract.
 - **`products/docker`** — optional companion image used to launch the gateway
   side-by-side with the desktop client on a personal machine. Provides a
@@ -188,7 +188,7 @@ below maps each workspace tab to its upstream backend and a short description.
 - [Node.js](https://nodejs.org/) >= 18
 - [Rust](https://www.rust-lang.org/) >= 1.70 (required by Tauri v2)
 - Tauri CLI v2 (`npm i -D @tauri-apps/cli` is already in devDependencies)
-- A running AgentRT gateway at `http://localhost:18789` (start it via the
+- A running AgentRT gateway at `http://localhost:8080` (start it via the
   `products/docker` image or directly from the runtime sources)
 
 #### Additional platform requirements
@@ -211,7 +211,7 @@ cd desktop
 # 2. Install JS dependencies
 npm install
 
-# 3. Configure the local gateway endpoint (defaults already point at localhost:18789)
+# 3. Configure the local gateway endpoint (defaults already point at localhost:8080)
 cp .env.example .env
 
 # 4. Development mode (launches Vite + Tauri native window)

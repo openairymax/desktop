@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Server,
@@ -13,6 +13,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { useHealth, useConnection } from '../hooks/useAgentOS';
+import { logger } from '../utils/logger';
 
 interface ServiceInfo {
   id: string;
@@ -136,7 +137,8 @@ const ServiceManagement: React.FC = () => {
     try {
       await fetchHealth();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 服务操作失败：保留 UI 容错，记录日志
+      logger.warn('服务操作失败', e);
     }
     setCheckingId(null);
   };
@@ -145,7 +147,8 @@ const ServiceManagement: React.FC = () => {
     try {
       await fetchHealth();
     } catch (e) {
-      // Intentionally empty: graceful degradation
+      // 服务操作失败：保留 UI 容错，记录日志
+      logger.warn('服务操作失败', e);
     }
   };
 
