@@ -1,6 +1,6 @@
 [package]
 name = "airymax-agentrt"
-version = "0.1.1"
+version = "0.1.2"
 description = "Airymax AgentRT - Industrial-grade AI Agent Runtime Platform Engineering Desktop Client"
 authors = ["SPHARX Ltd."]
 license = "AGPL-3.0-or-later OR Apache-2.0"
