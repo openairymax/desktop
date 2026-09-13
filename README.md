@@ -10,13 +10,12 @@
 
 Powered by OpenAirymax
 
-[![Version](https://img.shields.io/badge/version-0.1.1-5a6b7e)](https://atomgit.com/openairymax/desktop/releases)
 [![License](https://img.shields.io/badge/license-AGPL--3.0+Apache--2.0-4a90d9)](LICENSE)
-[![Branch](https://img.shields.io/badge/branch-feature%2Fofficial--hubs--01-6f42c1)](https://atomgit.com/openairymax/desktop)
+[![Branch](https://img.shields.io/badge/branch-main-6f42c1)](https://atomgit.com/openairymax/desktop)
 
 [![Tauri](https://img.shields.io/badge/Tauri-v2-FFC131?logo=tauri&logoColor=white)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)](https://atomgit.com/openairymax/desktop)
 
 </div>
@@ -36,11 +35,11 @@ provider).
 
 The application is a cross-platform (Windows / macOS / Linux) native wrapper
 built on **Tauri v2** (Rust 2021 edition core) with a **React 18 + TypeScript
-5.4 + Vite 5** frontend. It supports offline-first PWA behaviour, system tray
+5 + Vite 5** frontend. It supports offline-first PWA behaviour, system tray
 integration, global shortcuts, and a built-in connection to a locally running
 AgentRT gateway (default `http://localhost:8080`). The Rust core exposes IPC
 commands to the frontend through a typed bridge, while the frontend mirrors
-the AgentRT backend modules (kernel, manager, agents, gateway, OpenLab) into
+the AgentRT backend modules (kernel, daemons, gateway, OpenLab) into
 tabbed graphical workspaces.
 
 The Desktop Client targets personal users, developers and evaluators who need a
@@ -61,10 +60,11 @@ desktop/
 │   │                          #   CommandPalette, GlobalSearch, MemorySystem,
 │   │                          #   NotificationCenter, WelcomeWizard, ...)
 │   ├── services/              # Frontend SDK & service layer
-│   │   ├── agentos-sdk.ts     #   Generated API client
+│   │   ├── agentos-sdk.ts     #   Gateway API client
 │   │   ├── agentos.service.ts #   High-level service facade
 │   │   └── tauri-bridge.ts    #   Rust ↔ JS bridge
-│   ├── hooks/                 # React hooks (useAgentOS, useAnimations, ...)
+│   ├── hooks/                 # React hooks (useAgentOS, useAnimations,
+│   │                          #   useKeyboardShortcuts, ...)
 │   ├── i18n/                  # i18next localization (en / zh)
 │   ├── design-system/         # Shared design tokens
 │   ├── constants/  types/  utils/  styles/
@@ -79,7 +79,7 @@ desktop/
 │   │   ├── cli.rs             #   CLI argument parsing
 │   │   └── protocol_commands.rs
 │   ├── icons/                 # Cross-platform icon set + icns / ico
-│   ├── Cargo.toml             # crate `airymax-agentos`
+│   ├── Cargo.toml             # crate `airymax-agentrt`
 │   ├── Cargo.lock  build.rs
 │   └── tauri.conf.json        # window / CSP / tray / bundle config
 ├── public/                    # Static assets + PWA manifest + service worker
@@ -88,7 +88,7 @@ desktop/
 ├── .eslintrc.json  .prettierrc  tsconfig.json
 ├── vite.config.ts             # Vite + PWA + dev proxy to gateway
 ├── vitest.config.ts  playwright.config.ts
-├── package.json               # version 0.1.1, name airymax-agentos
+├── package.json               # npm manifest (name `airymax-agentos`)
 ├── .env.example               # gateway / Ollama defaults
 ├── INSTALLATION.md            # End-user install guide
 ├── LICENSE                    # AGPL-3.0 + Apache-2.0 dual text
@@ -99,34 +99,35 @@ desktop/
 
 ## Features / Components
 
-The desktop client mirrors the AgentRT backend modules one-to-one. The table
-below maps each workspace tab to its upstream backend and a short description.
+The desktop client maps each workspace to the matching AgentRT backend
+capability. The table below lists each workspace tab, the AgentRT component
+behind it, and a short description.
 
-| Module | Mapped Backend | Description |
-|--------|----------------|-------------|
-| Dashboard | Aggregated status | System overview, real-time status, quick actions |
-| Agent Management | `toolkit/agent` + `manager/kernel` | Create / start / monitor / destroy AI agents |
+| Module | AgentRT Backend | Description |
+|--------|-----------------|-------------|
+| Dashboard | Gateway status API | System overview, real-time status, quick actions |
+| Agent Management | `daemons/agent_d` + `atoms/corekern` | Create / start / monitor / destroy AI agents |
 | Task Management | `atoms/taskflow` | Submit, schedule, track and review tasks |
-| Session Management | `manager/session/` + `toolkit/session` | Full lifecycle for 6 agent types |
-| AI Chat | `agents/` + `gateway/` | Multi-agent dialogue, context-aware suggestions |
-| Skill Registry | `manager/skill/registry.yaml` | 7 skill categories with state management |
-| Tool Manager | `manager/tools/` + `toolkit/syscall` | Tool registration, execution & permissions |
-| Model Config | `manager/model/` + `manager/environment` | LLM providers, system params, env vars |
+| Session Management | `daemons/agent_d` | Full lifecycle for the built-in agent types |
+| AI Chat | `daemons/llm_d` + `daemons/think_d` | Multi-agent dialogue, context-aware suggestions |
+| Skill Registry | Built-in skill / hook services | Skill registration with state management |
+| Tool Manager | `daemons/tool_d` + `atoms/syscall` | Tool registration, execution & permissions |
+| Model Config | `daemons/llm_d` | LLM providers, system params, env vars |
 | Cognitive Loop | `atoms/coreloopthree` | 4-stage cognition visualisation, inference engine |
-| Memory System | `atoms/memoryrovol` | L1-L4 layered memory: retrieval, evolution, cleanup |
-| OpenLab | `openlab/` | 6 extension apps with search / install / rating |
-| Service Gateway | `gateway/` | Backend health & latency monitoring |
-| Security Center | `manager/security/` + `manager/sanitizer/` | 4 policy classes & audit logs |
-| System Monitor | `manager/monitoring/` | Real-time performance & environment metrics |
-| Telemetry | `toolkit/telemetry` + dashboards | 4 system + 4 business KPIs, alerting |
-| Logs Terminal | `manager/logging/` | Log viewer + terminal emulator |
-| Settings | `manager/schema/` + `manager/environment/` | Appearance, gateway, data & version info |
+| Memory System | `atoms/memory/` (`builtin` + `memoryrovol` providers) | L1–L4 layered memory: retrieval, evolution, cleanup |
+| OpenLab | `daemons/market_d` | Extension apps with search / install / rating |
+| Service Gateway | `gateway/` + `daemons/gateway_d` | Backend health & latency monitoring |
+| Security Center | Runtime policy & audit services | Security policies & audit logs |
+| System Monitor | `daemons/monit_d` | Real-time performance & environment metrics |
+| Telemetry | `daemons/monit_d` + `heapstore/` | System & business metrics, alerting |
+| Logs Terminal | Runtime logging services | Log viewer + terminal emulator |
+| Settings | Local configuration | Appearance, gateway, data & version info |
 
 ### Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 18 + TypeScript 5.4 + Vite 5 |
+| Frontend | React 18 + TypeScript 5 + Vite 5 |
 | Native shell | Tauri v2 (Rust 2021 edition) |
 | Animation | Framer Motion 12 |
 | Icons | Lucide React |
@@ -141,7 +142,8 @@ below maps each workspace tab to its upstream backend and a short description.
 - **System tray** — left-click toggles the window, right-click exposes
   show / hide / quit actions (`tauri.conf.json → app.trayIcon`).
 - **Global shortcuts** — `Ctrl+K` global search, `Ctrl+1~0` page navigation,
-  `Ctrl+Shift+[` / `Ctrl+Shift+]` history back / forward.
+  `Ctrl+Shift+[` / `Ctrl+Shift+]` history back / forward
+  (`tauri-plugin-global-shortcut`).
 - **Single instance** — `tauri-plugin-single-instance` enforces one running
   process on Windows / Linux (macOS relies on native activation).
 - **Shell & dialog plugins** — open external links, file pickers, save dialogs.
@@ -150,7 +152,7 @@ below maps each workspace tab to its upstream backend and a short description.
 
 ```
                          ┌──────────────────────┐
-   sdk/agentrt ───────▶  │  products/desktop    │
+   agentrt/ ──────────▶  │  products/desktop    │
    (runtime + SDK)       │  (this repository)   │
                          └──────────────────────┘
                                   ▲
@@ -158,10 +160,11 @@ below maps each workspace tab to its upstream backend and a short description.
                                   └── products/docker (deployment image)
 ```
 
-- **`sdk/agentrt`** — AgentRT runtime & SDK exposes the gateway HTTP /
-  WebSocket API consumed by the frontend at `VITE_AGENTOS_GATEWAY_HOST:PORT`
-  (default `http://localhost:8080`). The TypeScript API client in
-  `src/services/agentos-sdk.ts` is generated against this contract.
+- **`agentrt/`** — the AgentRT runtime source tree exposes the gateway
+  HTTP / WebSocket API consumed by the frontend at
+  `VITE_AGENTOS_GATEWAY_HOST:PORT` (default `http://localhost:8080`). The
+  TypeScript API client in `src/services/agentos-sdk.ts` implements this
+  contract.
 - **`products/docker`** — optional companion image used to launch the gateway
   side-by-side with the desktop client on a personal machine. Provides a
   one-command `docker compose up` backend.
@@ -178,8 +181,8 @@ below maps each workspace tab to its upstream backend and a short description.
 - **`products/docker` (`Dockerfile.desktop`)** — consumes the desktop frontend
   source to build a static web image (pure Vite build, no Tauri native shell)
   served by Nginx inside the Docker stack.
-- **Airymax Hub umbrella** — pins this leaf repo as a git submodule on the
-  `feature/official-hubs-01` branch for coordinated releases.
+- **`products/` management repository** — pins this repository as a git
+  submodule (fixed commit) for coordinated releases.
 
 ## Build / Installation
 
@@ -204,8 +207,8 @@ below maps each workspace tab to its upstream backend and a short description.
 ### Build from source
 
 ```bash
-# 1. Clone (leaf repos live on the feature/official-hubs-01 branch)
-git clone -b feature/official-hubs-01 git@atomgit.com:openairymax/desktop.git
+# 1. Clone
+git clone https://atomgit.com/openairymax/desktop.git
 cd desktop
 
 # 2. Install JS dependencies
@@ -242,7 +245,7 @@ npm run tauri dev      # Full Tauri dev mode
 npm run tauri build    # Production build with native installers
 npm run lint           # ESLint
 npm run format         # Prettier
-npm run typecheck      # tsc --noEmit
+npm run typecheck      # tsc -b --noEmit
 npm run check          # typecheck + lint + build
 npm run test           # Vitest watch
 npm run test:run       # Vitest one-shot
@@ -253,8 +256,10 @@ npm run clean          # Remove dist/ and src-tauri/target/
 
 ### Branch Strategy
 
-- Leaf repository active development branch: **`feature/official-hubs-01`**
-- Management repo (`products/`) tracks the same branch via git submodule pointer.
+- This repository is distributed from the **`main`** branch; release tags are
+  cut on `main`.
+- The `products/` management repository pins this repository as a submodule
+  at an exact commit for reproducible releases.
 
 ## License
 
@@ -275,8 +280,8 @@ See [`NOTICE`](NOTICE) for copyright, trademark and third-party component
 notices.
 
 ```
-Repository:  git@atomgit.com:openairymax/desktop.git
-Branch:      feature/official-hubs-01
+Repository:  https://atomgit.com/openairymax/desktop.git
+Branch:      main
 SPDX:        AGPL-3.0-or-later OR Apache-2.0
 ```
 
