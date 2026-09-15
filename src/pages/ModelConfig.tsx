@@ -77,7 +77,7 @@ const PROVIDER_TEMPLATES = {
   deepseek: {
     label: 'DeepSeek',
     baseUrl: 'https://api.deepseek.com/v1',
-    models: ['deepseek-chat', 'deepseek-reasoner'],
+    models: ['deepseek-flash'],
     icon: <Brain size={16} />,
     color: '#0ea5e9',
   },
