@@ -905,7 +905,7 @@ const AgentManagement: React.FC = () => {
                   >
                     <option value="gpt-4o">gpt-4o (OpenAI)</option>
                     <option value="claude-sonnet-4">claude-sonnet-4 (Anthropic)</option>
-                    <option value="deepseek-chat">deepseek-chat (DeepSeek)</option>
+                    <option value="deepseek-flash">deepseek-flash (DeepSeek)</option>
                     <option value="llama3">llama3 (Ollama)</option>
                   </select>
                 </div>
