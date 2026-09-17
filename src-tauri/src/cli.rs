@@ -45,10 +45,9 @@ impl CliConfig {
         }
 
         let possible_paths = vec![
-            "agentrt-cli".to_string(),
-            "agentrt".to_string(),
-            "/usr/local/bin/agentrt-cli".to_string(),
-            "/usr/bin/agentrt-cli".to_string(),
+            "airy_cli".to_string(),
+            "/usr/local/bin/airy_cli".to_string(),
+            "/usr/bin/airy_cli".to_string(),
         ];
 
         for path in &possible_paths {
@@ -57,7 +56,7 @@ impl CliConfig {
             }
         }
 
-        Err(anyhow::anyhow!("AgentRT CLI not found in PATH"))
+        Err(anyhow::anyhow!("AgentRT CLI entry not found in PATH"))
     }
 
     pub fn detect_project_root(&self) -> Result<String> {
