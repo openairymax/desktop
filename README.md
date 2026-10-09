@@ -27,11 +27,11 @@ Powered by OpenAirymax
 The **Desktop Client** is the **personal client** of the Airymax product line.
 It packages the AgentRT runtime, SDK and ecosystem capabilities into a single
 installable desktop application so individual users can operate the platform
-without touching a terminal or container orchestrator. It is one of the three
+without touching a terminal or container orchestrator. It is one of the eight
 leaf repositories under the
-[`products/`](https://atomgit.com/openairymax/products) management repo,
-alongside `docker` (deployment image) and `memoryrovol` (commercial memory
-provider).
+[`sdk/`](https://atomgit.com/openairymax/sdk) management repo, alongside the
+language SDKs (Python, Go, Rust, TypeScript), the interactive components
+(`console`, `tui`) and the container deployment assets (`docker`).
 
 The application is a cross-platform (Windows / macOS / Linux) native wrapper
 built on **Tauri v2** (Rust 2021 edition core) with a **React 18 + TypeScript
@@ -152,12 +152,12 @@ behind it, and a short description.
 
 ```
                          ┌──────────────────────┐
-   agentrt/ ──────────▶  │  products/desktop    │
+   agentrt/ ──────────▶  │  sdk/desktop         │
    (runtime + SDK)       │  (this repository)   │
                          └──────────────────────┘
                                   ▲
                                   │ optional
-                                  └── products/docker (deployment image)
+                                  └── sdk/docker (deployment image)
 ```
 
 - **`agentrt/`** — the AgentRT runtime source tree exposes the gateway
@@ -165,7 +165,7 @@ behind it, and a short description.
   `VITE_AGENTOS_GATEWAY_HOST:PORT` (default `http://localhost:8080`). The
   TypeScript API client in `src/services/agentos-sdk.ts` implements this
   contract.
-- **`products/docker`** — optional companion image used to launch the gateway
+- **`sdk/docker`** — optional companion image used to launch the gateway
   side-by-side with the desktop client on a personal machine. Provides a
   one-command `docker compose up` backend.
 - **Tauri v2 toolchain** — Rust ≥ 1.70, `@tauri-apps/cli` (already pinned in
@@ -178,10 +178,10 @@ behind it, and a short description.
   `.deb` / `.AppImage` artifacts directly. See
   [`INSTALLATION.md`](INSTALLATION.md) for per-platform install / uninstall
   instructions.
-- **`products/docker` (`Dockerfile.desktop`)** — consumes the desktop frontend
+- **`sdk/docker` (`Dockerfile.desktop`)** — consumes the desktop frontend
   source to build a static web image (pure Vite build, no Tauri native shell)
   served by Nginx inside the Docker stack.
-- **`products/` management repository** — pins this repository as a git
+- **`sdk/` management repository** — pins this repository as a git
   submodule (fixed commit) for coordinated releases.
 
 ## Build / Installation
@@ -192,7 +192,7 @@ behind it, and a short description.
 - [Rust](https://www.rust-lang.org/) >= 1.70 (required by Tauri v2)
 - Tauri CLI v2 (`npm i -D @tauri-apps/cli` is already in devDependencies)
 - A running AgentRT gateway at `http://localhost:8080` (start it via the
-  `products/docker` image or directly from the runtime sources)
+  `sdk/docker` image or directly from the runtime sources)
 
 #### Additional platform requirements
 
@@ -258,7 +258,7 @@ npm run clean          # Remove dist/ and src-tauri/target/
 
 - This repository is distributed from the **`main`** branch; release tags are
   cut on `main`.
-- The `products/` management repository pins this repository as a submodule
+- The `sdk/` management repository pins this repository as a submodule
   at an exact commit for reproducible releases.
 
 ## License

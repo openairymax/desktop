@@ -25,8 +25,9 @@ Powered by OpenAirymax
 
 **桌面客户端**是 Airymax 产品线的**个人客户端**。它将 AgentRT 运行时、SDK 与生态能力打包为
 一个可安装的桌面应用，让个人用户无需接触终端或容器编排器即可操作整个平台。它是
-[`products/`](https://atomgit.com/openairymax/products) 管理仓下三个叶子仓之一，
-另两个为 `docker`（部署镜像）和 `memoryrovol`（商业记忆提供者）。
+[`sdk/`](https://atomgit.com/openairymax/sdk) 管理仓下八个叶子仓之一，
+与多语言 SDK（Python、Go、Rust、TypeScript）、交互式组件（`console`、`tui`）
+以及容器化部署资产（`docker`）并列。
 
 应用基于 **Tauri v2**（Rust 2021 edition 内核）构建的跨平台（Windows / macOS / Linux）
 原生外壳，前端采用 **React 18 + TypeScript 5 + Vite 5**。支持离线优先 PWA、系统托盘集成、
@@ -142,18 +143,18 @@ desktop/
 
 ```
                          ┌──────────────────────┐
-   agentrt/ ──────────▶  │  products/desktop    │
+   agentrt/ ──────────▶  │  sdk/desktop         │
    （运行时 + SDK）       │  （本仓库）          │
                          └──────────────────────┘
                                   ▲
                                   │ 可选
-                                  └── products/docker（部署镜像）
+                                  └── sdk/docker（部署镜像）
 ```
 
 - **`agentrt/`** —— AgentRT 运行时源码树，提供网关 HTTP / WebSocket API，
   由前端通过 `VITE_AGENTOS_GATEWAY_HOST:PORT`（默认 `http://localhost:8080`）消费。
   `src/services/agentos-sdk.ts` 中的 TypeScript API 客户端实现了该契约。
-- **`products/docker`** —— 可选的配套镜像，用于在个人机器上与桌面客户端并行启动网关。
+- **`sdk/docker`** —— 可选的配套镜像，用于在个人机器上与桌面客户端并行启动网关。
   提供一条 `docker compose up` 命令即可启动后端。
 - **Tauri v2 工具链** —— Rust ≥ 1.70、`@tauri-apps/cli`（已在 devDependencies 中固定版本）
   以及各平台系统库（Linux 的 WebKit2GTK、macOS 的 WebKit、Windows 的 WebView2）。
@@ -162,9 +163,9 @@ desktop/
 
 - **终端用户（个人）** —— 直接安装产出的 `.exe` / `.msi` / `.dmg` / `.deb` / `.AppImage`
   制品。各平台逐步安装 / 卸载说明详见 [`INSTALLATION.md`](INSTALLATION.md)。
-- **`products/docker`（`Dockerfile.desktop`）** —— 消费桌面前端源码以构建静态 Web 镜像
+- **`sdk/docker`（`Dockerfile.desktop`）** —— 消费桌面前端源码以构建静态 Web 镜像
   （纯 Vite 构建，不含 Tauri 原生外壳），由 Nginx 在 Docker 栈中服务。
-- **`products/` 管理仓** —— 将本仓库作为 git 子模块（固定 commit）纳入，
+- **`sdk/` 管理仓** —— 将本仓库作为 git 子模块（固定 commit）纳入，
   用于协同发布。
 
 ## 构建 / 安装
@@ -174,7 +175,7 @@ desktop/
 - [Node.js](https://nodejs.org/) >= 18
 - [Rust](https://www.rust-lang.org/) >= 1.70（Tauri v2 必需）
 - Tauri CLI v2（已在 devDependencies 中通过 `npm i -D @tauri-apps/cli` 提供）
-- 在 `http://localhost:8080` 运行的 AgentRT 网关（可通过 `products/docker` 镜像
+- 在 `http://localhost:8080` 运行的 AgentRT 网关（可通过 `sdk/docker` 镜像
   或直接从运行时源码启动）
 
 #### 各平台额外依赖
@@ -239,7 +240,7 @@ npm run clean          # 清理 dist/ 与 src-tauri/target/
 ### 分支策略
 
 - 本仓库从 **`main`** 分支发布；发布 tag 基于 `main` 打出。
-- `products/` 管理仓将本仓库作为子模块固定在精确 commit 上，
+- `sdk/` 管理仓将本仓库作为子模块固定在精确 commit 上，
   保证发布可复现。
 
 ## 许可证
