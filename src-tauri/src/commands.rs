@@ -15,7 +15,10 @@ fn validate_path(path: &str) -> Result<std::path::PathBuf, String> {
     let canonical = if p.exists() {
         p.canonicalize().map_err(|e| format!("Invalid path {}: {}", path, e))?
     } else {
-        let parent = p.parent().unwrap_or_else(|| std::path::Path::new("/"));
+        let parent = match p.parent() {
+            Some(parent) => parent.to_path_buf(),
+            None => std::env::current_dir().map_err(|e| format!("Invalid path {}: {}", path, e))?,
+        };
         let parent_canonical = parent
             .canonicalize()
             .map_err(|e| format!("Invalid parent path for {}: {}", path, e))?;
@@ -28,13 +31,20 @@ fn validate_path(path: &str) -> Result<std::path::PathBuf, String> {
     let home = dirs::home_dir().unwrap_or_else(|| std::path::PathBuf::from("/"));
     let config_dir = dirs::config_dir().unwrap_or_else(|| home.clone());
     let data_dir = dirs::data_dir().unwrap_or_else(|| home.clone());
-    let project_dirs: Vec<std::path::PathBuf> = vec![
+    let mut project_dirs: Vec<std::path::PathBuf> = vec![
         home,
         config_dir,
         data_dir,
-        std::path::PathBuf::from("/tmp"),
-        std::path::PathBuf::from("/var/log"),
+        std::env::temp_dir(),
     ];
+    // 系统日志目录仅在 POSIX 存在；Windows 无 /var/log。
+    #[cfg(unix)]
+    project_dirs.push(std::path::PathBuf::from("/var/log"));
+
+    // 允许目录按真实路径比较：macOS 的 /tmp、/var 均为符号链接，未规范化
+    // 会让合法路径被判为越界。
+    let project_dirs: Vec<std::path::PathBuf> =
+        project_dirs.into_iter().filter_map(|d| d.canonicalize().ok()).collect();
 
     let allowed = project_dirs.iter().any(|dir| canonical.starts_with(dir));
     if !allowed {
